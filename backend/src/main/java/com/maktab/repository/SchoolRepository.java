@@ -2,9 +2,9 @@ package com.maktab.repository;
 
 import com.maktab.model.School;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.List;
 
-@Repository
 public interface SchoolRepository extends JpaRepository<School, Long> {
-    // Additional query methods if needed
+    List<School> findByDistrictId(Long districtId);
+    long countByDistrictId(Long districtId);
 }
