@@ -122,32 +122,81 @@ export default function Attendance({ user }) {
   const absentCount = totalStudents - presentCount;
   const percentage = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
 
+  const StatBar = ({items}) => (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      {items.map((c,i) => (
+        <div key={i} className={`rounded-2xl bg-gradient-to-br ${c.bg} border border-emerald-500/[0.06] p-4`}>
+          <span className="text-[10px] text-slate-600 uppercase">{c.label}</span>
+          <p className={`text-2xl font-bold mt-1 ${c.color}`}>{c.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+
+  const totalProvStudents = provinces.reduce((s,p)=>s+(p.studentCount||0),0);
+  const totalProvSchools = provinces.reduce((s,p)=>s+(p.schoolCount||0),0);
+  const totalProvDists = provinces.reduce((s,p)=>s+(p.districtCount||0),0);
+
   /* 1. Province */
   if (!selProv && !isDirector) {
     return (<div className="animate-fade-in">
-      <div className="mb-6"><h1 className="text-xl font-bold text-white">Davomat</h1><p className="text-sm text-slate-500 mt-0.5">Viloyatni tanlang</p></div>
+      <div className="mb-6"><h1 className="text-xl font-bold text-white">Davomat nazorati</h1><p className="text-sm text-slate-500 mt-0.5">Viloyatlar bo'yicha umumiy statistika</p></div>
+      <StatBar items={[
+        {label:'Viloyatlar',value:provinces.length,color:'text-emerald-400',bg:'from-emerald-500/10 to-emerald-500/5'},
+        {label:'Tumanlar',value:totalProvDists,color:'text-teal-400',bg:'from-teal-500/10 to-teal-500/5'},
+        {label:'Maktablar',value:totalProvSchools,color:'text-cyan-400',bg:'from-cyan-500/10 to-cyan-500/5'},
+        {label:"O'quvchilar",value:totalProvStudents,color:'text-amber-400',bg:'from-amber-500/10 to-amber-500/5'}
+      ]} />
       {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {provinces.map(p => <NavCard key={p.id} icon={ICONS.prov} title={p.name} subtitle={`${p.districtCount} tuman`} onClick={() => pickProv(p)} />)}
+        {provinces.map(p => <NavCard key={p.id} icon={ICONS.prov} title={p.name} subtitle={`${p.districtCount||0} tuman · ${p.schoolCount||0} maktab`} onClick={() => pickProv(p)} stats={[
+          {value:p.districtCount||0,label:'Tuman',color:'text-emerald-400',bg:'bg-emerald-500/[0.06]'},
+          {value:p.schoolCount||0,label:'Maktab',color:'text-cyan-400',bg:'bg-cyan-500/[0.06]'},
+          {value:p.studentCount||0,label:"O'quvchi",color:'text-amber-400',bg:'bg-amber-500/[0.06]'},
+          {value:'—',label:'Davomat',color:'text-slate-500',bg:'bg-slate-500/[0.06]'}
+        ]} />)}
       </div>}
     </div>);
   }
+
+  const distTotalStudents = districts.reduce((s,d)=>s+(d.studentCount||0),0);
+  const distTotalSchools = districts.reduce((s,d)=>s+(d.schoolCount||0),0);
 
   /* 2. District */
   if (!selDist && !isDirector) {
     return (<div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-6">{!isAdmin && <BackBtn onClick={goProvs} />}<div><h1 className="text-xl font-bold text-white">{selProv.name}</h1><Breadcrumb items={['Davomat', selProv.name]} /></div></div>
+      <StatBar items={[
+        {label:'Tumanlar',value:districts.length,color:'text-teal-400',bg:'from-teal-500/10 to-teal-500/5'},
+        {label:'Maktablar',value:distTotalSchools,color:'text-cyan-400',bg:'from-cyan-500/10 to-cyan-500/5'},
+        {label:"O'quvchilar",value:distTotalStudents,color:'text-amber-400',bg:'from-amber-500/10 to-amber-500/5'},
+        {label:'Davomat',value:'—',color:'text-slate-500',bg:'from-slate-500/10 to-slate-500/5'}
+      ]} />
       {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {districts.map(d => <NavCard key={d.id} icon={ICONS.dist} color="teal" title={d.name} subtitle={`${d.schoolCount||0} maktab`} onClick={() => pickDist(d)} />)}
+        {districts.map(d => <NavCard key={d.id} icon={ICONS.dist} color="teal" title={d.name} subtitle={`${d.schoolCount||0} maktab · ${d.studentCount||0} o'quvchi`} onClick={() => pickDist(d)} stats={[
+          {value:d.schoolCount||0,label:'Maktab',color:'text-cyan-400',bg:'bg-cyan-500/[0.06]'},
+          {value:d.studentCount||0,label:"O'quvchi",color:'text-amber-400',bg:'bg-amber-500/[0.06]'}
+        ]} />)}
       </div>}
     </div>);
   }
+
+  const schTotalStudents = schools.reduce((s,x)=>s+(x.studentCount||0),0);
 
   /* 3. School */
   if (!selSchool && !isDirector) {
     return (<div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-6"><BackBtn onClick={goDists} /><div><h1 className="text-xl font-bold text-white">{selDist.name}</h1><Breadcrumb items={['Davomat', selProv.name, selDist.name]} /></div></div>
+      <StatBar items={[
+        {label:'Maktablar',value:schools.length,color:'text-cyan-400',bg:'from-cyan-500/10 to-cyan-500/5'},
+        {label:"O'quvchilar",value:schTotalStudents,color:'text-amber-400',bg:'from-amber-500/10 to-amber-500/5'},
+        {label:'Server',value:schools.length > 0 ? '—':'0',color:'text-slate-500',bg:'from-slate-500/10 to-slate-500/5'},
+        {label:'Davomat',value:'—',color:'text-slate-500',bg:'from-slate-500/10 to-slate-500/5'}
+      ]} />
       {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {schools.map(s => <NavCard key={s.id} icon={ICONS.school} color="cyan" title={s.name} subtitle={`${s.studentCount||0} o'quvchi`} onClick={() => pickSchool(s)} />)}
+        {schools.map(s => <NavCard key={s.id} icon={ICONS.school} color="cyan" title={s.name} subtitle={`${s.studentCount||0} o'quvchi`} onClick={() => pickSchool(s)} stats={[
+          {value:s.studentCount||0,label:"O'quvchi",color:'text-amber-400',bg:'bg-amber-500/[0.06]'},
+          {value:'—',label:'Davomat',color:'text-slate-500',bg:'bg-slate-500/[0.06]'}
+        ]} />)}
       </div>}
     </div>);
   }
