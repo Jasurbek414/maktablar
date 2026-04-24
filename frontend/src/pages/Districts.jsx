@@ -221,7 +221,7 @@ export default function Districts({ user }) {
           </div>
         </div>
         {loading ? <Loader /> : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
             {provinces.map(p => <ProvinceCard key={p.id} province={p} maxDistricts={maxDistricts} onClick={() => selectProvince(p)} />)}
           </div>
         )}
@@ -259,9 +259,9 @@ export default function Districts({ user }) {
       </div>
 
       {loading ? <Loader /> : view === 'card' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-4">
           {filtered.map(item => <DistrictCard key={item.id} item={item} onEdit={openEdit} onDelete={remove} />)}
-          {filtered.length === 0 && <p className="col-span-3 text-center text-slate-600 py-12">Tuman topilmadi</p>}
+          {filtered.length === 0 && <p className="col-span-full text-center text-slate-600 py-12">Tuman topilmadi</p>}
         </div>
       ) : (
         <div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] overflow-hidden">
