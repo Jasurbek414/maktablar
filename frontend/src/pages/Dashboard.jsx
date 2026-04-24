@@ -1,182 +1,247 @@
 import React, { useState, useEffect } from 'react';
 
-// ── Stat Card ──
-function StatCard({ label, value, change, up, icon, color }) {
-  const colors = {
-    blue: 'bg-brand-600/10 text-brand-400',
-    green: 'bg-emerald-600/10 text-emerald-400',
-    red: 'bg-red-600/10 text-red-400',
-    amber: 'bg-amber-600/10 text-amber-400',
-    violet: 'bg-violet-600/10 text-violet-400',
-    cyan: 'bg-cyan-600/10 text-cyan-400',
-  };
-
+/* ─── Mini Bar Chart (CSS) ─── */
+function MiniChart({ data, color }) {
+  const max = Math.max(...data, 1);
   return (
-    <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-5 hover:border-slate-700/60 transition-colors duration-200">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colors[color] || colors.blue}`}>
-          <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
-          </svg>
+    <div className="flex items-end gap-[3px] h-10">
+      {data.map((v, i) => (
+        <div
+          key={i}
+          className={`w-[6px] rounded-sm bar-animate ${color}`}
+          style={{
+            height: `${(v / max) * 100}%`,
+            animationDelay: `${i * 0.08}s`,
+            opacity: i === data.length - 1 ? 1 : 0.5 + (i / data.length) * 0.5,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ─── Stat Card ─── */
+function StatCard({ label, value, sub, icon, gradient, chartData, chartColor }) {
+  return (
+    <div className="group relative overflow-hidden rounded-2xl bg-[#0f1629] border border-indigo-500/[0.08] p-5 hover:border-indigo-500/20 transition-all duration-300">
+      {/* Subtle gradient glow on hover */}
+      <div className={`absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${gradient}`} />
+
+      <div className="relative flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium text-slate-500 mb-3">{label}</p>
+          <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
+          {sub && <p className="text-xs text-slate-600 mt-1.5">{sub}</p>}
         </div>
-        {change !== undefined && (
-          <span className={`text-xs font-medium ${up ? 'text-emerald-400' : 'text-red-400'}`}>
-            {up ? '↑' : '↓'} {change}%
-          </span>
-        )}
+        <div className="flex flex-col items-end gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${icon.bg}`}>
+            <svg className={`w-5 h-5 ${icon.color}`} fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d={icon.d} />
+            </svg>
+          </div>
+          {chartData && <MiniChart data={chartData} color={chartColor} />}
+        </div>
       </div>
-      <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
-      <p className="text-xs text-slate-500 mt-1">{label}</p>
     </div>
   );
 }
 
-// ── Activity Row ──
-function ActivityRow({ name, action, time, type }) {
+/* ─── Donut Chart ─── */
+function DonutChart({ percent, label, color }) {
+  const deg = (percent / 100) * 360;
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-slate-800/40 last:border-0">
-      <div className={`w-2 h-2 rounded-full shrink-0 ${type === 'IN' ? 'bg-emerald-400' : 'bg-red-400'}`} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-200 truncate">{name}</p>
-        <p className="text-xs text-slate-500">{action}</p>
+    <div className="flex flex-col items-center gap-3">
+      <div
+        className="donut flex items-center justify-center"
+        style={{
+          background: `conic-gradient(${color} ${deg}deg, rgba(100,116,139,0.1) ${deg}deg)`,
+        }}
+      >
+        <span className="relative z-10 text-xl font-bold text-white">{percent}%</span>
       </div>
-      <span className="text-xs text-slate-600 shrink-0">{time}</span>
+      <span className="text-xs text-slate-500">{label}</span>
     </div>
   );
 }
 
-// ── Quick Action ──
-function QuickAction({ label, icon, onClick }) {
+/* ─── Quick Action ─── */
+function Action({ label, icon, gradient }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-800/60 bg-slate-900/40 hover:bg-slate-800/50 hover:border-slate-700/60 transition-all duration-200 group"
-    >
-      <div className="w-10 h-10 rounded-lg bg-slate-800/80 flex items-center justify-center text-slate-400 group-hover:text-brand-400 transition-colors">
+    <button className="group flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-[#0f1629] border border-indigo-500/[0.08] hover:border-indigo-500/20 transition-all duration-300 relative overflow-hidden">
+      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${gradient}`} />
+      <div className="relative w-11 h-11 rounded-xl bg-white/[0.04] flex items-center justify-center text-slate-400 group-hover:text-white group-hover:scale-110 transition-all duration-300">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
         </svg>
       </div>
-      <span className="text-xs text-slate-400 font-medium group-hover:text-slate-300 transition-colors">{label}</span>
+      <span className="relative text-[11px] font-medium text-slate-500 group-hover:text-slate-300 transition-colors">{label}</span>
     </button>
   );
 }
 
-// ── Main Dashboard ──
+/* ─── Status Badge ─── */
+function StatusDot({ online }) {
+  return (
+    <span className="relative flex h-2.5 w-2.5">
+      {online && <span className="live-dot absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />}
+      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${online ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+    </span>
+  );
+}
+
+/* ═══ MAIN DASHBOARD ═══ */
 export default function Dashboard({ user }) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
   }, []);
 
   const greeting = () => {
     const h = time.getHours();
-    if (h < 12) return 'Xayrli tong';
-    if (h < 18) return 'Xayrli kun';
-    return 'Xayrli kech';
+    return h < 12 ? 'Xayrli tong' : h < 18 ? 'Xayrli kun' : 'Xayrli kech';
   };
 
-  const formatTime = (d) => d.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
-  const formatDate = (d) => d.toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const fmt = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const fmtDate = (d) => d.toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  // Demo data for charts
+  const weeklyAttendance = [65, 78, 82, 71, 89, 92, 0];
+  const weeklyAbsent = [12, 8, 5, 14, 6, 3, 0];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">
-            {greeting()}, <span className="text-brand-400">{user?.fullName?.split(' ')[0]}</span>
-          </h1>
-          <p className="text-sm text-slate-500 mt-1 capitalize">{formatDate(time)}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-2xl font-bold text-white tabular-nums tracking-tight">{formatTime(time)}</p>
-          <p className="text-xs text-slate-500 mt-0.5">Toshkent vaqti</p>
+    <div className="space-y-5 animate-fade-in">
+      {/* ── Hero Banner ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600/20 via-[#0f1629] to-cyan-600/10 border border-indigo-500/[0.12] p-6">
+        {/* Decorative circles */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl translate-y-1/2" />
+
+        <div className="relative flex items-center justify-between">
+          <div>
+            <p className="text-slate-400 text-sm">{greeting()}</p>
+            <h1 className="text-2xl font-bold text-white mt-1">
+              {user?.fullName}
+            </h1>
+            <p className="text-slate-500 text-sm mt-1 capitalize">{fmtDate(time)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-4xl font-bold text-white tabular-nums tracking-tight font-mono">{fmt(time)}</p>
+            <div className="flex items-center justify-end gap-1.5 mt-2">
+              <StatusDot online={true} />
+              <span className="text-[11px] text-emerald-400/80 font-medium">Tizim faol</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* ── Stat Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Jami o'quvchilar"
+          label="JAMI O'QUVCHILAR"
           value="0"
-          color="blue"
-          icon="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+          sub="14 viloyat bo'ylab"
+          gradient="bg-indigo-500/20"
+          icon={{ bg: 'bg-indigo-500/10', color: 'text-indigo-400', d: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }}
+          chartData={[30, 45, 38, 52, 48, 60, 55]}
+          chartColor="bg-indigo-400"
         />
         <StatCard
-          label="Bugun kelgan"
+          label="BUGUN KELGAN"
           value="0"
-          change={0}
-          up={true}
-          color="green"
-          icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          sub="0% davomat"
+          gradient="bg-emerald-500/20"
+          icon={{ bg: 'bg-emerald-500/10', color: 'text-emerald-400', d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' }}
+          chartData={weeklyAttendance}
+          chartColor="bg-emerald-400"
         />
         <StatCard
-          label="Kelmagan"
+          label="KELMAGAN"
           value="0"
-          color="red"
-          icon="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+          sub="Sababsiz: 0"
+          gradient="bg-red-500/20"
+          icon={{ bg: 'bg-red-500/10', color: 'text-red-400', d: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' }}
+          chartData={weeklyAbsent}
+          chartColor="bg-red-400"
         />
         <StatCard
-          label="Davomat foizi"
-          value="0%"
-          color="amber"
-          icon="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+          label="MAKTABLAR"
+          value="0"
+          sub="14 viloyat"
+          gradient="bg-cyan-500/20"
+          icon={{ bg: 'bg-cyan-500/10', color: 'text-cyan-400', d: 'M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z' }}
+          chartData={[2, 5, 8, 12, 15, 14, 14]}
+          chartColor="bg-cyan-400"
         />
       </div>
 
-      {/* SUPERADMIN Extra Stats */}
-      {user?.role === 'SUPERADMIN' && (
-        <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Viloyatlar" value="14" color="violet" icon="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          <StatCard label="Maktablar" value="0" color="cyan" icon="M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-          <StatCard label="Qurilmalar" value="0" color="blue" icon="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </div>
-      )}
-
-      {/* Two Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Recent Activity */}
-        <div className="lg:col-span-3 rounded-xl border border-slate-800/60 bg-slate-900/40 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-white">Oxirgi voqealar</h2>
-            <span className="text-xs text-slate-600">Real vaqt</span>
+      {/* ── Three Columns ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Attendance Overview */}
+        <div className="lg:col-span-4 rounded-2xl bg-[#0f1629] border border-indigo-500/[0.08] p-6">
+          <h3 className="text-sm font-semibold text-white mb-6">Davomat ko'rsatkichi</h3>
+          <div className="flex justify-center gap-8">
+            <DonutChart percent={0} label="Bugun" color="#818cf8" />
+            <DonutChart percent={0} label="Haftalik" color="#34d399" />
           </div>
-          <div className="space-y-0">
-            <div className="text-center py-12">
-              <div className="w-12 h-12 rounded-xl bg-slate-800/60 flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            {[
+              { l: 'Kelgan', v: '0', c: 'text-emerald-400 bg-emerald-500/10' },
+              { l: 'Kelmagan', v: '0', c: 'text-red-400 bg-red-500/10' },
+              { l: 'Kechikkan', v: '0', c: 'text-amber-400 bg-amber-500/10' },
+            ].map(({ l, v, c }) => (
+              <div key={l} className={`text-center py-2.5 rounded-xl ${c.split(' ').slice(1).join(' ')}`}>
+                <p className={`text-lg font-bold ${c.split(' ')[0]}`}>{v}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">{l}</p>
               </div>
-              <p className="text-sm text-slate-500">Hozircha voqealar yo'q</p>
-              <p className="text-xs text-slate-600 mt-1">Face ID qurilma ulangach ko'rinadi</p>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="lg:col-span-5 rounded-2xl bg-[#0f1629] border border-indigo-500/[0.08] p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-sm font-semibold text-white">Oxirgi voqealar</h3>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="live-dot absolute inline-flex h-full w-full rounded-full bg-indigo-400" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-400" />
+              </span>
+              <span className="text-[10px] font-medium text-indigo-400">LIVE</span>
             </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center py-10">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-500/[0.06] flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-slate-700" fill="none" stroke="currentColor" strokeWidth={1.2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-sm text-slate-500 font-medium">Voqealar yo'q</p>
+            <p className="text-xs text-slate-700 mt-1">Face ID qurilma ulangach ko'rinadi</p>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-800/60 bg-slate-900/40 p-5">
-          <h2 className="text-sm font-semibold text-white mb-4">Tezkor amallar</h2>
+        <div className="lg:col-span-3 rounded-2xl bg-[#0f1629] border border-indigo-500/[0.08] p-6">
+          <h3 className="text-sm font-semibold text-white mb-4">Tezkor amallar</h3>
           <div className="grid grid-cols-2 gap-3">
-            <QuickAction
-              label="O'quvchi qo'shish"
-              icon="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-            />
-            <QuickAction
-              label="Sinxronizatsiya"
-              icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-            <QuickAction
-              label="Hisobot"
-              icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-            <QuickAction
-              label="Sozlamalar"
-              icon="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
+            <Action label="O'quvchi" icon="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" gradient="bg-gradient-to-br from-indigo-500/5 to-transparent" />
+            <Action label="Sinxron" icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" gradient="bg-gradient-to-br from-cyan-500/5 to-transparent" />
+            <Action label="Hisobot" icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" gradient="bg-gradient-to-br from-emerald-500/5 to-transparent" />
+            <Action label="Sozlama" icon="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" gradient="bg-gradient-to-br from-amber-500/5 to-transparent" />
+          </div>
+
+          {/* Device Status */}
+          <div className="mt-4 p-3 rounded-xl border border-indigo-500/[0.06] bg-white/[0.01]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <StatusDot online={false} />
+                <span className="text-xs text-slate-500">Qurilmalar</span>
+              </div>
+              <span className="text-xs font-mono text-slate-600">0 / 0</span>
+            </div>
           </div>
         </div>
       </div>
