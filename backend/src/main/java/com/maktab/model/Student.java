@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.util.List;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -20,7 +21,10 @@ public class Student {
     private String fullName;
 
     @Column(nullable = false, unique = true)
-    private String faceId; // identifier from Face ID device
+    private String faceId; // auto-generated identifier
+
+    @Column
+    private LocalDate birthDate;
 
     @Column
     private String photoUrl;

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/students")
@@ -34,6 +35,7 @@ public class StudentController {
             m.put("id", s.getId());
             m.put("fullName", s.getFullName());
             m.put("faceId", s.getFaceId());
+            m.put("birthDate", s.getBirthDate() != null ? s.getBirthDate().toString() : null);
             m.put("photoUrl", s.getPhotoUrl());
             m.put("schoolId", s.getSchool().getId());
             m.put("schoolName", s.getSchool().getName());
@@ -48,6 +50,7 @@ public class StudentController {
             m.put("id", s.getId());
             m.put("fullName", s.getFullName());
             m.put("faceId", s.getFaceId());
+            m.put("birthDate", s.getBirthDate() != null ? s.getBirthDate().toString() : null);
             m.put("photoUrl", s.getPhotoUrl());
             m.put("schoolId", s.getSchool().getId());
             m.put("schoolName", s.getSchool().getName());
@@ -75,20 +78,30 @@ public class StudentController {
 
         Student s = new Student();
         s.setFullName((String) body.get("fullName"));
-        s.setFaceId((String) body.get("faceId"));
+        // Auto-generate faceId: SCH{schoolId}-{UUID short}
+        s.setFaceId("SCH" + schoolId + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         s.setPhotoUrl((String) body.get("photoUrl"));
+        if (body.containsKey("birthDate") && body.get("birthDate") != null) {
+            s.setBirthDate(LocalDate.parse(body.get("birthDate").toString()));
+        }
         s.setSchool(school);
         Student saved = studentRepository.save(s);
 
-        return ResponseEntity.ok(Map.of("id", saved.getId(), "fullName", saved.getFullName(), "faceId", saved.getFaceId()));
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("fullName", saved.getFullName());
+        result.put("faceId", saved.getFaceId());
+        return ResponseEntity.ok(result);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return studentRepository.findById(id).map(s -> {
             if (body.containsKey("fullName")) s.setFullName((String) body.get("fullName"));
-            if (body.containsKey("faceId")) s.setFaceId((String) body.get("faceId"));
             if (body.containsKey("photoUrl")) s.setPhotoUrl((String) body.get("photoUrl"));
+            if (body.containsKey("birthDate") && body.get("birthDate") != null) {
+                s.setBirthDate(LocalDate.parse(body.get("birthDate").toString()));
+            }
             if (body.containsKey("schoolId")) {
                 School school = schoolRepository.findById(Long.valueOf(body.get("schoolId").toString())).orElse(null);
                 if (school != null) s.setSchool(school);
