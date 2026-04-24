@@ -1,0 +1,14 @@
+{
+  "serverUrl": "https://maktab.ecos.uz",
+  "deviceApiKey": "",
+  "deviceId": "",
+  "schoolId": "",
+  "faceDevice": {
+    "ip": "192.168.1.100",
+    "port": 80,
+    "username": "admin",
+    "password": "admin123"
+  },
+  "port": 3001,
+  "heartbeatInterval": 30000
+}

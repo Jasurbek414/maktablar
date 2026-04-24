@@ -1,53 +1,171 @@
 /**
- * Mini-PC Bridge Server
- * =====================
- * Face ID qurilma ↔ Backend o'rtasidagi ko'prik.
+ * Mini-PC Bridge – Mustaqil o'rnatiladigan dastur
+ * ================================================
+ * Har bir maktabdagi kompyuterga o'rnatiladi.
+ * Face ID qurilma ↔ Markaziy server o'rtasidagi ko'prik.
+ *
+ * O'rnatish:
+ *   1. Node.js 18+ o'rnatish
+ *   2. npm install
+ *   3. config.json sozlash
+ *   4. npm start
  *
  * Vazifalar:
- *   1. Face ID qurilmadan eventlarni qabul qilib backendga jo'natadi
- *   2. Backenddan buyruqlarni qabul qilib Face ID qurilmaga uzatadi
- *   3. Qurilma holatini kuzatadi (health check)
- *   4. Yuzlarni qurilmaga qo'shish / o'chirish
- *   5. Qurilmani qayta ishga tushirish
+ *   - Face ID qurilmadan eventlarni qabul qilib serverga jo'natadi
+ *   - Serverdan buyruqlarni qabul qilib qurilmaga uzatadi
+ *   - Har 30 soniyada heartbeat yuboradi (online/offline status)
+ *   - Qurilma bilan sinxronizatsiya qiladi
  */
 
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // yuz rasmi katta bo'lishi mumkin
+app.use(express.json({ limit: '10mb' }));
 
 // ──────────────────────────────────────
-// Configuration
+// Configuration – config.json dan o'qiladi
 // ──────────────────────────────────────
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080';
-const FACE_DEVICE_URL = process.env.FACE_DEVICE_URL || 'http://192.168.1.100'; // Hikvision terminal IP
-const DEVICE_USERNAME = process.env.DEVICE_USERNAME || 'admin';
-const DEVICE_PASSWORD = process.env.DEVICE_PASSWORD || 'admin123';
-const PORT = process.env.PORT || 3001;
+const CONFIG_PATH = path.join(__dirname, 'config.json');
 
-// Hikvision digest auth config
-const deviceAuth = {
-  username: DEVICE_USERNAME,
-  password: DEVICE_PASSWORD,
+let config = {
+  // Markaziy server URL (Cloudflare tunnel orqali)
+  serverUrl: 'https://maktab.ecos.uz',
+
+  // Qurilma API kaliti (serverdan ro'yxatdan o'tganda beriladi)
+  deviceApiKey: '',
+
+  // Qurilma ID (serverda ro'yxatdan o'tganda beriladi)
+  deviceId: '',
+
+  // Maktab ID
+  schoolId: '',
+
+  // Face ID terminal sozlamalari (local tarmoq)
+  faceDevice: {
+    ip: '192.168.1.100',
+    port: 80,
+    username: 'admin',
+    password: 'admin123',
+  },
+
+  // Mini-PC server porti
+  port: 3001,
+
+  // Heartbeat interval (ms)
+  heartbeatInterval: 30000,
 };
 
+// Konfiguratsiyani yuklash
+function loadConfig() {
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      const saved = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+      config = { ...config, ...saved };
+      console.log('✅ config.json yuklandi');
+    } else {
+      // Default config yaratish
+      saveConfig();
+      console.log('📝 config.json yaratildi – sozlamalarni o\'zgartiring va qayta ishga tushiring');
+    }
+  } catch (err) {
+    console.error('❌ config.json o\'qishda xatolik:', err.message);
+  }
+}
+
+function saveConfig() {
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+}
+
+loadConfig();
+
 // ──────────────────────────────────────
-// 1. FACE ID EVENT – qurilmadan keladi
+// Helpers
 // ──────────────────────────────────────
-/**
- * Face ID terminal o'quvchi yuzini taniganda shu endpointga jo'natadi.
- * 
- * Body (JSON yoki XML – Hikvision formatiga bog'liq):
- * {
- *   "faceId": "string",       // qurilmadagi yuz identifikatori
- *   "timestamp": "ISO8601",   // vaqt
- *   "deviceId": "string",     // qurilma seriya raqami (ixtiyoriy)
- *   "temperature": 36.5       // harorat (ixtiyoriy)
- * }
- */
+const FACE_DEVICE_URL = `http://${config.faceDevice.ip}:${config.faceDevice.port}`;
+const deviceAuth = {
+  username: config.faceDevice.username,
+  password: config.faceDevice.password,
+};
+
+// Serverga so'rov yuborish (API key bilan)
+async function serverRequest(method, path, data = null) {
+  const url = `${config.serverUrl}${path}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Device-Key': config.deviceApiKey,
+    'X-Device-Id': config.deviceId,
+  };
+
+  try {
+    const res = await axios({ method, url, data, headers, timeout: 15000 });
+    return res.data;
+  } catch (err) {
+    console.error(`[SERVER] ${method.toUpperCase()} ${path} xatolik:`, err.response?.data || err.message);
+    throw err;
+  }
+}
+
+// ──────────────────────────────────────
+// 1. RO'YXATDAN O'TISH (birinchi marta)
+// ──────────────────────────────────────
+app.post('/setup', async (req, res) => {
+  const { serverUrl, schoolId, username, password, faceDeviceIp } = req.body;
+
+  console.log('[SETUP] Ro\'yxatdan o\'tish boshlandi...');
+
+  try {
+    // Serverga login qilish
+    const loginRes = await axios.post(`${serverUrl}/api/auth/login`, {
+      username,
+      password,
+    });
+
+    const token = loginRes.data.token;
+
+    // Qurilmani ro'yxatdan o'tkazish
+    const registerRes = await axios.post(
+      `${serverUrl}/api/devices/register`,
+      {
+        schoolId,
+        name: `Mini-PC (${os.hostname()})`,
+        ipAddress: getLocalIP(),
+        faceDeviceIp: faceDeviceIp || config.faceDevice.ip,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Config yangilash
+    config.serverUrl = serverUrl;
+    config.schoolId = schoolId;
+    config.deviceApiKey = registerRes.data.apiKey;
+    config.deviceId = registerRes.data.deviceId;
+    if (faceDeviceIp) {
+      config.faceDevice.ip = faceDeviceIp;
+    }
+    saveConfig();
+
+    console.log(`[SETUP] ✅ Ro'yxatdan o'tildi. Device ID: ${config.deviceId}`);
+
+    return res.json({
+      success: true,
+      message: 'Muvaffaqiyatli ro\'yxatdan o\'tildi',
+      deviceId: config.deviceId,
+    });
+  } catch (err) {
+    console.error('[SETUP] Xatolik:', err.response?.data || err.message);
+    return res.status(500).json({ error: 'Ro\'yxatdan o\'tishda xatolik', details: err.message });
+  }
+});
+
+// ──────────────────────────────────────
+// 2. FACE ID EVENT – qurilmadan keladi
+// ──────────────────────────────────────
 app.post('/event', async (req, res) => {
   const { faceId, timestamp, deviceId, temperature } = req.body;
 
@@ -56,60 +174,26 @@ app.post('/event', async (req, res) => {
   }
 
   const eventTime = timestamp || new Date().toISOString();
-
-  console.log(`[EVENT] Face detected: ${faceId} at ${eventTime} from device ${deviceId || 'unknown'}`);
+  console.log(`[EVENT] Yuz aniqlandi: ${faceId} | ${eventTime}`);
 
   try {
-    // 1. Backenddan studentni topish
-    const studentRes = await axios.get(`${BACKEND_URL}/api/students/face/${faceId}`);
-    const student = studentRes.data;
-
-    if (!student || !student.id) {
-      console.warn(`[EVENT] Student not found for faceId: ${faceId}`);
-      return res.status(404).json({ error: 'O\'quvchi topilmadi' });
-    }
-
-    // 2. Attendance yozish
-    const attendanceDto = {
-      studentId: student.id,
+    // Serverga davomat yuborish
+    const result = await serverRequest('post', '/api/attendance/device', {
+      faceId,
       timestamp: eventTime,
-      type: 'IN', // backend tomonida IN/OUT avtomatik aniqlanadi
-      deviceId: deviceId || null,
       temperature: temperature || null,
-    };
-
-    const attendanceRes = await axios.post(`${BACKEND_URL}/api/attendance`, attendanceDto);
-
-    console.log(`[EVENT] Attendance recorded for student ${student.fullName} (ID: ${student.id})`);
-
-    return res.json({
-      success: true,
-      message: 'Davomat qayd etildi',
-      student: {
-        id: student.id,
-        fullName: student.fullName,
-      },
-      attendance: attendanceRes.data,
     });
+
+    console.log(`[EVENT] ✅ Davomat qayd etildi: ${result.studentName || faceId}`);
+    return res.json({ success: true, data: result });
   } catch (err) {
-    console.error(`[EVENT] Error:`, err.response?.data || err.message);
-    return res.status(500).json({ error: 'Ichki server xatosi', details: err.message });
+    return res.status(500).json({ error: 'Serverga yuborishda xatolik', details: err.message });
   }
 });
 
 // ──────────────────────────────────────
-// 2. YUZ QO'SHISH – backenddan buyruq
+// 3. QURILMAGA YUZ QO'SHISH
 // ──────────────────────────────────────
-/**
- * Backend yangi o'quvchi qo'shganda yuzni qurilmaga yuklash uchun chaqiradi.
- *
- * Body:
- * {
- *   "faceId": "string",        // qurilmadagi identifikator
- *   "fullName": "string",      // o'quvchi ismi
- *   "faceImage": "base64..."   // yuz rasmi base64 formatda
- * }
- */
 app.post('/face/add', async (req, res) => {
   const { faceId, fullName, faceImage } = req.body;
 
@@ -117,7 +201,7 @@ app.post('/face/add', async (req, res) => {
     return res.status(400).json({ error: 'faceId, fullName va faceImage majburiy' });
   }
 
-  console.log(`[FACE/ADD] Adding face for: ${fullName} (${faceId})`);
+  console.log(`[FACE/ADD] Yuz qo'shilmoqda: ${fullName} (${faceId})`);
 
   try {
     // Hikvision ISAPI - foydalanuvchi qo'shish
@@ -140,96 +224,58 @@ app.post('/face/add', async (req, res) => {
       { auth: deviceAuth, timeout: 10000 }
     );
 
-    // Hikvision ISAPI - yuz rasmi yuklash
-    const facePayload = {
-      FaceDataRecord: {
-        faceLibType: 'blackFD',
-        FDID: '1',
-        FPID: faceId,
-      },
-    };
-
-    const imageBuffer = Buffer.from(faceImage, 'base64');
-
-    // Multipart form data
+    // Yuz rasmini yuklash
     const FormData = require('form-data');
     const form = new FormData();
-    form.append('FaceDataRecord', JSON.stringify(facePayload), {
-      contentType: 'application/json',
-    });
-    form.append('img', imageBuffer, {
-      filename: `${faceId}.jpg`,
-      contentType: 'image/jpeg',
-    });
+    const facePayload = { FaceDataRecord: { faceLibType: 'blackFD', FDID: '1', FPID: faceId } };
+    form.append('FaceDataRecord', JSON.stringify(facePayload), { contentType: 'application/json' });
+    form.append('img', Buffer.from(faceImage, 'base64'), { filename: `${faceId}.jpg`, contentType: 'image/jpeg' });
 
     await axios.post(
       `${FACE_DEVICE_URL}/ISAPI/Intelligent/FDLib/FDSetUp?format=json`,
       form,
-      {
-        auth: deviceAuth,
-        headers: form.getHeaders(),
-        timeout: 15000,
-      }
+      { auth: deviceAuth, headers: form.getHeaders(), timeout: 15000 }
     );
 
-    console.log(`[FACE/ADD] Successfully added face for ${fullName}`);
-    return res.json({ success: true, message: `${fullName} yuz muvaffaqiyatli qo'shildi` });
+    console.log(`[FACE/ADD] ✅ ${fullName} yuz qo'shildi`);
+    return res.json({ success: true, message: `${fullName} yuz qo'shildi` });
   } catch (err) {
-    console.error(`[FACE/ADD] Error:`, err.response?.data || err.message);
+    console.error(`[FACE/ADD] ❌ Xatolik:`, err.response?.data || err.message);
     return res.status(500).json({ error: 'Yuz qo\'shishda xatolik', details: err.message });
   }
 });
 
 // ──────────────────────────────────────
-// 3. YUZ O'CHIRISH – backenddan buyruq
+// 4. YUZ O'CHIRISH
 // ──────────────────────────────────────
-/**
- * Body:
- * {
- *   "faceId": "string"
- * }
- */
 app.delete('/face/:faceId', async (req, res) => {
   const { faceId } = req.params;
-
-  console.log(`[FACE/DELETE] Removing face: ${faceId}`);
+  console.log(`[FACE/DELETE] O'chirilmoqda: ${faceId}`);
 
   try {
-    // Hikvision ISAPI - foydalanuvchini o'chirish
-    const payload = {
-      UserInfoDelCond: {
-        EmployeeNoList: [{ employeeNo: faceId }],
-      },
-    };
-
     await axios.put(
       `${FACE_DEVICE_URL}/ISAPI/AccessControl/UserInfo/Delete?format=json`,
-      payload,
+      { UserInfoDelCond: { EmployeeNoList: [{ employeeNo: faceId }] } },
       { auth: deviceAuth, timeout: 10000 }
     );
 
-    console.log(`[FACE/DELETE] Successfully removed face: ${faceId}`);
-    return res.json({ success: true, message: `${faceId} yuz o'chirildi` });
+    console.log(`[FACE/DELETE] ✅ ${faceId} o'chirildi`);
+    return res.json({ success: true });
   } catch (err) {
-    console.error(`[FACE/DELETE] Error:`, err.response?.data || err.message);
-    return res.status(500).json({ error: 'Yuz o\'chirishda xatolik', details: err.message });
+    return res.status(500).json({ error: 'Xatolik', details: err.message });
   }
 });
 
 // ──────────────────────────────────────
-// 4. QURILMA HOLATI – health check
+// 5. QURILMA HOLATI
 // ──────────────────────────────────────
 app.get('/device/status', async (req, res) => {
-  console.log(`[DEVICE/STATUS] Checking device health...`);
-
   try {
     const response = await axios.get(
       `${FACE_DEVICE_URL}/ISAPI/System/deviceInfo?format=json`,
       { auth: deviceAuth, timeout: 5000 }
     );
-
     const info = response.data?.DeviceInfo || response.data;
-
     return res.json({
       success: true,
       online: true,
@@ -238,189 +284,181 @@ app.get('/device/status', async (req, res) => {
         model: info.model || 'Unknown',
         serialNumber: info.serialNumber || 'Unknown',
         firmwareVersion: info.firmwareVersion || 'Unknown',
-        macAddress: info.macAddress || 'Unknown',
       },
     });
   } catch (err) {
-    console.error(`[DEVICE/STATUS] Device offline or unreachable:`, err.message);
-    return res.json({
-      success: false,
-      online: false,
-      error: err.message,
-    });
+    return res.json({ success: false, online: false, error: err.message });
   }
 });
 
 // ──────────────────────────────────────
-// 5. QURILMANI QAYTA ISHGA TUSHIRISH
+// 6. QURILMANI REBOOT
 // ──────────────────────────────────────
 app.post('/device/reboot', async (req, res) => {
-  console.log(`[DEVICE/REBOOT] Rebooting device...`);
-
   try {
-    await axios.put(
-      `${FACE_DEVICE_URL}/ISAPI/System/reboot`,
-      null,
-      { auth: deviceAuth, timeout: 10000 }
-    );
-
-    console.log(`[DEVICE/REBOOT] Reboot command sent successfully`);
+    await axios.put(`${FACE_DEVICE_URL}/ISAPI/System/reboot`, null, { auth: deviceAuth, timeout: 10000 });
     return res.json({ success: true, message: 'Qurilma qayta ishga tushirilmoqda' });
   } catch (err) {
-    console.error(`[DEVICE/REBOOT] Error:`, err.response?.data || err.message);
-    return res.status(500).json({ error: 'Qayta ishga tushirishda xatolik', details: err.message });
+    return res.status(500).json({ error: 'Xatolik', details: err.message });
   }
 });
 
 // ──────────────────────────────────────
-// 6. BARCHA YUZLAR RO'YXATI
+// 7. YUZLAR RO'YXATI
 // ──────────────────────────────────────
 app.get('/face/list', async (req, res) => {
-  console.log(`[FACE/LIST] Fetching all faces from device...`);
-
   try {
-    const payload = {
-      UserInfoSearchCond: {
-        searchID: '1',
-        maxResults: 1000,
-        searchResultPosition: 0,
-      },
-    };
-
     const response = await axios.post(
       `${FACE_DEVICE_URL}/ISAPI/AccessControl/UserInfo/Search?format=json`,
-      payload,
+      { UserInfoSearchCond: { searchID: '1', maxResults: 5000, searchResultPosition: 0 } },
       { auth: deviceAuth, timeout: 15000 }
     );
-
     const users = response.data?.UserInfoSearch?.UserInfo || [];
-
-    return res.json({
-      success: true,
-      total: users.length,
-      users: users.map((u) => ({
-        employeeNo: u.employeeNo,
-        name: u.name,
-        userType: u.userType,
-      })),
-    });
+    return res.json({ success: true, total: users.length, users: users.map(u => ({ employeeNo: u.employeeNo, name: u.name })) });
   } catch (err) {
-    console.error(`[FACE/LIST] Error:`, err.response?.data || err.message);
-    return res.status(500).json({ error: 'Ro\'yxatni olishda xatolik', details: err.message });
+    return res.status(500).json({ error: 'Xatolik', details: err.message });
   }
 });
 
 // ──────────────────────────────────────
-// 7. BACKEND BILAN SINXRONIZATSIYA
+// 8. SINXRONIZATSIYA
 // ──────────────────────────────────────
-/**
- * Backend chaqiradi – qurilmadagi yuzlarni backend DB bilan solishtirib
- * yangilarini qo'shadi, eskilarini o'chiradi.
- */
 app.post('/sync', async (req, res) => {
-  console.log(`[SYNC] Starting sync between device and backend...`);
+  console.log('[SYNC] Sinxronizatsiya boshlandi...');
 
   try {
-    // 1. Qurilmadagi barcha yuzlarni olish
-    const devicePayload = {
-      UserInfoSearchCond: {
-        searchID: '1',
-        maxResults: 5000,
-        searchResultPosition: 0,
-      },
-    };
+    // Serverdan maktab o'quvchilarini olish
+    const students = await serverRequest('get', `/api/devices/${config.deviceId}/students`);
 
+    // Qurilmadagi yuzlarni olish
     const deviceRes = await axios.post(
       `${FACE_DEVICE_URL}/ISAPI/AccessControl/UserInfo/Search?format=json`,
-      devicePayload,
+      { UserInfoSearchCond: { searchID: '1', maxResults: 5000, searchResultPosition: 0 } },
       { auth: deviceAuth, timeout: 15000 }
     );
-
     const deviceUsers = deviceRes.data?.UserInfoSearch?.UserInfo || [];
-    const deviceFaceIds = new Set(deviceUsers.map((u) => u.employeeNo));
+    const deviceFaceIds = new Set(deviceUsers.map(u => u.employeeNo));
+    const serverFaceIds = new Set(students.map(s => s.faceId));
 
-    // 2. Backenddan barcha studentlarni olish
-    const backendRes = await axios.get(`${BACKEND_URL}/api/students`);
-    const backendStudents = backendRes.data || [];
-    const backendFaceIds = new Set(backendStudents.map((s) => s.faceId));
+    const results = { added: 0, removed: 0, errors: [] };
 
-    // 3. Backendda bor, qurilmada yo'q – qo'shish kerak
-    const toAdd = backendStudents.filter((s) => !deviceFaceIds.has(s.faceId));
-
-    // 4. Qurilmada bor, backendda yo'q – o'chirish kerak
-    const toRemove = deviceUsers.filter((u) => !backendFaceIds.has(u.employeeNo));
-
-    const results = { added: [], removed: [], errors: [] };
-
-    // Qo'shish
-    for (const student of toAdd) {
-      try {
-        // Yuz rasmini backenddan olish
-        const imgRes = await axios.get(`${BACKEND_URL}/api/students/${student.id}/face-image`, {
-          responseType: 'arraybuffer',
-        });
-        const base64Image = Buffer.from(imgRes.data).toString('base64');
-
-        await axios.post(`http://localhost:${PORT}/face/add`, {
-          faceId: student.faceId,
-          fullName: student.fullName,
-          faceImage: base64Image,
-        });
-
-        results.added.push(student.faceId);
-      } catch (err) {
-        results.errors.push({ faceId: student.faceId, error: err.message });
+    // Qo'shish kerak
+    for (const student of students) {
+      if (!deviceFaceIds.has(student.faceId) && student.faceImage) {
+        try {
+          await axios.post(`http://localhost:${config.port}/face/add`, {
+            faceId: student.faceId,
+            fullName: student.fullName,
+            faceImage: student.faceImage,
+          });
+          results.added++;
+        } catch (err) {
+          results.errors.push({ faceId: student.faceId, error: err.message });
+        }
       }
     }
 
-    // O'chirish
-    for (const user of toRemove) {
-      try {
-        await axios.delete(`http://localhost:${PORT}/face/${user.employeeNo}`);
-        results.removed.push(user.employeeNo);
-      } catch (err) {
-        results.errors.push({ faceId: user.employeeNo, error: err.message });
+    // O'chirish kerak
+    for (const user of deviceUsers) {
+      if (!serverFaceIds.has(user.employeeNo)) {
+        try {
+          await axios.delete(`http://localhost:${config.port}/face/${user.employeeNo}`);
+          results.removed++;
+        } catch (err) {
+          results.errors.push({ faceId: user.employeeNo, error: err.message });
+        }
       }
     }
 
-    console.log(`[SYNC] Done. Added: ${results.added.length}, Removed: ${results.removed.length}, Errors: ${results.errors.length}`);
-
-    return res.json({
-      success: true,
-      message: 'Sinxronizatsiya tugadi',
-      results,
-    });
+    console.log(`[SYNC] ✅ Qo'shildi: ${results.added}, O'chirildi: ${results.removed}`);
+    return res.json({ success: true, results });
   } catch (err) {
-    console.error(`[SYNC] Error:`, err.response?.data || err.message);
     return res.status(500).json({ error: 'Sinxronizatsiyada xatolik', details: err.message });
   }
 });
 
 // ──────────────────────────────────────
-// 8. MINI-PC HEALTH – o'zi haqida
+// 9. HEALTH
 // ──────────────────────────────────────
 app.get('/health', (req, res) => {
   return res.json({
     service: 'mini-pc-bridge',
     status: 'running',
-    uptime: process.uptime(),
+    deviceId: config.deviceId,
+    schoolId: config.schoolId,
+    serverUrl: config.serverUrl,
+    uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
-    config: {
-      backendUrl: BACKEND_URL,
-      faceDeviceUrl: FACE_DEVICE_URL,
-      port: PORT,
-    },
   });
 });
 
 // ──────────────────────────────────────
-// Start
+// 10. HEARTBEAT – serverga har 30 sek
 // ──────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n╔══════════════════════════════════════════╗`);
-  console.log(`║   Mini-PC Bridge Server                  ║`);
-  console.log(`║   Port: ${PORT}                             ║`);
-  console.log(`║   Backend: ${BACKEND_URL.padEnd(28)}║`);
-  console.log(`║   Device:  ${FACE_DEVICE_URL.padEnd(28)}║`);
-  console.log(`╚══════════════════════════════════════════╝\n`);
+async function sendHeartbeat() {
+  if (!config.deviceApiKey) return; // ro'yxatdan o'tmagan
+
+  try {
+    // Qurilma online/offline tekshirish
+    let deviceOnline = false;
+    try {
+      await axios.get(`${FACE_DEVICE_URL}/ISAPI/System/deviceInfo?format=json`, {
+        auth: deviceAuth, timeout: 3000,
+      });
+      deviceOnline = true;
+    } catch {}
+
+    await serverRequest('post', '/api/devices/heartbeat', {
+      uptime: Math.floor(process.uptime()),
+      deviceOnline,
+      localIp: getLocalIP(),
+      faceDeviceIp: config.faceDevice.ip,
+    });
+  } catch (err) {
+    // Silent – server yo'q bo'lsa ham ishlashda davom etadi
+  }
+}
+
+// ──────────────────────────────────────
+// Helper – local IP olish
+// ──────────────────────────────────────
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
+
+// ──────────────────────────────────────
+// START
+// ──────────────────────────────────────
+app.listen(config.port, () => {
+  console.log('');
+  console.log('╔══════════════════════════════════════════════════╗');
+  console.log('║         🖥️  Mini-PC Bridge v2.0                 ║');
+  console.log('╠══════════════════════════════════════════════════╣');
+  console.log(`║  Port:       ${String(config.port).padEnd(36)}║`);
+  console.log(`║  Server:     ${config.serverUrl.padEnd(36)}║`);
+  console.log(`║  Device ID:  ${(config.deviceId || 'Ro\'yxatdan o\'tilmagan').padEnd(36)}║`);
+  console.log(`║  School ID:  ${(config.schoolId || '-').padEnd(36)}║`);
+  console.log(`║  Face IP:    ${config.faceDevice.ip.padEnd(36)}║`);
+  console.log(`║  Local IP:   ${getLocalIP().padEnd(36)}║`);
+  console.log('╚══════════════════════════════════════════════════╝');
+  console.log('');
+
+  if (!config.deviceApiKey) {
+    console.log('⚠️  Qurilma ro\'yxatdan o\'tmagan!');
+    console.log('   POST http://localhost:' + config.port + '/setup');
+    console.log('   Body: { "serverUrl": "https://maktab.ecos.uz", "schoolId": "1", "username": "...", "password": "...", "faceDeviceIp": "192.168.1.100" }');
+    console.log('');
+  }
+
+  // Heartbeat boshlash
+  setInterval(sendHeartbeat, config.heartbeatInterval);
+  sendHeartbeat();
 });
