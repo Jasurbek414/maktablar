@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/maktabdb
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  security:
+    user:
+      name: admin
+      password: admin123
+    jwt:
+      secret: "${JWT_SECRET:ChangeMeToSecureRandom}"
+      expirationMs: 86400000
