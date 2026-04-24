@@ -73,13 +73,13 @@ export default function Sidebar({ user }) {
               className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 relative ${
                 active
                   ? 'bg-gradient-to-r from-emerald-500/15 to-teal-500/5 text-white shadow-sm shadow-emerald-500/5'
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]'
+                  : 'text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/[0.08]'
               }`}
             >
               {active && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-emerald-400 to-teal-400" />
               )}
-              <span className={active ? 'text-emerald-400' : 'text-slate-600 group-hover:text-slate-400 transition-colors'}>
+              <span className={active ? 'text-emerald-400' : 'text-slate-600 group-hover:text-emerald-400 transition-colors'}>
                 <I d={item.icon} />
               </span>
               {item.label}
