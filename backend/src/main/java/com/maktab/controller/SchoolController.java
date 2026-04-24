@@ -5,6 +5,7 @@ import com.maktab.model.District;
 import com.maktab.repository.SchoolRepository;
 import com.maktab.repository.DistrictRepository;
 import com.maktab.repository.StudentRepository;
+import com.maktab.repository.SchoolClassRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,14 +17,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/schools")
 public class SchoolController {
 
-    @Autowired
-    private SchoolRepository schoolRepository;
-
-    @Autowired
-    private DistrictRepository districtRepository;
-
-    @Autowired
-    private StudentRepository studentRepository;
+    @Autowired private SchoolRepository schoolRepository;
+    @Autowired private DistrictRepository districtRepository;
+    @Autowired private StudentRepository studentRepository;
+    @Autowired private SchoolClassRepository classRepository;
 
     @GetMapping
     public List<Map<String, Object>> getAll(@RequestParam(required = false) Long districtId) {
@@ -42,6 +39,8 @@ public class SchoolController {
             m.put("provinceName", s.getDistrict().getProvince().getName());
             long studentCount = studentRepository.countBySchoolId(s.getId());
             m.put("studentCount", studentCount);
+            long classCount = classRepository.findBySchoolId(s.getId()).size();
+            m.put("classCount", classCount);
             return m;
         }).collect(Collectors.toList());
     }

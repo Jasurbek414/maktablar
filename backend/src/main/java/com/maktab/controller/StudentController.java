@@ -23,9 +23,11 @@ public class StudentController {
     private SchoolRepository schoolRepository;
 
     @GetMapping
-    public List<Map<String, Object>> getAll(@RequestParam(required = false) Long schoolId) {
+    public List<Map<String, Object>> getAll(@RequestParam(required = false) Long schoolId, @RequestParam(required = false) Long classId) {
         List<Student> students;
-        if (schoolId != null) {
+        if (classId != null) {
+            students = studentRepository.findByClassId(classId);
+        } else if (schoolId != null) {
             students = studentRepository.findBySchoolId(schoolId);
         } else {
             students = studentRepository.findAll();
@@ -39,6 +41,7 @@ public class StudentController {
             m.put("photoUrl", s.getPhotoUrl());
             m.put("schoolId", s.getSchool().getId());
             m.put("schoolName", s.getSchool().getName());
+            m.put("classId", s.getClassId());
             return m;
         }).collect(Collectors.toList());
     }
@@ -85,6 +88,9 @@ public class StudentController {
             s.setBirthDate(LocalDate.parse(body.get("birthDate").toString()));
         }
         s.setSchool(school);
+        if (body.containsKey("classId") && body.get("classId") != null) {
+            s.setClassId(Long.valueOf(body.get("classId").toString()));
+        }
         Student saved = studentRepository.save(s);
 
         Map<String, Object> result = new HashMap<>();
@@ -105,6 +111,9 @@ public class StudentController {
             if (body.containsKey("schoolId")) {
                 School school = schoolRepository.findById(Long.valueOf(body.get("schoolId").toString())).orElse(null);
                 if (school != null) s.setSchool(school);
+            }
+            if (body.containsKey("classId")) {
+                s.setClassId(body.get("classId") != null ? Long.valueOf(body.get("classId").toString()) : null);
             }
             studentRepository.save(s);
             return ResponseEntity.ok(Map.of("id", s.getId(), "fullName", s.getFullName()));
