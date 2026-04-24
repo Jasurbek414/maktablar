@@ -78,6 +78,14 @@ export default function Dashboard({ user }) {
   const fmt = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const fmtDate = (d) => d.toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  const roleSubtitle = {
+    SUPERADMIN: 'Barcha viloyatlar boshqaruvi',
+    ADMIN: user?.provinceName || 'Viloyat boshqaruvi',
+    DIRECTOR: user?.schoolName || 'Maktab boshqaruvi',
+    MUDIR: user?.schoolName || "O'quv ishlari",
+    TEACHER: user?.schoolName || "O'qituvchi",
+  };
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Hero */}
@@ -88,6 +96,7 @@ export default function Dashboard({ user }) {
           <div>
             <p className="text-slate-400 text-sm">{greeting()}</p>
             <h1 className="text-2xl font-bold text-white mt-1">{user?.fullName}</h1>
+            <p className="text-emerald-400/60 text-xs mt-1 font-medium">{roleSubtitle[user?.role]}</p>
             <p className="text-slate-500 text-sm mt-1 capitalize">{fmtDate(time)}</p>
           </div>
           <div className="text-right">

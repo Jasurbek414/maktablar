@@ -78,7 +78,7 @@ function SchoolCard({ item, onEdit, onDelete }) {
   );
 }
 
-export default function Schools() {
+export default function Schools({ user }) {
   const [view, setView] = useState('card');
   const [items, setItems] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -92,7 +92,15 @@ export default function Schools() {
     setLoading(true);
     try {
       const [s, d] = await Promise.all([api.get('/api/schools'), api.get('/api/districts')]);
-      setItems(s); setDistricts(d);
+      // ADMIN faqat o'z viloyatidagi maktablarni ko'radi
+      if (user?.role === 'ADMIN' && user?.provinceId) {
+        const myDistricts = d.filter(dd => dd.provinceId == user.provinceId);
+        const myDistrictIds = new Set(myDistricts.map(dd => dd.id));
+        setItems(s.filter(sc => myDistrictIds.has(sc.districtId)));
+        setDistricts(myDistricts);
+      } else {
+        setItems(s); setDistricts(d);
+      }
     } catch {}
     setLoading(false);
   };

@@ -106,7 +106,7 @@ function DistrictCard({ item, onEdit, onDelete }) {
 }
 
 /* ═══ MAIN ═══ */
-export default function Districts() {
+export default function Districts({ user }) {
   const [provinces, setProvinces] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState(null);
   const [districts, setDistricts] = useState([]);
@@ -117,8 +117,18 @@ export default function Districts() {
   const [form, setForm] = useState({});
   const [search, setSearch] = useState('');
 
+  const isAdmin = user?.role === 'ADMIN';
+
   useEffect(() => {
-    api.get('/api/provinces').then(p => { setProvinces(p); setLoading(false); }).catch(() => setLoading(false));
+    api.get('/api/provinces').then(p => {
+      setProvinces(p);
+      // ADMIN avtomatik o'z viloyatiga yo'naltiriladi
+      if (isAdmin && user?.provinceId) {
+        const myProv = p.find(x => x.id === user.provinceId);
+        if (myProv) { selectProvince(myProv); return; }
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
   const selectProvince = async (prov) => {
@@ -184,9 +194,11 @@ export default function Districts() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={goBack} className="p-2 rounded-xl border border-emerald-500/[0.1] text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/[0.08] transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
-          </button>
+          {!isAdmin && (
+            <button onClick={goBack} className="p-2 rounded-xl border border-emerald-500/[0.1] text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/[0.08] transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+            </button>
+          )}
           <div>
             <h1 className="text-xl font-bold text-white">{selectedProvince.name}</h1>
             <p className="text-sm text-slate-500 mt-0.5">{districts.length} ta tuman</p>

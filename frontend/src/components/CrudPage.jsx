@@ -34,7 +34,7 @@ function Select({ label, options, ...props }) {
   );
 }
 
-export default function CrudPage({ title, apiPath, columns, formFields, loadDeps }) {
+export default function CrudPage({ title, apiPath, columns, formFields, loadDeps, filterFn }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
@@ -45,7 +45,11 @@ export default function CrudPage({ title, apiPath, columns, formFields, loadDeps
 
   const load = async () => {
     setLoading(true);
-    try { setItems(await api.get(apiPath)); } catch {}
+    try {
+      let data = await api.get(apiPath);
+      if (filterFn) data = filterFn(data);
+      setItems(data);
+    } catch {}
     setLoading(false);
   };
 
