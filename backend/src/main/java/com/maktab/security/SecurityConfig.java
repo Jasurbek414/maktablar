@@ -38,7 +38,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Ochiq endpointlar
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/attendance").permitAll() // mini-pc dan keladi
+                .requestMatchers("/api/attendance").permitAll() // mini-pc event
+                .requestMatchers("/api/attendance/sync").permitAll() // mini-pc batch sync
+                .requestMatchers("/api/attendance/heartbeat").permitAll() // mini-pc heartbeat
                 .requestMatchers("/api/students/face/**").permitAll() // mini-pc dan
                 .requestMatchers("/api/files/**").permitAll() // rasm serve
                 .requestMatchers("/api/guardians/register").permitAll() // bot dan
