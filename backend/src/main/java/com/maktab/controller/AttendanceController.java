@@ -21,6 +21,7 @@ public class AttendanceController {
     @Autowired private AttendanceRepository attendanceRepo;
     @Autowired private StudentRepository studentRepo;
     @Autowired private DeviceHeartbeatRepository heartbeatRepo;
+    @Autowired private com.maktab.service.NotificationService notificationService;
 
     // ─── Mini-PC: single event ───
     @PostMapping
@@ -45,6 +46,11 @@ public class AttendanceController {
             a.setTemperature(body.get("temperature") != null ? Double.valueOf(body.get("temperature").toString()) : null);
             a.setDeviceSerial(body.get("deviceSerial") != null ? body.get("deviceSerial").toString() : null);
             attendanceRepo.save(a);
+
+            // 🔔 Ota-onaga xabar yuborish (async)
+            String snapshotUrl = body.get("snapshotUrl") != null ? body.get("snapshotUrl").toString() : null;
+            notificationService.notifyGuardians(student, timestamp, type.name(), snapshotUrl);
+
             return ResponseEntity.ok(Map.of("status", "ok", "id", a.getId()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

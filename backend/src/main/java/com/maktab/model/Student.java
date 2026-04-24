@@ -33,7 +33,7 @@ public class Student {
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "student_guardians",
         joinColumns = @JoinColumn(name = "student_id"),
