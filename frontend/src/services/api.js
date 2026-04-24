@@ -77,6 +77,19 @@ export const api = {
     return text ? JSON.parse(text) : { success: true };
   },
 
+  async upload(file) {
+    const token = localStorage.getItem('token');
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${API_BASE}/api/files/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    if (!res.ok) throw new Error('Yuklash xatosi');
+    return res.json();
+  },
+
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
