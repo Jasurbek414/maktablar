@@ -10,7 +10,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "attendance")
+@Table(name = "attendance", uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "timestamp", "type"}))
 public class Attendance {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,6 +26,12 @@ public class Attendance {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AttendanceType type;
+
+    @Column
+    private Double temperature; // optional: Face ID device may send temperature
+
+    @Column
+    private String deviceSerial; // which device recorded this
 
     public enum AttendanceType {
         IN,

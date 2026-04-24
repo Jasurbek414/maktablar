@@ -7,6 +7,7 @@ import Provinces from './pages/Provinces';
 import Districts from './pages/Districts';
 import Schools from './pages/Schools';
 import Students from './pages/Students';
+import Attendance from './pages/Attendance';
 import Users from './pages/Users';
 
 /* ── Ruxsat tekshiruvchi ── */
@@ -82,6 +83,9 @@ export default function App() {
               } />
               <Route path="/students" element={
                 <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR']}><Students user={user} /></Gate>
+              } />
+              <Route path="/attendance" element={
+                <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR', 'MUDIR', 'TEACHER']}><Attendance user={user} /></Gate>
               } />
               <Route path="/users" element={
                 <Gate user={user} allowed={['SUPERADMIN']}><Users user={user} /></Gate>
