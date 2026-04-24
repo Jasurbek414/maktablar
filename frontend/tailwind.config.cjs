@@ -1,17 +1,12 @@
-// tailwind.config.cjs
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
-  content: ['./src/**/*.{js,jsx,ts,tsx,html}'],
+  content: [
+    './index.html',
+    './src/**/*.{js,jsx,ts,tsx}',
+  ],
   theme: {
     extend: {
-      colors: {
-        primary: 'hsl(210, 60%, 55%)',
-        background: 'hsl(210, 40%, 12%)',
-        glass: 'rgba(255, 255, 255, 0.1)',
-      },
-      backdropBlur: {
-        xs: '2px',
-      },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
