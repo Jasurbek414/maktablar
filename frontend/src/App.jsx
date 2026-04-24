@@ -9,6 +9,7 @@ import Schools from './pages/Schools';
 import Students from './pages/Students';
 import Attendance from './pages/Attendance';
 import Users from './pages/Users';
+import Classes from './pages/Classes';
 
 /* ── Ruxsat tekshiruvchi ── */
 function Gate({ user, allowed, children }) {
@@ -89,6 +90,9 @@ export default function App() {
               } />
               <Route path="/users" element={
                 <Gate user={user} allowed={['SUPERADMIN']}><Users user={user} /></Gate>
+              } />
+              <Route path="/classes" element={
+                <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR']}><Classes /></Gate>
               } />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

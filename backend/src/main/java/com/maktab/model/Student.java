@@ -33,6 +33,9 @@ public class Student {
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
 
+    @Column(name = "class_id")
+    private Long classId;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "student_guardians",
