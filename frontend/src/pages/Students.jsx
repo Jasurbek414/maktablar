@@ -36,20 +36,31 @@ function BackBtn({ onClick }) {
   );
 }
 
-function NavCard({ icon, title, subtitle, color = 'emerald', onClick }) {
+function NavCard({ icon, title, subtitle, color = 'emerald', onClick, stats }) {
   const colors = { emerald: 'from-emerald-500/20 to-cyan-500/10 text-emerald-400', teal: 'from-teal-500/20 to-emerald-500/10 text-teal-400', cyan: 'from-cyan-500/20 to-blue-500/10 text-cyan-400' };
+  const glows = { emerald: 'from-emerald-500/[0.04]', teal: 'from-teal-500/[0.04]', cyan: 'from-cyan-500/[0.04]' };
+  const hoverColor = { emerald: 'text-emerald-300', teal: 'text-teal-300', cyan: 'text-cyan-300' };
   return (
-    <button onClick={onClick} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-      <div className="relative flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colors[color]} flex items-center justify-center shrink-0`}>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={icon} /></svg>
+    <button onClick={onClick} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 relative overflow-hidden">
+      <div className={`absolute inset-0 bg-gradient-to-br ${glows[color]} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
+      <div className="absolute -top-12 -right-12 w-28 h-28 rounded-full bg-emerald-500/[0.05] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+      <div className="relative p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${colors[color]} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={icon} /></svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className={`text-sm font-semibold text-white group-hover:${hoverColor[color]} transition-colors truncate`}>{title}</h3>
+            <p className="text-[10px] text-slate-600 mt-0.5">{subtitle}</p>
+          </div>
+          <svg className="w-4 h-4 text-slate-700 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors truncate">{title}</h3>
-          <p className="text-[10px] text-slate-600">{subtitle}</p>
-        </div>
-        <svg className="w-4 h-4 text-slate-600 group-hover:text-emerald-400 transition-colors shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+        {stats && <div className="grid grid-cols-2 gap-1.5">
+          {stats.map((s, i) => <div key={i} className={`flex items-center gap-2 py-1.5 px-2.5 rounded-lg ${s.bg}`}>
+            <span className={`text-xs font-bold ${s.color}`}>{s.value}</span>
+            <span className="text-[7px] text-slate-600">{s.label}</span>
+          </div>)}
+        </div>}
       </div>
     </button>
   );
@@ -160,7 +171,7 @@ export default function Students({ user }) {
     return (<div className="animate-fade-in">
       <div className="mb-6"><h1 className="text-xl font-bold text-white">O'quvchilar</h1><p className="text-sm text-slate-500 mt-0.5">Viloyatni tanlang</p></div>
       {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
-        {provinces.map(p => <NavCard key={p.id} icon={ICONS.prov} title={p.name} subtitle={`${p.districtCount} tuman · ${p.schoolCount||0} maktab`} onClick={() => pickProv(p)} />)}
+        {provinces.map(p => <NavCard key={p.id} icon={ICONS.prov} title={p.name} subtitle={`${p.studentCount||0} o'quvchi`} onClick={() => pickProv(p)} stats={[{value:p.districtCount,label:'Tuman',color:'text-emerald-400',bg:'bg-emerald-500/[0.06]'},{value:p.schoolCount||0,label:'Maktab',color:'text-cyan-400',bg:'bg-cyan-500/[0.06]'}]} />)}
       </div>}
     </div>);
   }
@@ -170,7 +181,7 @@ export default function Students({ user }) {
     return (<div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-6">{!isAdmin && <BackBtn onClick={goProvs} />}<div><h1 className="text-xl font-bold text-white">{selProv.name}</h1><Breadcrumb items={["O'quvchilar", selProv.name]} /></div></div>
       {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
-        {districts.map(d => <NavCard key={d.id} icon={ICONS.dist} color="teal" title={d.name} subtitle={`${d.schoolCount||0} maktab · ${d.studentCount||0} o'quvchi`} onClick={() => pickDist(d)} />)}
+        {districts.map(d => <NavCard key={d.id} icon={ICONS.dist} color="teal" title={d.name} subtitle={`${d.studentCount||0} o'quvchi`} onClick={() => pickDist(d)} stats={[{value:d.schoolCount||0,label:'Maktab',color:'text-teal-400',bg:'bg-teal-500/[0.06]'},{value:d.studentCount||0,label:"O'quvchi",color:'text-amber-400',bg:'bg-amber-500/[0.06]'}]} />)}
         {!districts.length && <p className="col-span-full text-center text-slate-600 py-12">Tuman topilmadi</p>}
       </div>}
     </div>);
@@ -181,7 +192,7 @@ export default function Students({ user }) {
     return (<div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-6"><BackBtn onClick={goDists} /><div><h1 className="text-xl font-bold text-white">{selDist.name}</h1><Breadcrumb items={["O'quvchilar", selProv.name, selDist.name]} /></div></div>
       {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
-        {schools.map(s => <NavCard key={s.id} icon={ICONS.school} color="cyan" title={s.name} subtitle={`${s.studentCount||0} o'quvchi`} onClick={() => pickSchool(s)} />)}
+        {schools.map(s => <NavCard key={s.id} icon={ICONS.school} color="cyan" title={s.name} subtitle={`${s.studentCount||0} o'quvchi`} onClick={() => pickSchool(s)} stats={[{value:s.studentCount||0,label:"O'quvchi",color:'text-cyan-400',bg:'bg-cyan-500/[0.06]'},{value:'0%',label:'Davomat',color:'text-emerald-400',bg:'bg-emerald-500/[0.06]'}]} />)}
         {!schools.length && <p className="col-span-full text-center text-slate-600 py-12">Maktab topilmadi</p>}
       </div>}
     </div>);
