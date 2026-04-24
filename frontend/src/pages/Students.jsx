@@ -1,38 +1,233 @@
-import React from 'react';
-import CrudPage, { Input, Select } from '../components/CrudPage';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { Input } from '../components/CrudPage';
+import ConfirmModal from '../components/ConfirmModal';
+
+function Modal({ open, onClose, title, children }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.12] p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-white mb-5">{title}</h3>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Breadcrumb({ items }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] flex-wrap">
+      {items.map((item, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <svg className="w-3 h-3 text-slate-700 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>}
+          <span className={i === items.length - 1 ? 'text-emerald-400 font-medium' : 'text-slate-600'}>{item}</span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function BackBtn({ onClick }) {
+  return (
+    <button onClick={onClick} className="p-2 rounded-xl border border-emerald-500/[0.1] text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/[0.08] transition-colors shrink-0">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+    </button>
+  );
+}
+
+function NavCard({ icon, title, subtitle, color = 'emerald', onClick }) {
+  const colors = { emerald: 'from-emerald-500/20 to-cyan-500/10 text-emerald-400', teal: 'from-teal-500/20 to-emerald-500/10 text-teal-400', cyan: 'from-cyan-500/20 to-blue-500/10 text-cyan-400' };
+  return (
+    <button onClick={onClick} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      <div className="relative flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colors[color]} flex items-center justify-center shrink-0`}>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={icon} /></svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors truncate">{title}</h3>
+          <p className="text-[10px] text-slate-600">{subtitle}</p>
+        </div>
+        <svg className="w-4 h-4 text-slate-600 group-hover:text-emerald-400 transition-colors shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+      </div>
+    </button>
+  );
+}
+
+function StudentCard({ s, onEdit, onDelete }) {
+  return (
+    <div className="group relative rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/20 transition-all duration-300 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      <div className="relative p-5">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 flex items-center justify-center text-emerald-400 text-sm font-bold shrink-0">
+              {s.fullName?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors">{s.fullName}</h3>
+              <p className="text-[10px] text-slate-600 mt-0.5">Face ID: {s.faceId || '—'}</p>
+            </div>
+          </div>
+          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => onEdit(s)} className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+            </button>
+            <button onClick={() => onDelete(s.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79" /></svg>
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="py-1.5 px-3 rounded-lg bg-emerald-500/[0.05] text-center">
+            <p className="text-xs font-bold text-emerald-400">0%</p>
+            <p className="text-[8px] text-slate-600 uppercase">Davomat</p>
+          </div>
+          <div className="py-1.5 px-3 rounded-lg bg-cyan-500/[0.05] text-center">
+            <p className="text-xs font-bold text-cyan-400">{s.schoolName || '—'}</p>
+            <p className="text-[8px] text-slate-600 uppercase">Maktab</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const Loader = () => <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>;
+const ICONS = { prov: 'M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21', dist: 'M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z', school: 'M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21' };
 
 export default function Students({ user }) {
+  const [provinces, setProvinces] = useState([]);
+  const [allDistricts, setAllDistricts] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [schools, setSchools] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [selProv, setSelProv] = useState(null);
+  const [selDist, setSelDist] = useState(null);
+  const [selSchool, setSelSchool] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+  const [search, setSearch] = useState('');
+  const [deleteId, setDeleteId] = useState(null);
+  const isAdmin = user?.role === 'ADMIN';
+  const isDirector = user?.role === 'DIRECTOR';
+
+  useEffect(() => {
+    Promise.all([api.get('/api/provinces'), api.get('/api/districts')]).then(([p, d]) => {
+      setProvinces(p); setAllDistricts(d);
+      if (isDirector && user?.schoolId) { loadSchoolDirect(); return; }
+      if (isAdmin && user?.provinceId) { const my = p.find(x => x.id === user.provinceId); if (my) { pickProv(my, d); return; } }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const loadSchoolDirect = async () => {
+    try {
+      const s = await api.get(`/api/schools/${user.schoolId}`);
+      setSelSchool(s); setStudents(await api.get(`/api/students?schoolId=${user.schoolId}`));
+    } catch {}
+    setLoading(false);
+  };
+
+  const pickProv = (p, dists) => { setSelProv(p); setSelDist(null); setSelSchool(null); setSearch(''); setDistricts((dists || allDistricts).filter(d => d.provinceId == p.id)); setLoading(false); };
+  const pickDist = async (d) => { setSelDist(d); setSelSchool(null); setLoading(true); setSearch(''); try { setSchools(await api.get(`/api/schools?districtId=${d.id}`)); } catch {} setLoading(false); };
+  const pickSchool = async (s) => { setSelSchool(s); setLoading(true); setSearch(''); try { setStudents(await api.get(`/api/students?schoolId=${s.id}`)); } catch {} setLoading(false); };
+
+  const goProvs = () => { setSelProv(null); setSelDist(null); setSelSchool(null); setSearch(''); };
+  const goDists = () => { setSelDist(null); setSelSchool(null); setSearch(''); };
+  const goSchools = () => { setSelSchool(null); setSearch(''); };
+
+  const openAdd = () => { setEditing(null); setForm({ schoolId: selSchool?.id }); setModal(true); };
+  const openEdit = (s) => { setEditing(s); setForm({ ...s }); setModal(true); };
+  const save = async () => {
+    try {
+      if (editing) await api.put(`/api/students/${editing.id}`, form);
+      else await api.post('/api/students', form);
+      setModal(false); if (selSchool) await pickSchool(selSchool);
+    } catch (e) { alert(e.message); }
+  };
+  const remove = async (id) => {
+    try { await api.del(`/api/students/${id}`); setDeleteId(null); if (selSchool) await pickSchool(selSchool); } catch (e) { alert(e.message); }
+  };
+
+  const filtered = students.filter(s => s.fullName?.toLowerCase().includes(search.toLowerCase()));
+
+  /* 1. Viloyat */
+  if (!selProv && !isDirector) {
+    return (<div className="animate-fade-in">
+      <div className="mb-6"><h1 className="text-xl font-bold text-white">O'quvchilar</h1><p className="text-sm text-slate-500 mt-0.5">Viloyatni tanlang</p></div>
+      {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
+        {provinces.map(p => <NavCard key={p.id} icon={ICONS.prov} title={p.name} subtitle={`${p.districtCount} tuman · ${p.schoolCount||0} maktab`} onClick={() => pickProv(p)} />)}
+      </div>}
+    </div>);
+  }
+
+  /* 2. Tuman */
+  if (!selDist && !isDirector) {
+    return (<div className="animate-fade-in">
+      <div className="flex items-center gap-3 mb-6">{!isAdmin && <BackBtn onClick={goProvs} />}<div><h1 className="text-xl font-bold text-white">{selProv.name}</h1><Breadcrumb items={["O'quvchilar", selProv.name]} /></div></div>
+      {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
+        {districts.map(d => <NavCard key={d.id} icon={ICONS.dist} color="teal" title={d.name} subtitle={`${d.schoolCount||0} maktab · ${d.studentCount||0} o'quvchi`} onClick={() => pickDist(d)} />)}
+        {!districts.length && <p className="col-span-full text-center text-slate-600 py-12">Tuman topilmadi</p>}
+      </div>}
+    </div>);
+  }
+
+  /* 3. Maktab */
+  if (!selSchool && !isDirector) {
+    return (<div className="animate-fade-in">
+      <div className="flex items-center gap-3 mb-6"><BackBtn onClick={goDists} /><div><h1 className="text-xl font-bold text-white">{selDist.name}</h1><Breadcrumb items={["O'quvchilar", selProv.name, selDist.name]} /></div></div>
+      {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
+        {schools.map(s => <NavCard key={s.id} icon={ICONS.school} color="cyan" title={s.name} subtitle={`${s.studentCount||0} o'quvchi`} onClick={() => pickSchool(s)} />)}
+        {!schools.length && <p className="col-span-full text-center text-slate-600 py-12">Maktab topilmadi</p>}
+      </div>}
+    </div>);
+  }
+
+  /* 4. O'quvchilar */
   return (
-    <CrudPage
-      title="O'quvchilar"
-      apiPath="/api/students"
-      columns={[
-        { key: 'fullName', label: 'F.I.O' },
-        { key: 'faceId', label: 'Face ID' },
-        { key: 'schoolName', label: 'Maktab' },
-      ]}
-      loadDeps={async () => ({ schools: await api.get('/api/schools') })}
-      // DIRECTOR faqat o'z maktab o'quvchilarini ko'radi
-      filterFn={(items) => {
-        if (user?.role === 'DIRECTOR' && user?.schoolId) {
-          return items.filter(s => s.schoolId == user.schoolId);
-        }
-        return items;
-      }}
-      formFields={(form, set, deps) => {
-        // DIRECTOR uchun maktab tanlash shart emas - o'zi bog'lanadi
-        const schools = deps.schools || [];
-        const filteredSchools = user?.role === 'DIRECTOR' && user?.schoolId
-          ? schools.filter(s => s.id == user.schoolId)
-          : schools;
-        return (<>
-          <Input label="To'liq ism" value={form.fullName || ''} onChange={e => set('fullName', e.target.value)} placeholder="Masalan: Aliyev Ali" />
-          <Input label="Face ID" value={form.faceId || ''} onChange={e => set('faceId', e.target.value)} placeholder="Qurilmadagi identifikator" />
-          <Select label="Maktab" value={form.schoolId || user?.schoolId || ''} onChange={e => set('schoolId', e.target.value)}
-            options={filteredSchools.map(s => ({ value: s.id, label: `${s.name} (${s.districtName})` }))} />
-        </>);
-      }}
-    />
+    <div className="animate-fade-in">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          {!isDirector && <BackBtn onClick={goSchools} />}
+          <div>
+            <h1 className="text-xl font-bold text-white">{selSchool?.name || 'Maktab'}</h1>
+            <Breadcrumb items={isDirector ? ["O'quvchilar"] : ["O'quvchilar", selProv?.name, selDist?.name, selSchool?.name].filter(Boolean)} />
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-500">{filtered.length} ta o'quvchi</span>
+          <button onClick={openAdd} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Qo'shish
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-5">
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Ism bo'yicha qidirish..."
+          className="w-full max-w-xs h-10 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.08] text-white text-sm placeholder-slate-600 outline-none focus:border-emerald-500/30 transition-colors" />
+      </div>
+
+      {loading ? <Loader /> : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-4">
+          {filtered.map(s => <StudentCard key={s.id} s={s} onEdit={openEdit} onDelete={setDeleteId} />)}
+          {!filtered.length && <p className="col-span-full text-center text-slate-600 py-12">O'quvchi topilmadi</p>}
+        </div>
+      )}
+
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Tahrirlash' : `Yangi o'quvchi`}>
+        <Input label="To'liq ism" value={form.fullName || ''} onChange={e => setForm({ ...form, fullName: e.target.value })} placeholder="Masalan: Aliyev Ali" />
+        <Input label="Face ID" value={form.faceId || ''} onChange={e => setForm({ ...form, faceId: e.target.value })} placeholder="Qurilmadagi identifikator" />
+        <div className="flex gap-3 mt-6">
+          <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor</button>
+          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
+        </div>
+      </Modal>
+      <ConfirmModal open={!!deleteId} onCancel={() => setDeleteId(null)} onConfirm={() => remove(deleteId)} />
+    </div>
   );
 }
