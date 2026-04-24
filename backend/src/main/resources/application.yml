@@ -1,18 +1,16 @@
 spring:
   datasource:
-    url: jdbc:postgresql://db:5432/maktabdb
-    username: postgres
-    password: postgres
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/maktabdb}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-  security:
-    user:
-      name: admin
-      password: admin123
-    jwt:
-      secret: "${JWT_SECRET:ChangeMeToSecureRandom}"
-      expirationMs: 86400000
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:SuperSecretKeyForMaktabPlatform2026!SuperSecretKeyForMaktabPlatform2026!}
+    expirationMs: 86400000
