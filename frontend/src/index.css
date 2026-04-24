@@ -8,7 +8,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-[#0a0e1a] text-slate-100 font-sans;
+    @apply bg-[#0a0f0d] text-slate-100 font-sans;
   }
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { @apply bg-transparent; }
@@ -25,7 +25,7 @@
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(14,165,233,0.15), transparent);
+    background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(52,211,153,0.15), transparent);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -46,7 +46,7 @@
   position: absolute;
   inset: 14px;
   border-radius: 50%;
-  background: #0f1629;
+  background: #0d1a14;
 }
 
 /* Pulse dot */
@@ -56,17 +56,6 @@
 }
 .live-dot {
   animation: livePulse 2s ease-in-out infinite;
-}
-
-/* Shimmer */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.shimmer {
-  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.03) 50%, transparent 75%);
-  background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
 }
 
 /* Bar chart animation */

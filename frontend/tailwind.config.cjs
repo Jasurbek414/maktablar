@@ -11,22 +11,21 @@ module.exports = {
       },
       colors: {
         brand: {
-          50: '#eef6ff',
-          100: '#d9eaff',
-          200: '#bcdaff',
-          300: '#8ec3ff',
-          400: '#59a1ff',
-          500: '#3381ff',
-          600: '#1a5ff5',
-          700: '#144ae1',
-          800: '#173db6',
-          900: '#19378f',
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
         },
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
         'slide-up': 'slideUp 0.4s ease-out',
-        'pulse-slow': 'pulse 3s infinite',
       },
       keyframes: {
         fadeIn: {
