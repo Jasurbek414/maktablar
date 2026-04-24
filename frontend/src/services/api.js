@@ -1,7 +1,6 @@
 // src/services/api.js
-const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://localhost:8080'
-  : 'https://api.maktab.ecos.uz';
+// Same domain – nginx proxies /api/* to backend
+const API_BASE = '';
 
 export const api = {
   async login(username, password) {
