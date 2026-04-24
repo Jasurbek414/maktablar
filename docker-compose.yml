@@ -59,22 +59,6 @@ services:
     networks:
       - maktab
 
-  # ─── Mini-PC Bridge (Node.js) ───
-  device:
-    container_name: maktab-device
-    build:
-      context: ./mini-pc
-      dockerfile: Dockerfile
-    restart: always
-    ports:
-      - "3002:3001"
-    environment:
-      BACKEND_URL: http://backend:8080
-      FACE_DEVICE_URL: http://192.168.1.100
-      DEVICE_USERNAME: admin
-      DEVICE_PASSWORD: admin123
-    networks:
-      - maktab
 
   # ─── Telegram Bot (Python) ───
   bot:
