@@ -1,0 +1,34 @@
+# Cloudflare Tunnel Configuration
+# ================================
+# 1 ta tunnel – 4 ta subdomain
+#
+# O'rnatish:
+#   cloudflared tunnel create maktab-platform
+#   cloudflared tunnel route dns maktab-platform maktab.YOUR-DOMAIN.com
+#   cloudflared tunnel route dns maktab-platform api.maktab.YOUR-DOMAIN.com
+#   cloudflared tunnel route dns maktab-platform bot.maktab.YOUR-DOMAIN.com
+#   cloudflared tunnel route dns maktab-platform device.maktab.YOUR-DOMAIN.com
+#   cloudflared tunnel run maktab-platform
+
+tunnel: maktab-platform
+credentials-file: C:\Users\Jasurbek\.cloudflared\<tunnel-id>.json
+
+ingress:
+  # 1. Frontend (React)
+  - hostname: maktab.YOUR-DOMAIN.com
+    service: http://localhost:5173
+
+  # 2. Backend API (Spring Boot)
+  - hostname: api.maktab.YOUR-DOMAIN.com
+    service: http://localhost:8080
+
+  # 3. Telegram Bot (Python webhook)
+  - hostname: bot.maktab.YOUR-DOMAIN.com
+    service: http://localhost:5000
+
+  # 4. Mini-PC Bridge (Face ID qurilma boshqaruvi)
+  - hostname: device.maktab.YOUR-DOMAIN.com
+    service: http://localhost:3001
+
+  # Catch-all (cloudflared talab qiladi)
+  - service: http_status:404
