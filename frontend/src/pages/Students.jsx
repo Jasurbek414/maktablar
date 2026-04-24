@@ -127,6 +127,8 @@ export default function Students({ user }) {
   const [form, setForm] = useState({});
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState(null);
+  const [view, setView] = useState('card');
+  const [profile, setProfile] = useState(null);
   const isAdmin = user?.role === 'ADMIN';
   const isDirector = user?.role === 'DIRECTOR';
 
@@ -203,8 +205,6 @@ export default function Students({ user }) {
   }
 
   /* 4. O'quvchilar */
-  const [view, setView] = useState('card');
-  const [profile, setProfile] = useState(null);
 
   return (
     <div className="animate-fade-in">
