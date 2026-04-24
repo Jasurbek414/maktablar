@@ -46,24 +46,22 @@ export default function Sidebar({ user }) {
   const items = NAV[user?.role] || NAV.TEACHER;
 
   return (
-    <aside className="w-[250px] flex flex-col bg-[#0c1021] border-r border-indigo-500/[0.08]">
+    <aside className="w-[250px] flex flex-col bg-[#0a120e] border-r border-emerald-500/[0.08]">
       {/* Brand */}
       <div className="h-16 flex items-center gap-3 px-5">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
           <svg className="w-[18px] h-[18px] text-white" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
         </div>
         <div>
           <span className="text-[15px] font-bold text-white tracking-tight">Maktab</span>
-          <span className="text-[15px] font-light text-indigo-400 ml-1">Platform</span>
+          <span className="text-[15px] font-light text-emerald-400 ml-1">Platform</span>
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
+      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
 
-      {/* Nav */}
       <nav className="flex-1 py-3 px-3 space-y-0.5 overflow-y-auto">
         <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-[0.15em] px-3 pt-2 pb-1.5">Asosiy</p>
         {items.map((item) => {
@@ -74,14 +72,14 @@ export default function Sidebar({ user }) {
               to={item.path}
               className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 relative ${
                 active
-                  ? 'bg-gradient-to-r from-indigo-500/15 to-cyan-500/5 text-white shadow-sm shadow-indigo-500/5'
+                  ? 'bg-gradient-to-r from-emerald-500/15 to-teal-500/5 text-white shadow-sm shadow-emerald-500/5'
                   : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]'
               }`}
             >
               {active && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-indigo-400 to-cyan-400" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-emerald-400 to-teal-400" />
               )}
-              <span className={active ? 'text-indigo-400' : 'text-slate-600 group-hover:text-slate-400 transition-colors'}>
+              <span className={active ? 'text-emerald-400' : 'text-slate-600 group-hover:text-slate-400 transition-colors'}>
                 <I d={item.icon} />
               </span>
               {item.label}
@@ -90,15 +88,14 @@ export default function Sidebar({ user }) {
         })}
       </nav>
 
-      {/* User */}
       <div className="mx-3 mb-3">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-indigo-500/[0.06] to-transparent border border-indigo-500/[0.08]">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/30 to-cyan-500/20 flex items-center justify-center text-[13px] font-bold text-indigo-300 shrink-0 ring-2 ring-indigo-500/10">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-emerald-500/[0.06] to-transparent border border-emerald-500/[0.08]">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500/30 to-teal-500/20 flex items-center justify-center text-[13px] font-bold text-emerald-300 shrink-0 ring-2 ring-emerald-500/10">
             {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold text-slate-200 truncate">{user?.fullName}</p>
-            <p className="text-[10px] text-indigo-400/60 font-medium">{user?.role}</p>
+            <p className="text-[10px] text-emerald-400/60 font-medium">{user?.role}</p>
           </div>
           <button
             onClick={() => api.logout()}
