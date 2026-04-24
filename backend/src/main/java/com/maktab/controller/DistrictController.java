@@ -2,9 +2,11 @@ package com.maktab.controller;
 
 import com.maktab.model.District;
 import com.maktab.model.Province;
+import com.maktab.model.School;
 import com.maktab.repository.DistrictRepository;
 import com.maktab.repository.ProvinceRepository;
 import com.maktab.repository.SchoolRepository;
+import com.maktab.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,14 +18,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/districts")
 public class DistrictController {
 
-    @Autowired
-    private DistrictRepository districtRepository;
-
-    @Autowired
-    private ProvinceRepository provinceRepository;
-
-    @Autowired
-    private SchoolRepository schoolRepository;
+    @Autowired private DistrictRepository districtRepository;
+    @Autowired private ProvinceRepository provinceRepository;
+    @Autowired private SchoolRepository schoolRepository;
+    @Autowired private StudentRepository studentRepository;
 
     @GetMapping
     public List<Map<String, Object>> getAll(@RequestParam(required = false) Long provinceId) {
@@ -39,8 +37,11 @@ public class DistrictController {
             m.put("name", d.getName());
             m.put("provinceId", d.getProvince().getId());
             m.put("provinceName", d.getProvince().getName());
-            long schoolCount = schoolRepository.countByDistrictId(d.getId());
-            m.put("schoolCount", schoolCount);
+            List<School> schools = schoolRepository.findByDistrictId(d.getId());
+            m.put("schoolCount", schools.size());
+            long studentCount = 0;
+            for (School s : schools) studentCount += studentRepository.countBySchoolId(s.getId());
+            m.put("studentCount", studentCount);
             return m;
         }).collect(Collectors.toList());
     }
