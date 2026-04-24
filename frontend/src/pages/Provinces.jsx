@@ -126,7 +126,7 @@ export default function Provinces() {
     } catch (e) { alert(e.message); }
   };
   const remove = async (id) => {
-    if (!confirm("O'chirishni tasdiqlaysizmi?")) return;
+    if (!window.confirm("O'chirishni tasdiqlaysizmi?")) return;
     try { await api.del(`/api/provinces/${id}`); load(); } catch (e) { alert(e.message); }
   };
 

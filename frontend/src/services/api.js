@@ -73,7 +73,8 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('API xatosi');
-    return res.json();
+    const text = await res.text();
+    return text ? JSON.parse(text) : { success: true };
   },
 
   logout() {
