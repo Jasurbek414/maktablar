@@ -43,6 +43,8 @@ services:
       JWT_SECRET: ChangeMeToSecureRandomString123!
       SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
       SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
+      BOT_WEBHOOK_URL: http://bot:5000
+      BACKEND_PUBLIC_URL: https://maktab.ecos.uz
     volumes:
       - uploads:/app/uploads
     depends_on:

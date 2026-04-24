@@ -53,10 +53,11 @@ def attendance_webhook():
       "studentId": 1,
       "studentName": "Ali Valiyev",
       "type": "IN",
-      "timestamp": "2026-04-24T08:30:00Z",
+      "timestamp": "2026-04-24T08:30:00+05:00",
+      "photoUrl": "https://maktab.ecos.uz/api/files/abc123.jpg",
+      "schoolName": "135-maktab",
       "guardians": [
-        {"telegramUserId": "123456789", "name": "Ota"},
-        {"telegramUserId": "987654321", "name": "Ona"}
+        {"telegramUserId": "123456789", "name": "Ota"}
       ]
     }
     """
@@ -67,6 +68,8 @@ def attendance_webhook():
     student_name = data.get("studentName", "Noma'lum")
     event_type = data.get("type", "IN")
     timestamp = data.get("timestamp", "")
+    photo_url = data.get("photoUrl")
+    school_name = data.get("schoolName", "")
     guardians = data.get("guardians", [])
 
     # Emoji va xabar matni
@@ -79,15 +82,25 @@ def attendance_webhook():
 
     # Vaqtni formatlash
     time_str = timestamp[11:16] if len(timestamp) >= 16 else timestamp
-    message = f"{emoji} **{student_name}** {action}\n🕐 Vaqt: {time_str}"
+    date_str = timestamp[:10] if len(timestamp) >= 10 else ""
+
+    caption = (
+        f"{emoji} *{student_name}* {action}\n\n"
+        f"🏫 Maktab: {school_name}\n"
+        f"📅 Sana: {date_str}\n"
+        f"🕐 Vaqt: {time_str}\n\n"
+        f"_Maktab Platform tizimi_"
+    )
 
     # Har bir guardian(vasiy)ga xabar yuborish
     for guardian in guardians:
         tg_user_id = guardian.get("telegramUserId")
         if tg_user_id:
             try:
-                asyncio.run(_send_message(int(tg_user_id), message))
-                logger.info(f"Sent notification to {tg_user_id}")
+                asyncio.run(_send_attendance_notification(
+                    int(tg_user_id), caption, photo_url
+                ))
+                logger.info(f"Sent notification to {tg_user_id} for {student_name}")
             except Exception as e:
                 logger.error(f"Failed to send to {tg_user_id}: {e}")
 
@@ -99,11 +112,26 @@ def health():
     return jsonify({"service": "telegram-bot", "status": "running"}), 200
 
 
-async def _send_message(chat_id: int, text: str):
-    """Helper to send message via bot"""
+async def _send_attendance_notification(chat_id: int, caption: str, photo_url: str = None):
+    """O'quvchi rasmi bilan xabar yuborish"""
     global tg_app
-    if tg_app:
-        await tg_app.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+    if not tg_app:
+        return
+
+    if photo_url:
+        try:
+            await tg_app.bot.send_photo(
+                chat_id=chat_id,
+                photo=photo_url,
+                caption=caption,
+                parse_mode="Markdown"
+            )
+            return
+        except Exception as e:
+            logger.warning(f"Failed to send photo, falling back to text: {e}")
+
+    # Rasm yo'q bo'lsa yoki rasm yuborishda xato bo'lsa text yuborish
+    await tg_app.bot.send_message(chat_id=chat_id, text=caption, parse_mode="Markdown")
 
 
 # ──────────────────────────────
