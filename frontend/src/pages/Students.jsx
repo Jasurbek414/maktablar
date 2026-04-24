@@ -203,6 +203,9 @@ export default function Students({ user }) {
   }
 
   /* 4. O'quvchilar */
+  const [view, setView] = useState('card');
+  const [profile, setProfile] = useState(null);
+
   return (
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
@@ -214,7 +217,15 @@ export default function Students({ user }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-500">{filtered.length} ta o'quvchi</span>
+          <div className="flex rounded-lg border border-emerald-500/[0.1] overflow-hidden">
+            <button onClick={() => setView('card')} className={`px-3 py-1.5 text-xs transition-colors ${view==='card' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-white'}`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zm0 9.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25z" /></svg>
+            </button>
+            <button onClick={() => setView('table')} className={`px-3 py-1.5 text-xs transition-colors ${view==='table' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-white'}`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" /></svg>
+            </button>
+          </div>
+          <span className="text-sm text-slate-500">{filtered.length} ta</span>
           <button onClick={openAdd} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
             Qo'shish
@@ -227,16 +238,103 @@ export default function Students({ user }) {
           className="w-full max-w-xs h-10 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.08] text-white text-sm placeholder-slate-600 outline-none focus:border-emerald-500/30 transition-colors" />
       </div>
 
-      {loading ? <Loader /> : (
+      {loading ? <Loader /> : view === 'card' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-4">
-          {filtered.map(s => <StudentCard key={s.id} s={s} onEdit={openEdit} onDelete={setDeleteId} />)}
+          {filtered.map(s => <div key={s.id} onClick={() => setProfile(s)} className="cursor-pointer"><StudentCard s={s} onEdit={openEdit} onDelete={setDeleteId} /></div>)}
           {!filtered.length && <p className="col-span-full text-center text-slate-600 py-12">O'quvchi topilmadi</p>}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-emerald-500/[0.06]">
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">№</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Rasm</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">F.I.O</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Face ID</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Maktab</th>
+              <th className="px-5 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Davomat</th>
+              <th className="px-5 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Amallar</th>
+            </tr></thead>
+            <tbody>{filtered.map((s, i) => (
+              <tr key={s.id} onClick={() => setProfile(s)} className="border-b border-emerald-500/[0.04] hover:bg-emerald-500/[0.03] transition-colors cursor-pointer">
+                <td className="px-5 py-3 text-slate-600">{i+1}</td>
+                <td className="px-5 py-2">{s.photoUrl ? <img src={s.photoUrl} className="w-8 h-8 rounded-full object-cover border border-emerald-500/20" /> : <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-xs font-bold">{s.fullName?.charAt(0)}</div>}</td>
+                <td className="px-5 py-3 text-white font-medium">{s.fullName}</td>
+                <td className="px-5 py-3"><span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-xs font-mono">{s.faceId}</span></td>
+                <td className="px-5 py-3 text-slate-400 text-xs">{s.schoolName}</td>
+                <td className="px-5 py-3 text-center"><span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-medium">0%</span></td>
+                <td className="px-5 py-3 text-right" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors mr-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg></button>
+                  <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79" /></svg></button>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Student Profile Panel */}
+      {profile && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm" onClick={() => setProfile(null)}>
+          <div className="w-full max-w-lg bg-[#0a120e] border-l border-emerald-500/[0.1] overflow-y-auto animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="relative">
+              <div className="h-32 bg-gradient-to-br from-emerald-900/40 to-teal-900/20" />
+              <button onClick={() => setProfile(null)} className="absolute top-4 right-4 p-2 rounded-xl bg-black/30 text-white/70 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+              <div className="absolute -bottom-12 left-6">
+                {profile.photoUrl ? <img src={profile.photoUrl} className="w-24 h-24 rounded-2xl object-cover border-4 border-[#0a120e] shadow-xl" /> : <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-cyan-500/20 border-4 border-[#0a120e] flex items-center justify-center text-emerald-400 text-3xl font-bold shadow-xl">{profile.fullName?.charAt(0)}</div>}
+              </div>
+            </div>
+            <div className="px-6 pt-16 pb-6">
+              <h2 className="text-xl font-bold text-white">{profile.fullName}</h2>
+              <p className="text-sm text-slate-500 mt-1">{selSchool?.name || profile.schoolName}</p>
+              <div className="grid grid-cols-2 gap-3 mt-6">
+                {[{l:'Face ID',v:profile.faceId,c:'text-emerald-400 font-mono'},{l:'ID raqam',v:`#${profile.id}`,c:'text-cyan-400 font-mono'},{l:'Maktab',v:profile.schoolName,c:'text-white'},{l:'Holat',v:'Faol',c:'text-emerald-400',dot:true}].map((x,i) => (
+                  <div key={i} className="rounded-xl bg-white/[0.02] border border-emerald-500/[0.06] p-3">
+                    <p className="text-[10px] text-slate-600 uppercase tracking-wider">{x.l}</p>
+                    <div className="flex items-center gap-1.5 mt-1">{x.dot && <span className="w-2 h-2 rounded-full bg-emerald-400" />}<p className={`text-sm ${x.c}`}>{x.v}</p></div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>Davomat statistikasi</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {[{v:'0',l:'Kelgan',c:'text-emerald-400',bg:'bg-emerald-500/[0.06]'},{v:'0',l:'Kelmagan',c:'text-red-400',bg:'bg-red-500/[0.06]'},{v:'0%',l:'Foiz',c:'text-amber-400',bg:'bg-amber-500/[0.06]'}].map((x,i) => (
+                    <div key={i} className={`rounded-xl ${x.bg} p-3 text-center`}><p className={`text-lg font-bold ${x.c}`}>{x.v}</p><p className="text-[9px] text-slate-600 uppercase">{x.l}</p></div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>Haftalik davomat</h3>
+                <div className="flex items-end gap-1.5 h-20">
+                  {['Du','Se','Cho','Pa','Ju'].map((d, i) => {const h = [65,80,45,90,70][i]; return (<div key={d} className="flex-1 flex flex-col items-center gap-1"><div className="w-full rounded-t-md bg-emerald-500/20 relative overflow-hidden" style={{height:`${h}%`}}><div className="absolute inset-x-0 bottom-0 bg-emerald-500/40 rounded-t-md" style={{height:`${h}%`}} /></div><span className="text-[8px] text-slate-600">{d}</span></div>);})}
+                </div>
+              </div>
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-white mb-3">So'nggi faoliyat</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-white/[0.02]"><div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" /><div><p className="text-xs text-white">Tizimga qo'shildi</p><p className="text-[10px] text-slate-600">Bugun</p></div></div>
+                  <div className="flex items-center gap-3 py-2 px-3 rounded-lg bg-white/[0.02]"><div className="w-2 h-2 rounded-full bg-slate-600 shrink-0" /><div><p className="text-xs text-slate-400">Davomat ma'lumotlari yo'q</p><p className="text-[10px] text-slate-600">Face ID qurilma ulanmagan</p></div></div>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-8">
+                <button onClick={() => { setProfile(null); openEdit(profile); }} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>Tahrirlash
+                </button>
+                <button onClick={() => { setProfile(null); setDeleteId(profile.id); }} className="h-10 px-5 rounded-xl border border-red-500/20 text-red-400 text-sm hover:bg-red-500/10 transition-colors flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79" /></svg>O'chirish
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Tahrirlash' : `Yangi o'quvchi`}>
         <Input label="To'liq ism" value={form.fullName || ''} onChange={e => setForm({ ...form, fullName: e.target.value })} placeholder="Masalan: Aliyev Ali" />
         <Input label="Face ID" value={form.faceId || ''} onChange={e => setForm({ ...form, faceId: e.target.value })} placeholder="Qurilmadagi identifikator" />
+        <Input label="Rasm URL" value={form.photoUrl || ''} onChange={e => setForm({ ...form, photoUrl: e.target.value })} placeholder="https://..." />
         <div className="flex gap-3 mt-6">
           <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor</button>
           <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
@@ -246,3 +344,4 @@ export default function Students({ user }) {
     </div>
   );
 }
+
