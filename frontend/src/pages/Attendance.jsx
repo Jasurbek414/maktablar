@@ -194,7 +194,7 @@ export default function Attendance({ user }) {
         {label:'Maktablar',value:totalProvSchools,max:totalProvSchools||1,color:'bg-cyan-400'},
         {label:"O'quvchilar",value:totalProvStudents,max:totalProvStudents||1,color:'bg-amber-400'}
       ]} />
-      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:'0.75rem'}}>
+      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'0.75rem'}}>
         {provinces.map(p => <NavCard key={p.id} icon={ICONS.prov} title={p.name} subtitle={`${p.districtCount||0} tuman · ${p.schoolCount||0} maktab`} onClick={() => pickProv(p)} stats={[
           {value:p.districtCount||0,label:'Tuman',color:'text-emerald-400',bg:'bg-emerald-500/[0.06]'},
           {value:p.schoolCount||0,label:'Maktab',color:'text-cyan-400',bg:'bg-cyan-500/[0.06]'},
@@ -222,7 +222,7 @@ export default function Attendance({ user }) {
         {label:'Maktablar',value:distTotalSchools,max:distTotalSchools||1,color:'bg-cyan-400'},
         {label:"O'quvchilar",value:distTotalStudents,max:distTotalStudents||1,color:'bg-amber-400'}
       ]} />
-      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:'0.75rem'}}>
+      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'0.75rem'}}>
         {districts.map(d => <NavCard key={d.id} icon={ICONS.dist} color="teal" title={d.name} subtitle={`${d.schoolCount||0} maktab · ${d.studentCount||0} o'quvchi`} onClick={() => pickDist(d)} stats={[
           {value:d.schoolCount||0,label:'Maktab',color:'text-cyan-400',bg:'bg-cyan-500/[0.06]'},
           {value:d.studentCount||0,label:"O'quvchi",color:'text-amber-400',bg:'bg-amber-500/[0.06]'}
@@ -246,7 +246,7 @@ export default function Attendance({ user }) {
       ]} donut={{pct:0,color:'#64748b'}} bars={{data:schBars,color:'bg-cyan-400'}} progresses={[
         {label:"O'quvchilar",value:schTotalStudents,max:schTotalStudents||1,color:'bg-amber-400'}
       ]} />
-      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:'0.75rem'}}>
+      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'0.75rem'}}>
         {schools.map(s => <NavCard key={s.id} icon={ICONS.school} color="cyan" title={s.name} subtitle={`${s.studentCount||0} o'quvchi`} onClick={() => pickSchool(s)} stats={[
           {value:s.studentCount||0,label:"O'quvchi",color:'text-amber-400',bg:'bg-amber-500/[0.06]'},
           {value:'—',label:'Davomat',color:'text-slate-500',bg:'bg-slate-500/[0.06]'}
