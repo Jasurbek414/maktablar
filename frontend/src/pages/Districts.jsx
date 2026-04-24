@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Input } from '../components/CrudPage';
+import ConfirmModal from '../components/ConfirmModal';
 
 function Ring({ percent, size = 72, stroke = 6 }) {
   const r = (size - stroke) / 2, circ = 2 * Math.PI * r;
@@ -170,6 +171,7 @@ export default function Districts({ user }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [search, setSearch] = useState('');
+  const [deleteId, setDeleteId] = useState(null);
   const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
@@ -199,8 +201,7 @@ export default function Districts({ user }) {
     } catch (e) { alert(e.message); }
   };
   const remove = async (id) => {
-    if (!window.confirm("O'chirishni tasdiqlaysizmi?")) return;
-    try { await api.del(`/api/districts/${id}`); selectProvince(selectedProvince); api.get('/api/provinces').then(setProvinces); } catch (e) { alert(e.message); }
+    try { await api.del(`/api/districts/${id}`); setDeleteId(null); selectProvince(selectedProvince); api.get('/api/provinces').then(setProvinces); } catch (e) { alert(e.message); }
   };
 
   const filtered = districts.filter(i => i.name?.toLowerCase().includes(search.toLowerCase()));
@@ -260,7 +261,7 @@ export default function Districts({ user }) {
 
       {loading ? <Loader /> : view === 'card' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-4">
-          {filtered.map(item => <DistrictCard key={item.id} item={item} onEdit={openEdit} onDelete={remove} />)}
+          {filtered.map(item => <DistrictCard key={item.id} item={item} onEdit={openEdit} onDelete={setDeleteId} />)}
           {filtered.length === 0 && <p className="col-span-full text-center text-slate-600 py-12">Tuman topilmadi</p>}
         </div>
       ) : (
@@ -279,7 +280,7 @@ export default function Districts({ user }) {
                 <td className="px-5 py-3"><span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 text-xs font-medium">{item.studentCount||0}</span></td>
                 <td className="px-5 py-3 text-right">
                   <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors mr-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg></button>
-                  <button onClick={() => remove(item.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79" /></svg></button>
+                  <button onClick={() => setDeleteId(item.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79" /></svg></button>
                 </td>
               </tr>
             ))}</tbody>
@@ -294,6 +295,7 @@ export default function Districts({ user }) {
           <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
         </div>
       </Modal>
+      <ConfirmModal open={!!deleteId} onCancel={() => setDeleteId(null)} onConfirm={() => remove(deleteId)} />
     </div>
   );
 }
