@@ -194,7 +194,7 @@ export default function Attendance({ user }) {
         {label:'Maktablar',value:totalProvSchools,max:totalProvSchools||1,color:'bg-cyan-400'},
         {label:"O'quvchilar",value:totalProvStudents,max:totalProvStudents||1,color:'bg-amber-400'}
       ]} />
-      {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:'0.75rem'}}>
         {provinces.map(p => <NavCard key={p.id} icon={ICONS.prov} title={p.name} subtitle={`${p.districtCount||0} tuman · ${p.schoolCount||0} maktab`} onClick={() => pickProv(p)} stats={[
           {value:p.districtCount||0,label:'Tuman',color:'text-emerald-400',bg:'bg-emerald-500/[0.06]'},
           {value:p.schoolCount||0,label:'Maktab',color:'text-cyan-400',bg:'bg-cyan-500/[0.06]'},
@@ -222,7 +222,7 @@ export default function Attendance({ user }) {
         {label:'Maktablar',value:distTotalSchools,max:distTotalSchools||1,color:'bg-cyan-400'},
         {label:"O'quvchilar",value:distTotalStudents,max:distTotalStudents||1,color:'bg-amber-400'}
       ]} />
-      {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:'0.75rem'}}>
         {districts.map(d => <NavCard key={d.id} icon={ICONS.dist} color="teal" title={d.name} subtitle={`${d.schoolCount||0} maktab · ${d.studentCount||0} o'quvchi`} onClick={() => pickDist(d)} stats={[
           {value:d.schoolCount||0,label:'Maktab',color:'text-cyan-400',bg:'bg-cyan-500/[0.06]'},
           {value:d.studentCount||0,label:"O'quvchi",color:'text-amber-400',bg:'bg-amber-500/[0.06]'}
@@ -246,7 +246,7 @@ export default function Attendance({ user }) {
       ]} donut={{pct:0,color:'#64748b'}} bars={{data:schBars,color:'bg-cyan-400'}} progresses={[
         {label:"O'quvchilar",value:schTotalStudents,max:schTotalStudents||1,color:'bg-amber-400'}
       ]} />
-      {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:'0.75rem'}}>
         {schools.map(s => <NavCard key={s.id} icon={ICONS.school} color="cyan" title={s.name} subtitle={`${s.studentCount||0} o'quvchi`} onClick={() => pickSchool(s)} stats={[
           {value:s.studentCount||0,label:"O'quvchi",color:'text-amber-400',bg:'bg-amber-500/[0.06]'},
           {value:'—',label:'Davomat',color:'text-slate-500',bg:'bg-slate-500/[0.06]'}
@@ -361,7 +361,7 @@ export default function Attendance({ user }) {
             <div className="px-5 py-3 border-b border-emerald-500/[0.06]">
               <h3 className="text-sm font-semibold text-white">O'quvchilar holati</h3>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 p-4">
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:'0.5rem'}} className="p-4">
               {students.map(s => {
                 const came = presentIds.has(s.id);
                 return (
