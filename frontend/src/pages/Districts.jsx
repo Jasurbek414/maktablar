@@ -199,7 +199,7 @@ export default function Districts({ user }) {
     } catch (e) { alert(e.message); }
   };
   const remove = async (id) => {
-    if (!confirm("O'chirishni tasdiqlaysizmi?")) return;
+    if (!window.confirm("O'chirishni tasdiqlaysizmi?")) return;
     try { await api.del(`/api/districts/${id}`); selectProvince(selectedProvince); api.get('/api/provinces').then(setProvinces); } catch (e) { alert(e.message); }
   };
 

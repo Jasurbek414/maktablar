@@ -218,12 +218,12 @@ export default function Schools({ user }) {
       if (editing) await api.put(`/api/schools/${editing.id}`, form);
       else await api.post('/api/schools', form);
       setModal(false);
-      if (selDist) pickDistrict(selDist);
+      if (selDist) await pickDistrict(selDist);
     } catch (e) { alert(e.message); }
   };
   const remove = async (id) => {
-    if (!confirm("O'chirishni tasdiqlaysizmi?")) return;
-    try { await api.del(`/api/schools/${id}`); if (selDist) pickDistrict(selDist); } catch (e) { alert(e.message); }
+    if (!window.confirm("O'chirishni tasdiqlaysizmi?")) return;
+    try { await api.del(`/api/schools/${id}`); if (selDist) await pickDistrict(selDist); } catch (e) { alert(e.message); }
   };
 
   const filtered = schools.filter(i => i.name?.toLowerCase().includes(search.toLowerCase()));

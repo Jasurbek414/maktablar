@@ -70,7 +70,7 @@ export default function CrudPage({ title, apiPath, columns, formFields, loadDeps
   };
 
   const remove = async (id) => {
-    if (!confirm("O'chirishni tasdiqlaysizmi?")) return;
+    if (!window.confirm("O'chirishni tasdiqlaysizmi?")) return;
     try { await api.del(`${apiPath}/${id}`); load(); } catch (e) { alert(e.message); }
   };
 
