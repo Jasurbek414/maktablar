@@ -2,10 +2,11 @@ package com.maktab.repository;
 
 import com.maktab.model.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Optional;
 
-@Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
-    // Find by faceId for Mini-PC service
-    Student findByFaceId(String faceId);
+    Optional<Student> findByFaceId(String faceId);
+    List<Student> findBySchoolId(Long schoolId);
+    long countBySchoolId(Long schoolId);
 }
