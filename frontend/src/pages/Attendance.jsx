@@ -122,14 +122,57 @@ export default function Attendance({ user }) {
   const absentCount = totalStudents - presentCount;
   const percentage = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
 
-  const StatBar = ({items}) => (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-      {items.map((c,i) => (
-        <div key={i} className={`rounded-2xl bg-gradient-to-br ${c.bg} border border-emerald-500/[0.06] p-4`}>
-          <span className="text-[10px] text-slate-600 uppercase">{c.label}</span>
-          <p className={`text-2xl font-bold mt-1 ${c.color}`}>{c.value}</p>
+  /* SVG Donut Chart */
+  const Donut = ({pct=0, size=80, stroke=8, color='#10b981'}) => {
+    const r = (size-stroke)/2, c = 2*Math.PI*r, offset = c - (pct/100)*c;
+    return (<svg width={size} height={size} className="shrink-0"><circle cx={size/2} cy={size/2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-white/[0.04]" /><circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`} className="transition-all duration-1000" /><text x={size/2} y={size/2} textAnchor="middle" dy=".35em" className="fill-white text-sm font-bold">{pct}%</text></svg>);
+  };
+
+  /* Mini Bar Chart */
+  const MiniBar = ({data=[], color='bg-emerald-400'}) => (
+    <div className="flex items-end gap-0.5 h-10">{data.map((v,i)=>(<div key={i} className="flex-1 flex flex-col items-center gap-0.5"><div className={`w-full rounded-t-sm ${color} transition-all duration-500`} style={{height:`${v}%`,opacity:0.3+v/140}} /></div>))}</div>
+  );
+
+  /* Progress bar */
+  const Progress = ({value=0, max=100, color='bg-emerald-400', label, sub}) => {
+    const pct = max > 0 ? Math.round(value/max*100) : 0;
+    return (<div className="flex-1"><div className="flex items-center justify-between mb-1"><span className="text-[10px] text-slate-500">{label}</span><span className="text-xs font-bold text-white">{value}<span className="text-slate-600 font-normal">/{max}</span></span></div><div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden"><div className={`h-full rounded-full ${color} transition-all duration-700`} style={{width:`${pct}%`}} /></div>{sub && <span className="text-[9px] text-slate-600 mt-0.5">{sub}</span>}</div>);
+  };
+
+  const StatDashboard = ({title, subtitle, cards, donut, bars, progresses}) => (
+    <div className="mb-6 rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div><h2 className="text-sm font-semibold text-white">{title}</h2>{subtitle && <p className="text-[10px] text-slate-600 mt-0.5">{subtitle}</p>}</div>
+        <span className="text-[9px] text-slate-700 uppercase tracking-wider">Real vaqt</span>
+      </div>
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
+          {cards.map((c,i) => (
+            <div key={i} className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-3 relative overflow-hidden group hover:border-emerald-500/20 transition-colors">
+              <div className={`absolute top-0 right-0 w-12 h-12 rounded-full ${c.glow || 'bg-emerald-500/5'} blur-xl -translate-y-3 translate-x-3 group-hover:scale-150 transition-transform`} />
+              <div className="relative">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className={`w-1.5 h-1.5 rounded-full ${c.dot || 'bg-emerald-400'}`} />
+                  <span className="text-[9px] text-slate-600 uppercase tracking-wider">{c.label}</span>
+                </div>
+                <p className={`text-xl font-bold ${c.color}`}>{c.value}</p>
+                {c.sub && <p className="text-[9px] text-slate-600 mt-0.5">{c.sub}</p>}
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+        {/* Charts area */}
+        {(donut || bars || progresses) && (
+          <div className="flex items-center gap-5 lg:w-72 shrink-0">
+            {donut && <Donut pct={donut.pct} color={donut.color} />}
+            <div className="flex-1 space-y-3">
+              {bars && <div><p className="text-[9px] text-slate-600 uppercase mb-1">Taqsimot</p><MiniBar data={bars.data} color={bars.color} /></div>}
+              {progresses && progresses.map((p,i) => <Progress key={i} {...p} />)}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -139,13 +182,17 @@ export default function Attendance({ user }) {
 
   /* 1. Province */
   if (!selProv && !isDirector) {
+    const provBars = provinces.slice(0,7).map(p => Math.min(100, (p.studentCount||0)/Math.max(1,totalProvStudents)*100*provinces.length));
     return (<div className="animate-fade-in">
       <div className="mb-6"><h1 className="text-xl font-bold text-white">Davomat nazorati</h1><p className="text-sm text-slate-500 mt-0.5">Viloyatlar bo'yicha umumiy statistika</p></div>
-      <StatBar items={[
-        {label:'Viloyatlar',value:provinces.length,color:'text-emerald-400',bg:'from-emerald-500/10 to-emerald-500/5'},
-        {label:'Tumanlar',value:totalProvDists,color:'text-teal-400',bg:'from-teal-500/10 to-teal-500/5'},
-        {label:'Maktablar',value:totalProvSchools,color:'text-cyan-400',bg:'from-cyan-500/10 to-cyan-500/5'},
-        {label:"O'quvchilar",value:totalProvStudents,color:'text-amber-400',bg:'from-amber-500/10 to-amber-500/5'}
+      <StatDashboard title="Umumiy ko'rsatkichlar" subtitle="Barcha viloyatlar bo'yicha" cards={[
+        {label:'Viloyatlar',value:provinces.length,color:'text-emerald-400',dot:'bg-emerald-400',glow:'bg-emerald-500/10',sub:'hudud'},
+        {label:'Tumanlar',value:totalProvDists,color:'text-teal-400',dot:'bg-teal-400',glow:'bg-teal-500/10'},
+        {label:'Maktablar',value:totalProvSchools,color:'text-cyan-400',dot:'bg-cyan-400',glow:'bg-cyan-500/10'},
+        {label:"O'quvchilar",value:totalProvStudents,color:'text-amber-400',dot:'bg-amber-400',glow:'bg-amber-500/10',sub:'jami ro\'yxat'}
+      ]} donut={{pct:0,color:'#64748b'}} bars={{data:provBars,color:'bg-emerald-400'}} progresses={[
+        {label:'Maktablar',value:totalProvSchools,max:totalProvSchools||1,color:'bg-cyan-400'},
+        {label:"O'quvchilar",value:totalProvStudents,max:totalProvStudents||1,color:'bg-amber-400'}
       ]} />
       {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {provinces.map(p => <NavCard key={p.id} icon={ICONS.prov} title={p.name} subtitle={`${p.districtCount||0} tuman · ${p.schoolCount||0} maktab`} onClick={() => pickProv(p)} stats={[
@@ -163,13 +210,17 @@ export default function Attendance({ user }) {
 
   /* 2. District */
   if (!selDist && !isDirector) {
+    const distBars = districts.slice(0,7).map(d => Math.min(100, (d.studentCount||0)/Math.max(1,distTotalStudents)*100*districts.length));
     return (<div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-6">{!isAdmin && <BackBtn onClick={goProvs} />}<div><h1 className="text-xl font-bold text-white">{selProv.name}</h1><Breadcrumb items={['Davomat', selProv.name]} /></div></div>
-      <StatBar items={[
-        {label:'Tumanlar',value:districts.length,color:'text-teal-400',bg:'from-teal-500/10 to-teal-500/5'},
-        {label:'Maktablar',value:distTotalSchools,color:'text-cyan-400',bg:'from-cyan-500/10 to-cyan-500/5'},
-        {label:"O'quvchilar",value:distTotalStudents,color:'text-amber-400',bg:'from-amber-500/10 to-amber-500/5'},
-        {label:'Davomat',value:'—',color:'text-slate-500',bg:'from-slate-500/10 to-slate-500/5'}
+      <StatDashboard title={`${selProv.name} statistikasi`} subtitle={`${districts.length} tuman bo'yicha`} cards={[
+        {label:'Tumanlar',value:districts.length,color:'text-teal-400',dot:'bg-teal-400',glow:'bg-teal-500/10'},
+        {label:'Maktablar',value:distTotalSchools,color:'text-cyan-400',dot:'bg-cyan-400',glow:'bg-cyan-500/10'},
+        {label:"O'quvchilar",value:distTotalStudents,color:'text-amber-400',dot:'bg-amber-400',glow:'bg-amber-500/10'},
+        {label:'Davomat',value:'—',color:'text-slate-500',dot:'bg-slate-500',glow:'bg-slate-500/10',sub:'ma\'lumot yo\'q'}
+      ]} donut={{pct:0,color:'#64748b'}} bars={{data:distBars,color:'bg-teal-400'}} progresses={[
+        {label:'Maktablar',value:distTotalSchools,max:distTotalSchools||1,color:'bg-cyan-400'},
+        {label:"O'quvchilar",value:distTotalStudents,max:distTotalStudents||1,color:'bg-amber-400'}
       ]} />
       {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {districts.map(d => <NavCard key={d.id} icon={ICONS.dist} color="teal" title={d.name} subtitle={`${d.schoolCount||0} maktab · ${d.studentCount||0} o'quvchi`} onClick={() => pickDist(d)} stats={[
@@ -184,13 +235,16 @@ export default function Attendance({ user }) {
 
   /* 3. School */
   if (!selSchool && !isDirector) {
+    const schBars = schools.map(s => Math.min(100, (s.studentCount||0)/Math.max(1,schTotalStudents)*100*schools.length));
     return (<div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-6"><BackBtn onClick={goDists} /><div><h1 className="text-xl font-bold text-white">{selDist.name}</h1><Breadcrumb items={['Davomat', selProv.name, selDist.name]} /></div></div>
-      <StatBar items={[
-        {label:'Maktablar',value:schools.length,color:'text-cyan-400',bg:'from-cyan-500/10 to-cyan-500/5'},
-        {label:"O'quvchilar",value:schTotalStudents,color:'text-amber-400',bg:'from-amber-500/10 to-amber-500/5'},
-        {label:'Server',value:schools.length > 0 ? '—':'0',color:'text-slate-500',bg:'from-slate-500/10 to-slate-500/5'},
-        {label:'Davomat',value:'—',color:'text-slate-500',bg:'from-slate-500/10 to-slate-500/5'}
+      <StatDashboard title={`${selDist.name} statistikasi`} subtitle={`${schools.length} maktab bo'yicha`} cards={[
+        {label:'Maktablar',value:schools.length,color:'text-cyan-400',dot:'bg-cyan-400',glow:'bg-cyan-500/10'},
+        {label:"O'quvchilar",value:schTotalStudents,color:'text-amber-400',dot:'bg-amber-400',glow:'bg-amber-500/10'},
+        {label:'Server',value:'—',color:'text-slate-500',dot:'bg-slate-500',glow:'bg-slate-500/10',sub:'ulanmagan'},
+        {label:'Davomat',value:'—',color:'text-slate-500',dot:'bg-slate-500',glow:'bg-slate-500/10',sub:'ma\'lumot yo\'q'}
+      ]} donut={{pct:0,color:'#64748b'}} bars={{data:schBars,color:'bg-cyan-400'}} progresses={[
+        {label:"O'quvchilar",value:schTotalStudents,max:schTotalStudents||1,color:'bg-amber-400'}
       ]} />
       {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {schools.map(s => <NavCard key={s.id} icon={ICONS.school} color="cyan" title={s.name} subtitle={`${s.studentCount||0} o'quvchi`} onClick={() => pickSchool(s)} stats={[
