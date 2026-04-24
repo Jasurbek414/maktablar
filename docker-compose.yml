@@ -1,7 +1,6 @@
 # Docker Compose – Maktab Platform
 # =================================
-# Barcha xizmatlarni bitta buyruq bilan ishga tushirish:
-#   docker compose up -d --build
+# docker compose up -d --build
 
 version: '3.9'
 
@@ -25,6 +24,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - maktab
 
   # ─── Backend (Spring Boot) ───
   backend:
@@ -43,6 +44,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - maktab
 
   # ─── Frontend (React + Vite) ───
   frontend:
@@ -53,10 +56,12 @@ services:
     restart: always
     ports:
       - "5173:5173"
+    networks:
+      - maktab
 
   # ─── Mini-PC Bridge (Node.js) ───
-  mini-pc:
-    container_name: maktab-minipc
+  device:
+    container_name: maktab-device
     build:
       context: ./mini-pc
       dockerfile: Dockerfile
@@ -68,6 +73,8 @@ services:
       FACE_DEVICE_URL: http://192.168.1.100
       DEVICE_USERNAME: admin
       DEVICE_PASSWORD: admin123
+    networks:
+      - maktab
 
   # ─── Telegram Bot (Python) ───
   bot:
@@ -81,16 +88,22 @@ services:
     environment:
       BOT_TOKEN: "YOUR_TELEGRAM_BOT_TOKEN"
       BACKEND_URL: http://backend:8080
-      WEBHOOK_URL: https://bot.maktab.YOUR-DOMAIN.com/webhook
+      WEBHOOK_URL: https://bot.maktab.ecos.uz/webhook
+    networks:
+      - maktab
 
   # ─── Cloudflare Tunnel ───
-  cloudflared:
-    container_name: maktab-tunnel
+  tunnel:
     image: cloudflare/cloudflared:latest
+    container_name: maktab-tunnel
     restart: always
-    command: tunnel run
-    environment:
-      TUNNEL_TOKEN: "YOUR_CLOUDFLARE_TUNNEL_TOKEN"
+    command: tunnel --no-autoupdate run --token eyJhIjoiMDI5NDc1MzY0YWNjNDEzY2Q2Y2YzNWVkOGU0MjEzNGIiLCJ0IjoiNTAxY2FmZGMtZmNmZi00NmExLTk4MjctMmU3MTRmMGRjODMwIiwicyI6Ik1XSXdPV0l4TURJdE16QmxNUzAwWW1RekxXSXhZek10TkdJelpUazRZV0pqTmpsbCJ9
+    networks:
+      - maktab
+
+networks:
+  maktab:
+    driver: bridge
 
 volumes:
   pgdata:
