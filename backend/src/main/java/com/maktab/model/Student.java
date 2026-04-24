@@ -22,6 +22,9 @@ public class Student {
     @Column(nullable = false, unique = true)
     private String faceId; // identifier from Face ID device
 
+    @Column
+    private String photoUrl;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_id", nullable = false)
     private School school;

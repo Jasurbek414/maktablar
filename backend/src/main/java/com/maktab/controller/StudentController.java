@@ -34,6 +34,7 @@ public class StudentController {
             m.put("id", s.getId());
             m.put("fullName", s.getFullName());
             m.put("faceId", s.getFaceId());
+            m.put("photoUrl", s.getPhotoUrl());
             m.put("schoolId", s.getSchool().getId());
             m.put("schoolName", s.getSchool().getName());
             return m;
@@ -47,6 +48,7 @@ public class StudentController {
             m.put("id", s.getId());
             m.put("fullName", s.getFullName());
             m.put("faceId", s.getFaceId());
+            m.put("photoUrl", s.getPhotoUrl());
             m.put("schoolId", s.getSchool().getId());
             m.put("schoolName", s.getSchool().getName());
             return ResponseEntity.ok(m);
@@ -74,6 +76,7 @@ public class StudentController {
         Student s = new Student();
         s.setFullName((String) body.get("fullName"));
         s.setFaceId((String) body.get("faceId"));
+        s.setPhotoUrl((String) body.get("photoUrl"));
         s.setSchool(school);
         Student saved = studentRepository.save(s);
 
@@ -85,6 +88,7 @@ public class StudentController {
         return studentRepository.findById(id).map(s -> {
             if (body.containsKey("fullName")) s.setFullName((String) body.get("fullName"));
             if (body.containsKey("faceId")) s.setFaceId((String) body.get("faceId"));
+            if (body.containsKey("photoUrl")) s.setPhotoUrl((String) body.get("photoUrl"));
             if (body.containsKey("schoolId")) {
                 School school = schoolRepository.findById(Long.valueOf(body.get("schoolId").toString())).orElse(null);
                 if (school != null) s.setSchool(school);

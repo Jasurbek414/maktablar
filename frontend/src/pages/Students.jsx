@@ -73,9 +73,13 @@ function StudentCard({ s, onEdit, onDelete }) {
       <div className="relative p-5">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 flex items-center justify-center text-emerald-400 text-sm font-bold shrink-0">
-              {s.fullName?.charAt(0)?.toUpperCase() || '?'}
-            </div>
+            {s.photoUrl ? (
+              <img src={s.photoUrl} alt={s.fullName} className="w-11 h-11 rounded-full object-cover shrink-0 border border-emerald-500/20" />
+            ) : (
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 flex items-center justify-center text-emerald-400 text-sm font-bold shrink-0">
+                {s.fullName?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+            )}
             <div>
               <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors">{s.fullName}</h3>
               <p className="text-[10px] text-slate-600 mt-0.5">Face ID: {s.faceId || '—'}</p>
