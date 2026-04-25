@@ -23,4 +23,5 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findBySchoolId(@Param("schoolId") Long schoolId);
 
     boolean existsByStudentIdAndTimestampAndType(Long studentId, OffsetDateTime timestamp, Attendance.AttendanceType type);
+    boolean existsBySyncKey(String syncKey);
 }

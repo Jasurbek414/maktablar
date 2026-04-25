@@ -1,9 +1,11 @@
 package com.maktab.controller;
 
 import com.maktab.model.Attendance;
+import com.maktab.model.Device;
 import com.maktab.model.DeviceHeartbeat;
 import com.maktab.model.Student;
 import com.maktab.repository.AttendanceRepository;
+import com.maktab.repository.DeviceRepository;
 import com.maktab.repository.DeviceHeartbeatRepository;
 import com.maktab.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ public class AttendanceController {
     @Autowired private AttendanceRepository attendanceRepo;
     @Autowired private StudentRepository studentRepo;
     @Autowired private DeviceHeartbeatRepository heartbeatRepo;
+    @Autowired private DeviceRepository deviceRepo;
     @Autowired private com.maktab.service.NotificationService notificationService;
 
     // ─── Mini-PC: single event ───
@@ -59,18 +62,32 @@ public class AttendanceController {
 
     // ─── Mini-PC: batch sync (offline → online) ───
     @PostMapping("/sync")
-    public ResponseEntity<?> batchSync(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> batchSync(
+            @RequestHeader(value = "X-Api-Key", required = false) String apiKey,
+            @RequestBody Map<String, Object> body) {
+        // Device lookup (optional)
+        Device device = apiKey != null ? deviceRepo.findByApiKey(apiKey).orElse(null) : null;
+
         List<Map<String, Object>> events = (List<Map<String, Object>>) body.get("events");
         if (events == null) return ResponseEntity.badRequest().body(Map.of("error", "No events"));
         int saved = 0, skipped = 0;
+        List<Map<String, Object>> results = new ArrayList<>();
         for (Map<String, Object> ev : events) {
+            String syncKey = ev.get("syncKey") != null ? ev.get("syncKey").toString() : null;
             try {
+                // Dedup by syncKey
+                if (syncKey != null && attendanceRepo.existsBySyncKey(syncKey)) {
+                    skipped++;
+                    results.add(Map.of("syncKey", syncKey, "status", "duplicate"));
+                    continue;
+                }
                 Long studentId = Long.valueOf(ev.get("studentId").toString());
                 OffsetDateTime ts = OffsetDateTime.parse(ev.get("timestamp").toString());
                 Attendance.AttendanceType type = Attendance.AttendanceType.valueOf(ev.get("type").toString());
 
                 if (attendanceRepo.existsByStudentIdAndTimestampAndType(studentId, ts, type)) {
                     skipped++;
+                    results.add(Map.of("syncKey", syncKey != null ? syncKey : "", "status", "duplicate"));
                     continue;
                 }
                 Student student = studentRepo.findById(studentId).orElse(null);
@@ -82,11 +99,25 @@ public class AttendanceController {
                 a.setType(type);
                 a.setTemperature(ev.get("temperature") != null ? Double.valueOf(ev.get("temperature").toString()) : null);
                 a.setDeviceSerial(ev.get("deviceSerial") != null ? ev.get("deviceSerial").toString() : null);
+                a.setPhotoPath(ev.get("photoPath") != null ? ev.get("photoPath").toString() : null);
+                a.setSyncKey(syncKey);
+                a.setSyncedAt(OffsetDateTime.now());
+                a.setMiniPcDeviceId(device != null ? device.getId() : null);
+                a.setNotificationSent(false);
                 attendanceRepo.save(a);
                 saved++;
+                results.add(Map.of("syncKey", syncKey != null ? syncKey : "", "status", "synced"));
+
+                // Telegram notification
+                try {
+                    String snapshotUrl = ev.get("photoPath") != null ? ev.get("photoPath").toString() : null;
+                    notificationService.notifyGuardians(student, ts, type.name(), snapshotUrl);
+                    a.setNotificationSent(true);
+                    attendanceRepo.save(a);
+                } catch (Exception ignored) {}
             } catch (Exception ignored) { skipped++; }
         }
-        return ResponseEntity.ok(Map.of("saved", saved, "skipped", skipped, "total", events.size()));
+        return ResponseEntity.ok(Map.of("synced", saved, "skipped", skipped, "total", events.size(), "results", results));
     }
 
     // ─── Mini-PC: heartbeat ───
@@ -171,5 +202,29 @@ public class AttendanceController {
             m.put("temperature", a.getTemperature());
             return m;
         }).collect(Collectors.toList()));
+    }
+
+    // ─── Mini-PC: o'quvchilar ro'yxati (kesh uchun) ───
+    @GetMapping("/students")
+    public ResponseEntity<?> getStudentsForDevice(
+            @RequestHeader(value = "X-Api-Key", required = false) String apiKey,
+            @RequestParam Long schoolId) {
+        // API key tekshirish
+        if (apiKey != null) {
+            Device device = deviceRepo.findByApiKey(apiKey).orElse(null);
+            if (device == null || !device.getSchoolId().equals(schoolId)) {
+                return ResponseEntity.status(401).body(Map.of("error", "Ruxsat yo'q"));
+            }
+        }
+        List<Student> students = studentRepo.findBySchoolId(schoolId);
+        List<Map<String, Object>> result = students.stream().map(s -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", s.getId());
+            m.put("fullName", s.getFullName());
+            m.put("classId", s.getClassId());
+            m.put("photoUrl", s.getPhotoUrl());
+            return m;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(Map.of("students", result, "count", result.size()));
     }
 }
