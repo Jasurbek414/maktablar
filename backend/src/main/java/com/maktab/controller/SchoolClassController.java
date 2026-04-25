@@ -5,6 +5,8 @@ import com.maktab.model.School;
 import com.maktab.repository.SchoolClassRepository;
 import com.maktab.repository.SchoolRepository;
 import com.maktab.repository.StudentRepository;
+import com.maktab.repository.UserRepository;
+import com.maktab.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,7 @@ public class SchoolClassController {
     @Autowired private SchoolClassRepository classRepo;
     @Autowired private SchoolRepository schoolRepo;
     @Autowired private StudentRepository studentRepo;
+    @Autowired private UserRepository userRepo;
 
     @GetMapping
     public List<Map<String, Object>> getAll(@RequestParam(required = false) Long schoolId) {
@@ -83,6 +86,10 @@ public class SchoolClassController {
         m.put("schoolId", sc.getSchool().getId());
         m.put("schoolName", sc.getSchool().getName());
         m.put("teacherId", sc.getTeacherId());
+        // Resolve teacher name
+        if (sc.getTeacherId() != null) {
+            userRepo.findById(sc.getTeacherId()).ifPresent(u -> m.put("teacherName", u.getFullName()));
+        }
         // Count students in this class
         long count = studentRepo.countByClassId(sc.getId());
         m.put("studentCount", count);

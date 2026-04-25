@@ -120,6 +120,7 @@ export default function Students({ user }) {
   const [schools, setSchools] = useState([]);
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [selProv, setSelProv] = useState(null);
   const [selDist, setSelDist] = useState(null);
   const [selSchool, setSelSchool] = useState(null);
@@ -150,14 +151,16 @@ export default function Students({ user }) {
   const loadSchoolDirect = async () => {
     try {
       const s = await api.get(`/api/schools/${user.schoolId}`);
-      setSelSchool(s); setClasses(await api.get(`/api/classes?schoolId=${user.schoolId}`));
+      setSelSchool(s);
+      const [cls, tchs] = await Promise.all([api.get(`/api/classes?schoolId=${user.schoolId}`), api.get(`/api/users?role=TEACHER&schoolId=${user.schoolId}`)]);
+      setClasses(cls); setTeachers(tchs);
     } catch {}
     setLoading(false);
   };
 
   const pickProv = (p, dists) => { setSelProv(p); setSelDist(null); setSelSchool(null); setSelClass(null); setSearch(''); setDistricts((dists || allDistricts).filter(d => d.provinceId == p.id)); setLoading(false); };
   const pickDist = async (d) => { setSelDist(d); setSelSchool(null); setSelClass(null); setLoading(true); setSearch(''); try { setSchools(await api.get(`/api/schools?districtId=${d.id}`)); } catch {} setLoading(false); };
-  const pickSchool = async (s) => { setSelSchool(s); setSelClass(null); setLoading(true); setSearch(''); try { setClasses(await api.get(`/api/classes?schoolId=${s.id}`)); } catch {} setLoading(false); };
+  const pickSchool = async (s) => { setSelSchool(s); setSelClass(null); setLoading(true); setSearch(''); try { const [cls, tchs] = await Promise.all([api.get(`/api/classes?schoolId=${s.id}`), api.get(`/api/users?role=TEACHER&schoolId=${s.id}`)]); setClasses(cls); setTeachers(tchs); } catch {} setLoading(false); };
   const pickClass = async (c) => { setSelClass(c); setLoading(true); setSearch(''); try { setStudents(await api.get(`/api/students?classId=${c.id}`)); } catch {} setLoading(false); };
 
   const goProvs = () => { setSelProv(null); setSelDist(null); setSelSchool(null); setSelClass(null); setSearch(''); };
@@ -212,6 +215,13 @@ export default function Students({ user }) {
         <div className="mb-4"><label className="text-xs font-semibold text-slate-400 uppercase">Sinf nomi</label>
           <input className={inputCls2 + ' mt-1.5'} value={classForm.name||''} onChange={e => setClassForm({...classForm, name: e.target.value})} placeholder="Masalan: 5-A" />
         </div>
+        <div className="mb-4"><label className="text-xs font-semibold text-slate-400 uppercase">Sinf rahbari (O'qituvchi)</label>
+          <select className={selectCls + ' mt-1.5'} value={classForm.teacherId||''} onChange={e => setClassForm({...classForm, teacherId: e.target.value ? Number(e.target.value) : null})}>
+            <option value="">Tanlanmagan</option>
+            {teachers.map(t => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+          </select>
+          {!teachers.length && <p className="text-[10px] text-slate-500 mt-1">Bu maktabda TEACHER roli bilan foydalanuvchi yo'q</p>}
+        </div>
         <div className="flex gap-3 mt-6">
           <button onClick={() => setClassModal(null)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor</button>
           <button onClick={saveClass} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
@@ -259,7 +269,7 @@ export default function Students({ user }) {
                   </div>
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-white group-hover:text-cyan-300 transition-colors truncate">{s.name}</h3>
-                    <p className="text-[10px] text-slate-600 mt-0.5">{s.districtName}</p>
+                    <p className="text-[10px] text-slate-600 mt-0.5">{s.directorName ? `👤 ${s.directorName}` : s.districtName}</p>
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-slate-700 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all shrink-0 mt-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
@@ -294,7 +304,7 @@ export default function Students({ user }) {
         <div className="flex items-center justify-between mb-3">
           <div className={`px-3 py-1.5 rounded-lg text-sm font-bold ${CLASS_COLORS[c.grade]||'bg-slate-500/10 text-slate-400'}`}>{c.name}</div>
           <div className="flex items-center gap-1">
-            <button onClick={e => { e.stopPropagation(); setClassForm({id:c.id,name:c.name,grade:c.grade,section:c.section,schoolId:c.schoolId}); setClassModal('edit'); }} className="p-1.5 rounded-lg text-slate-600 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors opacity-0 group-hover:opacity-100"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg></button>
+            <button onClick={e => { e.stopPropagation(); setClassForm({id:c.id,name:c.name,grade:c.grade,section:c.section,schoolId:c.schoolId,teacherId:c.teacherId}); setClassModal('edit'); }} className="p-1.5 rounded-lg text-slate-600 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors opacity-0 group-hover:opacity-100"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg></button>
             <button onClick={e => { e.stopPropagation(); setDeleteClassId(c.id); }} className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79" /></svg></button>
             <svg className="w-4 h-4 text-slate-700 group-hover:text-emerald-400 transition-colors ml-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
           </div>
@@ -309,6 +319,8 @@ export default function Students({ user }) {
             <div><p className="text-xs font-bold text-emerald-400">0%</p><p className="text-[7px] text-slate-600">Davomat</p></div>
           </div>
         </div>
+        {c.teacherName && <div className="flex items-center gap-1.5 mb-1.5 py-1 px-2 rounded-lg bg-violet-500/[0.06]"><svg className="w-3 h-3 text-violet-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg><span className="text-[9px] text-violet-300 truncate">{c.teacherName}</span></div>}
+        {!c.teacherName && <div className="flex items-center gap-1.5 mb-1.5 py-1 px-2 rounded-lg bg-slate-500/[0.04]"><svg className="w-3 h-3 text-slate-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg><span className="text-[9px] text-slate-600">O'qituvchi biriktirilmagan</span></div>}
         {c.grade && <div className="flex items-center justify-between"><span className="text-[9px] text-slate-600">{c.grade}-sinf, {c.section}-bo'lim</span><span className="relative flex h-1.5 w-1.5"><span className="live-dot absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" /></span></div>}
       </div>
     </div>

@@ -21,8 +21,21 @@ public class UserController {
     private PasswordEncoder passwordEncoder;
 
     @GetMapping
-    public List<Map<String, Object>> getAll() {
-        return userRepository.findAll().stream().map(this::toMap).collect(Collectors.toList());
+    public List<Map<String, Object>> getAll(
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Long schoolId,
+            @RequestParam(required = false) Long provinceId) {
+        List<User> users;
+        if (role != null && schoolId != null) {
+            users = userRepository.findByRoleAndSchoolId(User.Role.valueOf(role), schoolId);
+        } else if (role != null && provinceId != null) {
+            users = userRepository.findByRoleAndProvinceId(User.Role.valueOf(role), provinceId);
+        } else if (role != null) {
+            users = userRepository.findByRole(User.Role.valueOf(role));
+        } else {
+            users = userRepository.findAll();
+        }
+        return users.stream().map(this::toMap).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
