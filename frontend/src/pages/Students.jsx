@@ -132,6 +132,9 @@ export default function Students({ user }) {
   const [deleteId, setDeleteId] = useState(null);
   const [view, setView] = useState('card');
   const [profile, setProfile] = useState(null);
+  const [classModal, setClassModal] = useState(null); // 'add' | 'edit' | null
+  const [classForm, setClassForm] = useState({});
+  const [deleteClassId, setDeleteClassId] = useState(null);
   const isAdmin = user?.role === 'ADMIN';
   const isDirector = user?.role === 'DIRECTOR';
 
@@ -175,6 +178,48 @@ export default function Students({ user }) {
     try { await api.del(`/api/students/${id}`); setDeleteId(null); if (selClass) await pickClass(selClass); else if (selSchool) await pickSchool(selSchool); } catch (e) { alert(e.message); }
   };
 
+  /* ── Class CRUD ── */
+  const saveClass = async () => {
+    try {
+      const data = { ...classForm, name: classForm.name || `${classForm.grade}-${classForm.section}` };
+      if (classModal === 'edit') await api.put(`/api/classes/${classForm.id}`, data);
+      else await api.post('/api/classes', data);
+      setClassModal(null);
+      if (selSchool) { setClasses(await api.get(`/api/classes?schoolId=${selSchool.id}`)); }
+    } catch (e) { alert(e.message); }
+  };
+  const removeClass = async (id) => {
+    try { await api.del(`/api/classes/${id}`); setDeleteClassId(null);
+      if (selSchool) { setClasses(await api.get(`/api/classes?schoolId=${selSchool.id}`)); }
+    } catch (e) { alert(e.message); }
+  };
+  useEffect(() => { if (classForm.grade && classForm.section) setClassForm(f => ({...f, name: `${f.grade}-${f.section}`})); }, [classForm.grade, classForm.section]);
+
+  const selectCls = "w-full h-11 px-4 rounded-xl bg-[#0a120e] border border-emerald-500/[0.1] text-white text-sm outline-none focus:border-emerald-500/40 transition-colors";
+  const inputCls2 = "w-full h-11 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.1] text-white text-sm placeholder-slate-600 outline-none focus:border-emerald-500/40 transition-colors";
+  const renderClassModal = () => classModal && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setClassModal(null)}>
+      <div className="w-full max-w-md rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.12] p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-white mb-5">{classModal === 'edit' ? 'Sinfni tahrirlash' : 'Yangi sinf'}</h3>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div><label className="text-xs font-semibold text-slate-400 uppercase">Sinf raqami</label>
+            <select className={selectCls + ' mt-1.5'} value={classForm.grade||''} onChange={e => setClassForm({...classForm, grade: e.target.value})}><option value="">Tanlang</option>{[1,2,3,4,5,6,7,8,9,10,11].map(g => <option key={g} value={g}>{g}-sinf</option>)}</select>
+          </div>
+          <div><label className="text-xs font-semibold text-slate-400 uppercase">Bo'lim</label>
+            <select className={selectCls + ' mt-1.5'} value={classForm.section||''} onChange={e => setClassForm({...classForm, section: e.target.value})}><option value="">Tanlang</option>{['A','B','C','D','E','F','G','H'].map(s => <option key={s} value={s}>{s}</option>)}</select>
+          </div>
+        </div>
+        <div className="mb-4"><label className="text-xs font-semibold text-slate-400 uppercase">Sinf nomi</label>
+          <input className={inputCls2 + ' mt-1.5'} value={classForm.name||''} onChange={e => setClassForm({...classForm, name: e.target.value})} placeholder="Masalan: 5-A" />
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button onClick={() => setClassModal(null)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor</button>
+          <button onClick={saveClass} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
+        </div>
+      </div>
+    </div>
+  );
+
   const filtered = students.filter(s => s.fullName?.toLowerCase().includes(search.toLowerCase()));
 
   /* 1. Viloyat */
@@ -202,56 +247,108 @@ export default function Students({ user }) {
   if (!selSchool && !isDirector) {
     return (<div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-6"><BackBtn onClick={goDists} /><div><h1 className="text-xl font-bold text-white">{selDist.name}</h1><Breadcrumb items={["O'quvchilar", selProv.name, selDist.name]} /></div></div>
-      {loading ? <Loader /> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
-        {schools.map(s => <NavCard key={s.id} icon={ICONS.school} color="cyan" title={s.name} subtitle={`${s.studentCount||0} o'quvchi`} onClick={() => pickSchool(s)} stats={[{value:s.studentCount||0,label:"O'quvchi",color:'text-cyan-400',bg:'bg-cyan-500/[0.06]'},{value:'0%',label:'Davomat',color:'text-emerald-400',bg:'bg-emerald-500/[0.06]'}]} />)}
+      {loading ? <Loader /> : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'0.75rem'}}>
+        {schools.map(s => (
+          <div key={s.id} className="group relative rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/20 transition-all duration-300 overflow-hidden cursor-pointer" onClick={() => pickSchool(s)}>
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            <div className="relative p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/10 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={ICONS.school} /></svg>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-white group-hover:text-cyan-300 transition-colors truncate">{s.name}</h3>
+                    <p className="text-[10px] text-slate-600 mt-0.5">{s.districtName}</p>
+                  </div>
+                </div>
+                <svg className="w-4 h-4 text-slate-700 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all shrink-0 mt-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <div className="flex items-center gap-1.5 py-1.5 px-2 rounded-lg bg-cyan-500/[0.06]">
+                  <svg className="w-3 h-3 text-cyan-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
+                  <div><p className="text-xs font-bold text-cyan-400">{s.classCount||0}</p><p className="text-[7px] text-slate-600 leading-tight">Sinf</p></div>
+                </div>
+                <div className="flex items-center gap-1.5 py-1.5 px-2 rounded-lg bg-amber-500/[0.06]">
+                  <svg className="w-3 h-3 text-amber-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+                  <div><p className="text-xs font-bold text-amber-400">{s.studentCount||0}</p><p className="text-[7px] text-slate-600 leading-tight">O'quvchi</p></div>
+                </div>
+                <div className="flex items-center gap-1.5 py-1.5 px-2 rounded-lg bg-emerald-500/[0.06]">
+                  <svg className="w-3 h-3 text-emerald-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <div><p className="text-xs font-bold text-emerald-400">0%</p><p className="text-[7px] text-slate-600 leading-tight">Davomat</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
         {!schools.length && <p className="col-span-full text-center text-slate-600 py-12">Maktab topilmadi</p>}
       </div>}
     </div>);
   }
 
+  /* ── Class Card Component ── */
+  const ClassCard = ({ c, onClick }) => (
+    <div className="group relative rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      <div className="relative p-4 cursor-pointer" onClick={() => onClick(c)}>
+        <div className="flex items-center justify-between mb-3">
+          <div className={`px-3 py-1.5 rounded-lg text-sm font-bold ${CLASS_COLORS[c.grade]||'bg-slate-500/10 text-slate-400'}`}>{c.name}</div>
+          <div className="flex items-center gap-1">
+            <button onClick={e => { e.stopPropagation(); setClassForm({id:c.id,name:c.name,grade:c.grade,section:c.section,schoolId:c.schoolId}); setClassModal('edit'); }} className="p-1.5 rounded-lg text-slate-600 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors opacity-0 group-hover:opacity-100"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg></button>
+            <button onClick={e => { e.stopPropagation(); setDeleteClassId(c.id); }} className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79" /></svg></button>
+            <svg className="w-4 h-4 text-slate-700 group-hover:text-emerald-400 transition-colors ml-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 mb-2">
+          <div className="flex items-center gap-1.5 py-1 px-2 rounded-lg bg-amber-500/[0.06]">
+            <svg className="w-3 h-3 text-amber-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+            <div><p className="text-xs font-bold text-amber-400">{c.studentCount||0}</p><p className="text-[7px] text-slate-600">O'quvchi</p></div>
+          </div>
+          <div className="flex items-center gap-1.5 py-1 px-2 rounded-lg bg-emerald-500/[0.06]">
+            <svg className="w-3 h-3 text-emerald-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div><p className="text-xs font-bold text-emerald-400">0%</p><p className="text-[7px] text-slate-600">Davomat</p></div>
+          </div>
+        </div>
+        {c.grade && <div className="flex items-center justify-between"><span className="text-[9px] text-slate-600">{c.grade}-sinf, {c.section}-bo'lim</span><span className="relative flex h-1.5 w-1.5"><span className="live-dot absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" /></span></div>}
+      </div>
+    </div>
+  );
+
   /* 4. Sinf tanlash */
   if (!selClass && !isDirector) {
     return (<div className="animate-fade-in">
-      <div className="flex items-center gap-3 mb-6"><BackBtn onClick={goSchools} /><div><h1 className="text-xl font-bold text-white">{selSchool?.name}</h1><Breadcrumb items={["O'quvchilar", selProv?.name, selDist?.name, selSchool?.name].filter(Boolean)} /></div></div>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3"><BackBtn onClick={goSchools} /><div><h1 className="text-xl font-bold text-white">{selSchool?.name}</h1><Breadcrumb items={["O'quvchilar", selProv?.name, selDist?.name, selSchool?.name].filter(Boolean)} /></div></div>
+        <button onClick={() => { setClassForm({schoolId:selSchool?.id,grade:'',section:'',name:''}); setClassModal('add'); }} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Sinf qo'shish
+        </button>
+      </div>
       {loading ? <Loader /> : classes.length > 0 ? (
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'0.75rem'}}>
-          {classes.map(c => (
-            <button key={c.id} onClick={() => pickClass(c)} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 relative overflow-hidden p-4">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`px-3 py-1.5 rounded-lg text-sm font-bold ${CLASS_COLORS[c.grade]||'bg-slate-500/10 text-slate-400'}`}>{c.name}</div>
-                  <svg className="w-4 h-4 text-slate-700 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
-                  <span className="text-xs text-amber-400 font-semibold">{c.studentCount||0}</span>
-                  <span className="text-[9px] text-slate-600">o'quvchi</span>
-                </div>
-              </div>
-            </button>
-          ))}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:'0.75rem'}}>
+          {classes.map(c => <ClassCard key={c.id} c={c} onClick={pickClass} />)}
         </div>
-      ) : (<div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] py-12 text-center"><p className="text-slate-600 text-sm">Bu maktabda hali sinf yo'q</p><p className="text-[10px] text-slate-500 mt-1">Sinflar bo'limidan sinf qo'shing</p></div>)}
+      ) : (<div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] py-12 text-center"><p className="text-slate-600 text-sm">Bu maktabda hali sinf yo'q</p><button onClick={() => { setClassForm({schoolId:selSchool?.id,grade:'',section:'',name:''}); setClassModal('add'); }} className="mt-3 h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors">+ Sinf qo'shish</button></div>)}
+      {renderClassModal()}
+      <ConfirmModal open={!!deleteClassId} onCancel={() => setDeleteClassId(null)} onConfirm={() => removeClass(deleteClassId)} />
     </div>);
   }
 
   /* Director uchun sinf tanlash */
   if (!selClass && isDirector) {
     return (<div className="animate-fade-in">
-      <div className="mb-6"><h1 className="text-xl font-bold text-white">{selSchool?.name || 'O\'quvchilar'}</h1><p className="text-sm text-slate-500">Sinfni tanlang</p></div>
+      <div className="flex items-center justify-between mb-6">
+        <div><h1 className="text-xl font-bold text-white">{selSchool?.name || 'O\'quvchilar'}</h1><p className="text-sm text-slate-500">Sinfni tanlang</p></div>
+        <button onClick={() => { setClassForm({schoolId:selSchool?.id||user?.schoolId,grade:'',section:'',name:''}); setClassModal('add'); }} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Sinf qo'shish
+        </button>
+      </div>
       {loading ? <Loader /> : classes.length > 0 ? (
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'0.75rem'}}>
-          {classes.map(c => (
-            <button key={c.id} onClick={() => pickClass(c)} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 relative overflow-hidden p-4">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-              <div className="relative"><div className="flex items-center justify-between mb-3"><div className={`px-3 py-1.5 rounded-lg text-sm font-bold ${CLASS_COLORS[c.grade]||'bg-slate-500/10 text-slate-400'}`}>{c.name}</div><svg className="w-4 h-4 text-slate-700 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg></div>
-                <div className="flex items-center gap-1.5"><svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg><span className="text-xs text-amber-400 font-semibold">{c.studentCount||0}</span><span className="text-[9px] text-slate-600">o'quvchi</span></div>
-              </div>
-            </button>
-          ))}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:'0.75rem'}}>
+          {classes.map(c => <ClassCard key={c.id} c={c} onClick={pickClass} />)}
         </div>
-      ) : (<div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] py-12 text-center"><p className="text-slate-600 text-sm">Bu maktabda hali sinf yo'q</p></div>)}
+      ) : (<div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] py-12 text-center"><p className="text-slate-600 text-sm">Bu maktabda hali sinf yo'q</p><button onClick={() => { setClassForm({schoolId:selSchool?.id||user?.schoolId,grade:'',section:'',name:''}); setClassModal('add'); }} className="mt-3 h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-colors">+ Sinf qo'shish</button></div>)}
+      {renderClassModal()}
+      <ConfirmModal open={!!deleteClassId} onCancel={() => setDeleteClassId(null)} onConfirm={() => removeClass(deleteClassId)} />
     </div>);
   }
 
