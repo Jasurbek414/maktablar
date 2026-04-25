@@ -10,6 +10,7 @@ import Students from './pages/Students';
 import Attendance from './pages/Attendance';
 import Users from './pages/Users';
 import Classes from './pages/Classes';
+import Devices from './pages/Devices';
 
 const api = { baseURL: '/api' };
 const apiFetch = async (url) => {
@@ -277,6 +278,9 @@ export default function App() {
               } />
               <Route path="/classes" element={
                 <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR']}><Classes /></Gate>
+              } />
+              <Route path="/devices" element={
+                <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR']}><Devices user={user} /></Gate>
               } />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
