@@ -1,7 +1,7 @@
-FROM node:20-alpine
+FROM python:3.11-slim
 WORKDIR /app
-COPY package.json .
-RUN npm install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-EXPOSE 3001
-CMD ["npm", "start"]
+RUN mkdir -p /app/data /app/photos
+CMD ["python", "main.py"]

@@ -33,6 +33,21 @@ public class Attendance {
     @Column
     private String deviceSerial; // which device recorded this
 
+    @Column
+    private String photoPath; // Face ID capture rasm yo'li
+
+    @Column
+    private Long miniPcDeviceId; // qaysi mini-PC dan kelgan
+
+    @Column(unique = true)
+    private String syncKey; // dublikat oldini olish uchun (schoolId-studentId-timestamp-type)
+
+    @Column
+    private Boolean notificationSent = false; // Telegram xabar yuborilganmi
+
+    @Column
+    private OffsetDateTime syncedAt; // main backend'ga qachon kelgani
+
     public enum AttendanceType {
         IN,
         OUT

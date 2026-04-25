@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  mini-server:
+    container_name: maktab-minipc
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "7660:7660"    # ISUP Face ID TCP port
+      - "8090:8090"    # Local API
+    environment:
+      SCHOOL_ID: "${SCHOOL_ID:-2}"
+      API_KEY: "${API_KEY:-mpc-test-key-12345}"
+      MAIN_BACKEND: "${MAIN_BACKEND:-https://maktab.ecos.uz}"
+      SYNC_INTERVAL: "${SYNC_INTERVAL:-30}"
+      ISUP_PORT: "7660"
+      LOCAL_API_PORT: "8090"
+    volumes:
+      - ./data:/app/data
+      - ./photos:/app/photos
