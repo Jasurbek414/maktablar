@@ -110,17 +110,20 @@ function StudentCard({ s, onEdit, onDelete }) {
 }
 
 const Loader = () => <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>;
-const ICONS = { prov: 'M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21', dist: 'M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z', school: 'M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21' };
+const ICONS = { prov: 'M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21', dist: 'M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z', school: 'M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21', cls: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25' };
+const CLASS_COLORS = ['','bg-red-500/10 text-red-400','bg-orange-500/10 text-orange-400','bg-amber-500/10 text-amber-400','bg-yellow-500/10 text-yellow-400','bg-lime-500/10 text-lime-400','bg-emerald-500/10 text-emerald-400','bg-teal-500/10 text-teal-400','bg-cyan-500/10 text-cyan-400','bg-blue-500/10 text-blue-400','bg-indigo-500/10 text-indigo-400','bg-violet-500/10 text-violet-400'];
 
 export default function Students({ user }) {
   const [provinces, setProvinces] = useState([]);
   const [allDistricts, setAllDistricts] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [schools, setSchools] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [selProv, setSelProv] = useState(null);
   const [selDist, setSelDist] = useState(null);
   const [selSchool, setSelSchool] = useState(null);
+  const [selClass, setSelClass] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -144,30 +147,32 @@ export default function Students({ user }) {
   const loadSchoolDirect = async () => {
     try {
       const s = await api.get(`/api/schools/${user.schoolId}`);
-      setSelSchool(s); setStudents(await api.get(`/api/students?schoolId=${user.schoolId}`));
+      setSelSchool(s); setClasses(await api.get(`/api/classes?schoolId=${user.schoolId}`));
     } catch {}
     setLoading(false);
   };
 
-  const pickProv = (p, dists) => { setSelProv(p); setSelDist(null); setSelSchool(null); setSearch(''); setDistricts((dists || allDistricts).filter(d => d.provinceId == p.id)); setLoading(false); };
-  const pickDist = async (d) => { setSelDist(d); setSelSchool(null); setLoading(true); setSearch(''); try { setSchools(await api.get(`/api/schools?districtId=${d.id}`)); } catch {} setLoading(false); };
-  const pickSchool = async (s) => { setSelSchool(s); setLoading(true); setSearch(''); try { setStudents(await api.get(`/api/students?schoolId=${s.id}`)); } catch {} setLoading(false); };
+  const pickProv = (p, dists) => { setSelProv(p); setSelDist(null); setSelSchool(null); setSelClass(null); setSearch(''); setDistricts((dists || allDistricts).filter(d => d.provinceId == p.id)); setLoading(false); };
+  const pickDist = async (d) => { setSelDist(d); setSelSchool(null); setSelClass(null); setLoading(true); setSearch(''); try { setSchools(await api.get(`/api/schools?districtId=${d.id}`)); } catch {} setLoading(false); };
+  const pickSchool = async (s) => { setSelSchool(s); setSelClass(null); setLoading(true); setSearch(''); try { setClasses(await api.get(`/api/classes?schoolId=${s.id}`)); } catch {} setLoading(false); };
+  const pickClass = async (c) => { setSelClass(c); setLoading(true); setSearch(''); try { setStudents(await api.get(`/api/students?classId=${c.id}`)); } catch {} setLoading(false); };
 
-  const goProvs = () => { setSelProv(null); setSelDist(null); setSelSchool(null); setSearch(''); };
-  const goDists = () => { setSelDist(null); setSelSchool(null); setSearch(''); };
-  const goSchools = () => { setSelSchool(null); setSearch(''); };
+  const goProvs = () => { setSelProv(null); setSelDist(null); setSelSchool(null); setSelClass(null); setSearch(''); };
+  const goDists = () => { setSelDist(null); setSelSchool(null); setSelClass(null); setSearch(''); };
+  const goSchools = () => { setSelSchool(null); setSelClass(null); setSearch(''); };
+  const goClasses = () => { setSelClass(null); setSearch(''); };
 
-  const openAdd = () => { setEditing(null); setForm({ schoolId: selSchool?.id }); setModal(true); };
+  const openAdd = () => { setEditing(null); setForm({ schoolId: selSchool?.id, classId: selClass?.id }); setModal(true); };
   const openEdit = (s) => { setEditing(s); setForm({ ...s }); setModal(true); };
   const save = async () => {
     try {
       if (editing) await api.put(`/api/students/${editing.id}`, form);
       else await api.post('/api/students', form);
-      setModal(false); if (selSchool) await pickSchool(selSchool);
+      setModal(false); if (selClass) await pickClass(selClass); else if (selSchool) await pickSchool(selSchool);
     } catch (e) { alert(e.message); }
   };
   const remove = async (id) => {
-    try { await api.del(`/api/students/${id}`); setDeleteId(null); if (selSchool) await pickSchool(selSchool); } catch (e) { alert(e.message); }
+    try { await api.del(`/api/students/${id}`); setDeleteId(null); if (selClass) await pickClass(selClass); else if (selSchool) await pickSchool(selSchool); } catch (e) { alert(e.message); }
   };
 
   const filtered = students.filter(s => s.fullName?.toLowerCase().includes(search.toLowerCase()));
@@ -204,16 +209,61 @@ export default function Students({ user }) {
     </div>);
   }
 
-  /* 4. O'quvchilar */
+  /* 4. Sinf tanlash */
+  if (!selClass && !isDirector) {
+    return (<div className="animate-fade-in">
+      <div className="flex items-center gap-3 mb-6"><BackBtn onClick={goSchools} /><div><h1 className="text-xl font-bold text-white">{selSchool?.name}</h1><Breadcrumb items={["O'quvchilar", selProv?.name, selDist?.name, selSchool?.name].filter(Boolean)} /></div></div>
+      {loading ? <Loader /> : classes.length > 0 ? (
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'0.75rem'}}>
+          {classes.map(c => (
+            <button key={c.id} onClick={() => pickClass(c)} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 relative overflow-hidden p-4">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`px-3 py-1.5 rounded-lg text-sm font-bold ${CLASS_COLORS[c.grade]||'bg-slate-500/10 text-slate-400'}`}>{c.name}</div>
+                  <svg className="w-4 h-4 text-slate-700 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+                  <span className="text-xs text-amber-400 font-semibold">{c.studentCount||0}</span>
+                  <span className="text-[9px] text-slate-600">o'quvchi</span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (<div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] py-12 text-center"><p className="text-slate-600 text-sm">Bu maktabda hali sinf yo'q</p><p className="text-[10px] text-slate-500 mt-1">Sinflar bo'limidan sinf qo'shing</p></div>)}
+    </div>);
+  }
 
+  /* Director uchun sinf tanlash */
+  if (!selClass && isDirector) {
+    return (<div className="animate-fade-in">
+      <div className="mb-6"><h1 className="text-xl font-bold text-white">{selSchool?.name || 'O\'quvchilar'}</h1><p className="text-sm text-slate-500">Sinfni tanlang</p></div>
+      {loading ? <Loader /> : classes.length > 0 ? (
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'0.75rem'}}>
+          {classes.map(c => (
+            <button key={c.id} onClick={() => pickClass(c)} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 relative overflow-hidden p-4">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="relative"><div className="flex items-center justify-between mb-3"><div className={`px-3 py-1.5 rounded-lg text-sm font-bold ${CLASS_COLORS[c.grade]||'bg-slate-500/10 text-slate-400'}`}>{c.name}</div><svg className="w-4 h-4 text-slate-700 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg></div>
+                <div className="flex items-center gap-1.5"><svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg><span className="text-xs text-amber-400 font-semibold">{c.studentCount||0}</span><span className="text-[9px] text-slate-600">o'quvchi</span></div>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (<div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] py-12 text-center"><p className="text-slate-600 text-sm">Bu maktabda hali sinf yo'q</p></div>)}
+    </div>);
+  }
+
+  /* 5. O'quvchilar */
   return (
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          {!isDirector && <BackBtn onClick={goSchools} />}
+          <BackBtn onClick={goClasses} />
           <div>
-            <h1 className="text-xl font-bold text-white">{selSchool?.name || 'Maktab'}</h1>
-            <Breadcrumb items={isDirector ? ["O'quvchilar"] : ["O'quvchilar", selProv?.name, selDist?.name, selSchool?.name].filter(Boolean)} />
+            <h1 className="text-xl font-bold text-white">{selClass?.name} — {selSchool?.name || 'Maktab'}</h1>
+            <Breadcrumb items={isDirector ? ["O'quvchilar", selSchool?.name, selClass?.name] : ["O'quvchilar", selProv?.name, selDist?.name, selSchool?.name, selClass?.name].filter(Boolean)} />
           </div>
         </div>
         <div className="flex items-center gap-3">
