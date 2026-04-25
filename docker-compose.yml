@@ -76,7 +76,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      BOT_TOKEN: "YOUR_TELEGRAM_BOT_TOKEN"
+      BOT_TOKEN: "8768167572:AAHB_GHJFBqJI-RHzL9iliMxJJMrLTqJuEw"
       BACKEND_URL: http://backend:8080
       WEBHOOK_URL: https://bot.maktab.ecos.uz/webhook
     networks:
