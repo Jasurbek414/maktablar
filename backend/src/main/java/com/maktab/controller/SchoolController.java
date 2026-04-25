@@ -6,6 +6,8 @@ import com.maktab.repository.SchoolRepository;
 import com.maktab.repository.DistrictRepository;
 import com.maktab.repository.StudentRepository;
 import com.maktab.repository.SchoolClassRepository;
+import com.maktab.repository.UserRepository;
+import com.maktab.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,7 @@ public class SchoolController {
     @Autowired private DistrictRepository districtRepository;
     @Autowired private StudentRepository studentRepository;
     @Autowired private SchoolClassRepository classRepository;
+    @Autowired private UserRepository userRepository;
 
     @GetMapping
     public List<Map<String, Object>> getAll(@RequestParam(required = false) Long districtId) {
@@ -41,6 +44,9 @@ public class SchoolController {
             m.put("studentCount", studentCount);
             long classCount = classRepository.findBySchoolId(s.getId()).size();
             m.put("classCount", classCount);
+            // Director name
+            userRepository.findFirstByRoleAndSchoolId(User.Role.DIRECTOR, s.getId())
+                .ifPresent(d -> m.put("directorName", d.getFullName()));
             return m;
         }).collect(Collectors.toList());
     }
@@ -53,6 +59,10 @@ public class SchoolController {
             m.put("name", s.getName());
             m.put("districtId", s.getDistrict().getId());
             m.put("districtName", s.getDistrict().getName());
+            m.put("studentCount", studentRepository.countBySchoolId(s.getId()));
+            m.put("classCount", classRepository.findBySchoolId(s.getId()).size());
+            userRepository.findFirstByRoleAndSchoolId(User.Role.DIRECTOR, s.getId())
+                .ifPresent(d -> m.put("directorName", d.getFullName()));
             return ResponseEntity.ok(m);
         }).orElse(ResponseEntity.notFound().build());
     }
