@@ -1,7 +1,10 @@
 package com.maktab.service;
 
 import com.maktab.model.Guardian;
+import com.maktab.model.Notification;
 import com.maktab.model.Student;
+import com.maktab.repository.NotificationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -17,10 +20,9 @@ import java.util.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * O'quvchi Face ID dan o'tganda ota-onaga Telegram bot orqali xabar yuborish.
- * Backend → Bot /webhook/attendance → Telegram
- * 
- * Yuboriladi: o'quvchi ismi, rasmi, vaqt, kirdi/chiqdi holati
+ * O'quvchi Face ID dan o'tganda:
+ * 1. Ota-onaga Telegram bot orqali xabar yuborish
+ * 2. Web dashboard'ga bildirishnoma yaratish
  */
 @Service
 public class NotificationService {
@@ -29,6 +31,9 @@ public class NotificationService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper mapper = new ObjectMapper();
 
+    @Autowired
+    private NotificationRepository notifRepo;
+
     @Value("${BOT_WEBHOOK_URL:http://bot:5000}")
     private String botUrl;
 
@@ -36,18 +41,20 @@ public class NotificationService {
     private String publicUrl;
 
     /**
-     * Davomat eventi bo'lganda ota-onalarga xabar yuborish.
-     * Async — javobni kutmasdan ishlaydi
+     * Davomat eventi bo'lganda — ota-onalarga Telegram xabar + web bildirishnoma
      */
     @Async
     public void notifyGuardians(Student student, OffsetDateTime timestamp, String type, String snapshotUrl) {
+        // 1. Web dashboard bildirishnoma
+        createAttendanceNotification(student, timestamp, type);
+
+        // 2. Telegram notification
         List<Guardian> guardians = student.getGuardians();
         if (guardians == null || guardians.isEmpty()) {
-            log.info("Student {} has no guardians, skipping notification", student.getId());
+            log.info("Student {} has no guardians, skipping Telegram notification", student.getId());
             return;
         }
 
-        // Guardian ma'lumotlari
         List<Map<String, String>> guardianData = new ArrayList<>();
         for (Guardian g : guardians) {
             if (g.getTelegramUserId() != null && !g.getTelegramUserId().isEmpty()) {
@@ -63,15 +70,12 @@ public class NotificationService {
             return;
         }
 
-        // Rasm URL
         String photoUrl = null;
         if (snapshotUrl != null && !snapshotUrl.isEmpty()) {
-            // Mini-PC dan kelgan real vaqtdagi rasm
             photoUrl = snapshotUrl;
         } else if (student.getPhotoUrl() != null) {
-            // Profil rasmi
-            photoUrl = student.getPhotoUrl().startsWith("http") 
-                ? student.getPhotoUrl() 
+            photoUrl = student.getPhotoUrl().startsWith("http")
+                ? student.getPhotoUrl()
                 : publicUrl + student.getPhotoUrl();
         }
 
@@ -94,9 +98,74 @@ public class NotificationService {
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            log.info("Notification sent for student {}: status={}", student.getId(), response.statusCode());
+            log.info("Telegram notification sent for student {}: status={}", student.getId(), response.statusCode());
         } catch (Exception e) {
-            log.error("Failed to notify guardians for student {}: {}", student.getId(), e.getMessage());
+            log.error("Failed to send Telegram notification for student {}: {}", student.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Davomat uchun web bildirishnoma yaratish
+     */
+    public void createAttendanceNotification(Student student, OffsetDateTime timestamp, String type) {
+        try {
+            Notification n = new Notification();
+            String emoji = "IN".equals(type) ? "🟢" : "🔴";
+            String action = "IN".equals(type) ? "maktabga kirdi" : "maktabdan chiqdi";
+            String time = timestamp.toLocalTime().toString().substring(0, 5);
+
+            n.setTitle(emoji + " " + student.getFullName() + " " + action);
+            n.setMessage(student.getFullName() + " soat " + time + " da " + action
+                + (student.getSchool() != null ? " (" + student.getSchool().getName() + ")" : ""));
+            n.setType(Notification.NotificationType.ATTENDANCE);
+            n.setLevel(Notification.NotificationLevel.INFO);
+            n.setSchoolId(student.getSchool() != null ? student.getSchool().getId() : null);
+            n.setRelatedEntity("STUDENT");
+            n.setRelatedId(student.getId());
+            n.setIsRead(false);
+            n.setCreatedAt(OffsetDateTime.now());
+            notifRepo.save(n);
+        } catch (Exception e) {
+            log.error("Failed to create web notification: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Qurilma holati bildirishnomasi
+     */
+    public void createDeviceNotification(String deviceName, Long schoolId, boolean online) {
+        try {
+            Notification n = new Notification();
+            n.setTitle(online ? "🟢 " + deviceName + " onlayn" : "🔴 " + deviceName + " oflayn");
+            n.setMessage(deviceName + " " + (online ? "serverga ulandi" : "serverdan uzildi"));
+            n.setType(Notification.NotificationType.DEVICE_STATUS);
+            n.setLevel(online ? Notification.NotificationLevel.SUCCESS : Notification.NotificationLevel.WARNING);
+            n.setSchoolId(schoolId);
+            n.setRelatedEntity("DEVICE");
+            n.setIsRead(false);
+            n.setCreatedAt(OffsetDateTime.now());
+            notifRepo.save(n);
+        } catch (Exception e) {
+            log.error("Failed to create device notification: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Umumiy tizim bildirishnomasi
+     */
+    public void createSystemNotification(String title, String message, Notification.NotificationLevel level) {
+        try {
+            Notification n = new Notification();
+            n.setTitle(title);
+            n.setMessage(message);
+            n.setType(Notification.NotificationType.SYSTEM);
+            n.setLevel(level);
+            n.setIsRead(false);
+            n.setCreatedAt(OffsetDateTime.now());
+            notifRepo.save(n);
+        } catch (Exception e) {
+            log.error("Failed to create system notification: {}", e.getMessage());
         }
     }
 }
+

@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/students/face/**").permitAll() // mini-pc dan
                 .requestMatchers("/api/files/**").permitAll() // rasm serve
                 .requestMatchers("/api/guardians/register").permitAll() // bot dan
+                .requestMatchers("/api/notifications/**").permitAll() // bildirishnomalar
                 // SUPERADMIN – hamma narsa
                 .requestMatchers("/api/admin/**").hasRole("SUPERADMIN")
                 // Qolgan barcha endpointlar autentifikatsiya talab qiladi
