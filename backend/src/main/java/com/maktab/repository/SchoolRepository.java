@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface SchoolRepository extends JpaRepository<School, Long> {
     List<School> findByDistrictId(Long districtId);
+    List<School> findByDistrictIdIn(List<Long> districtIds);
     long countByDistrictId(Long districtId);
 }
