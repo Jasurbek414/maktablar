@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface DeviceRepository extends JpaRepository<Device, Long> {
     Optional<Device> findByApiKey(String apiKey);
     List<Device> findBySchoolId(Long schoolId);
+    List<Device> findBySchoolIdIn(List<Long> schoolIds);
     List<Device> findByStatus(Device.DeviceStatus status);
     List<Device> findByLastHeartbeatBefore(LocalDateTime time);
 }
