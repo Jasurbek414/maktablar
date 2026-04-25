@@ -250,11 +250,11 @@ export default function App() {
       <div className="h-screen flex overflow-hidden bg-[#0a0f0d]">
         <Sidebar user={user} />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="h-14 shrink-0 flex items-center justify-between px-6 border-b border-emerald-500/[0.06] bg-[#0a0f0d]/80 backdrop-blur-md">
+          <header className="relative z-50 h-14 shrink-0 flex items-center justify-between px-6 border-b border-emerald-500/[0.06] bg-[#0a0f0d]/80 backdrop-blur-md">
             <span className="text-xs text-slate-600">{roleLabel[user?.role] || 'Panel'}</span>
             <NotificationPanel user={user} />
           </header>
-          <main className="flex-1 overflow-y-auto p-6">
+          <main className="flex-1 overflow-y-auto p-6 relative z-0">
             <Routes>
               <Route path="/" element={<Dashboard user={user} />} />
               <Route path="/provinces" element={
