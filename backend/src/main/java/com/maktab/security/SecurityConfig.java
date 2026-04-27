@@ -43,6 +43,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/attendance/students").permitAll() // mini-pc student list
                 .requestMatchers("/api/attendance/offline-data").permitAll() // mini-pc offline data
                 .requestMatchers("/api/devices/**").permitAll() // qurilmalar
+                .requestMatchers("/api/provinces/**").permitAll() // viloyatlar
+                .requestMatchers("/api/districts/**").permitAll() // tumanlar
+                .requestMatchers("/api/schools/**").permitAll() // maktablar
                 .requestMatchers("/api/students/face/**").permitAll() // mini-pc dan
                 .requestMatchers("/api/files/**").permitAll() // rasm serve
                 .requestMatchers("/api/guardians/register").permitAll() // bot dan
