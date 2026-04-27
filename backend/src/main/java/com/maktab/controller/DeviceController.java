@@ -40,18 +40,18 @@ public class DeviceController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, Object> body) {
         String apiKey = (String) body.get("apiKey");
-        Long schoolId = Long.valueOf(body.get("schoolId").toString());
         String deviceName = (String) body.getOrDefault("deviceName", "Mini-PC");
         String localIp = (String) body.getOrDefault("localIp", "");
         String macAddress = (String) body.getOrDefault("macAddress", "");
 
-        if (!schoolRepo.existsById(schoolId)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Maktab topilmadi"));
+        Long schoolId = null;
+        if (body.containsKey("schoolId") && body.get("schoolId") != null && !body.get("schoolId").toString().isEmpty()) {
+            try { schoolId = Long.valueOf(body.get("schoolId").toString()); } catch (Exception e) {}
         }
 
         Device device = deviceRepo.findByApiKey(apiKey).orElse(new Device());
         device.setApiKey(apiKey);
-        device.setSchoolId(schoolId);
+        if (schoolId != null) device.setSchoolId(schoolId);
         device.setDeviceName(deviceName);
         device.setLocalIp(localIp);
         device.setMacAddress(macAddress);
@@ -65,7 +65,7 @@ public class DeviceController {
         return ResponseEntity.ok(Map.of(
             "id", device.getId(),
             "status", "registered",
-            "schoolId", schoolId,
+            "schoolId", device.getSchoolId() != null ? device.getSchoolId() : "Biriktirilmagan",
             "message", "Mini-PC muvaffaqiyatli ro'yxatdan o'tdi"
         ));
     }
@@ -142,6 +142,18 @@ public class DeviceController {
     }
 
     /** Qurilma o'chirish */
+    @PutMapping("/{id}/assign-school")
+    public ResponseEntity<?> assignSchool(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Device device = deviceRepo.findById(id).orElseThrow(() -> new RuntimeException("Device not found"));
+        Long schoolId = Long.valueOf(body.get("schoolId").toString());
+        if (!schoolRepo.existsById(schoolId)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Maktab topilmadi"));
+        }
+        device.setSchoolId(schoolId);
+        deviceRepo.save(device);
+        return ResponseEntity.ok(Map.of("message", "Maktabga muvaffaqiyatli biriktirildi"));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         // Bog'liq terminallarni ham o'chirish
