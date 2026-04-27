@@ -205,10 +205,7 @@ public class AttendanceController {
         }).collect(Collectors.toList()));
     }
 
-    // ─── Mini-PC: o'quvchilar ro'yxati (kesh uchun) ───
     @GetMapping("/students")
-    public ResponseEntity<?> getStudentsForDevice(
-            @RequestHeader(value = "X-Api-Key", required = false) String apiKey,
     public ResponseEntity<?> getStudentsList(@RequestParam(required = false) Long schoolId) {
         List<Student> students = schoolId != null ? studentRepo.findBySchoolId(schoolId) : studentRepo.findAll();
         List<Map<String, Object>> result = students.stream().map(s -> {
