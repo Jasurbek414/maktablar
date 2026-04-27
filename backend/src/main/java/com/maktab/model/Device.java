@@ -22,7 +22,7 @@ public class Device {
     @Column(nullable = false)
     private String deviceName;
 
-    @Column(nullable = false)
+    @Column
     private Long schoolId;
 
     @Column
