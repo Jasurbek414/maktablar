@@ -109,7 +109,12 @@ select:focus {
 }
 
 .light-theme body { background-color: var(--bg-main) !important; }
-.light-theme .content-area, .light-theme .content-area .bg-\[\#0a0f0d\] { background-color: var(--bg-main) !important; color: var(--text-primary) !important; }
+.light-theme .content-area, 
+.light-theme .content-area .bg-\[\#0a0f0d\], 
+.light-theme .content-area .bg-\[\#0a120e\] { 
+  background-color: var(--bg-main) !important; 
+  color: var(--text-primary) !important; 
+}
 
 /* Cards & Containers */
 .light-theme .content-area .bg-\[\#0d1a14\] { 
@@ -126,8 +131,15 @@ select:focus {
 .light-theme .content-area .text-slate-500, .light-theme .content-area .text-slate-600 { color: var(--text-muted) !important; }
 
 /* Borders */
-.light-theme .content-area .border-emerald-500\/\[0\.08\], .light-theme .content-area .border-emerald-500\/\[0\.1\], .light-theme .content-area .border-emerald-500\/\[0\.06\], .light-theme .content-area .border-emerald-500\/\[0\.05\], .light-theme .content-area .border-emerald-500\/\[0\.12\] { border-color: var(--border-light) !important; }
-.light-theme .content-area .border-white\/\[0\.04\], .light-theme .content-area .border-white\/\[0\.05\] { border-color: var(--border-light) !important; }
+.light-theme .content-area .border-emerald-500\/\[0\.08\], 
+.light-theme .content-area .border-emerald-500\/\[0\.1\], 
+.light-theme .content-area .border-emerald-500\/\[0\.06\], 
+.light-theme .content-area .border-emerald-500\/\[0\.05\], 
+.light-theme .content-area .border-emerald-500\/\[0\.12\],
+.light-theme .content-area .border-emerald-500\/\[0\.04\] { border-color: var(--border-light) !important; }
+.light-theme .content-area .border-white\/\[0\.04\], 
+.light-theme .content-area .border-white\/\[0\.05\],
+.light-theme .content-area .border-slate-700 { border-color: var(--border-light) !important; }
 
 /* Gradients (Hero section fix) */
 .light-theme .content-area .via-\[\#0d1a14\] {
@@ -135,10 +147,15 @@ select:focus {
 }
 
 /* Other UI elements */
-.light-theme .content-area .bg-white\/\[0\.03\], .light-theme .content-area .bg-white\/\[0\.02\], .light-theme .content-area .bg-white\/\[0\.04\] { background-color: #f1f5f9 !important; border: 1px solid var(--border-light) !important; }
-.light-theme .content-area .hover\:bg-white\/\[0\.04\]:hover { background-color: #e2e8f0 !important; }
-.light-theme .content-area select { background-color: #ffffff !important; color: #0f172a !important; border: 1px solid var(--border-light); }
-.light-theme .content-area select option { background-color: #ffffff !important; color: #0f172a !important; }
+.light-theme .content-area .bg-white\/\[0\.03\], 
+.light-theme .content-area .bg-white\/\[0\.02\], 
+.light-theme .content-area .bg-white\/\[0\.04\] { background-color: #ffffff !important; border: 1px solid var(--border-light) !important; color: var(--text-primary) !important; }
+.light-theme .content-area .hover\:bg-white\/\[0\.04\]:hover,
+.light-theme .content-area .hover\:bg-white\/\[0\.03\]:hover,
+.light-theme .content-area .hover\:bg-white\/\[0\.02\]:hover { background-color: #e2e8f0 !important; color: var(--text-primary) !important; }
+.light-theme .content-area input { background-color: #ffffff !important; color: var(--text-primary) !important; border: 1px solid var(--border-light); }
+.light-theme .content-area select { background-color: #ffffff !important; color: var(--text-primary) !important; border: 1px solid var(--border-light); }
+.light-theme .content-area select option { background-color: #ffffff !important; color: var(--text-primary) !important; }
 .light-theme .content-area .donut::after { background: var(--bg-card) !important; }
 .light-theme .content-area .shadow-emerald-500\/20 { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important; }
 .light-theme .content-area .bg-black\/20 { background-color: var(--bg-main) !important; }
