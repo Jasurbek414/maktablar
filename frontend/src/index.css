@@ -8,7 +8,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-[#0a0f0d] text-slate-100 font-sans;
+    @apply bg-[#020504] text-slate-100 font-sans;
   }
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { @apply bg-transparent; }
@@ -111,6 +111,7 @@ select:focus {
 .light-theme body { background-color: var(--bg-main) !important; }
 .light-theme .content-area, 
 .light-theme .content-area .bg-\[\#0a0f0d\], 
+.light-theme .content-area .bg-\[\#020504\], 
 .light-theme .content-area .bg-\[\#0a120e\] { 
   background-color: var(--bg-main) !important; 
   color: var(--text-primary) !important; 
@@ -166,7 +167,8 @@ select:focus {
 .light-theme .content-area .donut::after { background: var(--bg-card) !important; }
 .light-theme .content-area .shadow-emerald-500\/20 { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important; }
 .light-theme .content-area .bg-black\/20 { background-color: var(--bg-main) !important; }
-.light-theme .content-area .bg-\[\#0a0f0d\]\/80 { background-color: rgba(248, 250, 252, 0.9) !important; }
+.light-theme .content-area .bg-\[\#0a0f0d\]\/80,
+.light-theme .content-area .bg-\[\#020504\]\/80 { background-color: rgba(248, 250, 252, 0.9) !important; }
 
 /* Sidebar Theme Integration */
 .light-theme aside {
