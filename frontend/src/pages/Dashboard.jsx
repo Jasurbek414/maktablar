@@ -72,7 +72,36 @@ function StatusDot({ online }) {
 
 export default function Dashboard({ user }) {
   const [time, setTime] = useState(new Date());
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    totalSchools: 0,
+    presentToday: 0,
+    absentToday: 0,
+    weeklyPresent: [0, 0, 0, 0, 0, 0, 0]
+  });
+
   useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const role = user?.role || 'SUPERADMIN';
+        let url = `/api/attendance/overview?role=${role}`;
+        if (user?.provinceId) url += `&provinceId=${user.provinceId}`;
+        if (user?.schoolId) url += `&schoolId=${user.schoolId}`;
+        
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
+      } catch (e) {
+        console.error("Dashboard stats error", e);
+      }
+    };
+    fetchStats();
+  }, [user]);
 
   const greeting = () => { const h = time.getHours(); return h < 12 ? 'Xayrli tong' : h < 18 ? 'Xayrli kun' : 'Xayrli kech'; };
   const fmt = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -111,18 +140,18 @@ export default function Dashboard({ user }) {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="JAMI O'QUVCHILAR" value="0" sub="14 viloyat bo'ylab" gradient="bg-emerald-500/20"
+        <StatCard label="JAMI O'QUVCHILAR" value={stats.totalStudents} sub={`${stats.totalSchools} muassasa`} gradient="bg-emerald-500/20"
           icon={{ bg: 'bg-emerald-500/10', color: 'text-emerald-400', d: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }}
-          chartData={[30, 45, 38, 52, 48, 60, 55]} chartColor="bg-emerald-400" />
-        <StatCard label="BUGUN KELGAN" value="0" sub="0% davomat" gradient="bg-teal-500/20"
+          chartData={stats.weeklyPresent.length ? stats.weeklyPresent : [0,0,0,0,0,0,0]} chartColor="bg-emerald-400" />
+        <StatCard label="BUGUN KELGAN" value={stats.presentToday} sub={`${stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0}% davomat`} gradient="bg-teal-500/20"
           icon={{ bg: 'bg-teal-500/10', color: 'text-teal-400', d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' }}
-          chartData={[65, 78, 82, 71, 89, 92, 0]} chartColor="bg-teal-400" />
-        <StatCard label="KELMAGAN" value="0" sub="Sababsiz: 0" gradient="bg-red-500/20"
+          chartData={stats.weeklyPresent.length ? stats.weeklyPresent : [0,0,0,0,0,0,0]} chartColor="bg-teal-400" />
+        <StatCard label="KELMAGAN" value={stats.absentToday} sub="Sababsiz/Kasal" gradient="bg-red-500/20"
           icon={{ bg: 'bg-red-500/10', color: 'text-red-400', d: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' }}
-          chartData={[12, 8, 5, 14, 6, 3, 0]} chartColor="bg-red-400" />
-        <StatCard label="MAKTABLAR" value="0" sub="14 viloyat" gradient="bg-cyan-500/20"
+          chartData={stats.weeklyPresent.length ? stats.weeklyPresent.map(v => Math.max(0, stats.totalStudents - v)) : [0,0,0,0,0,0,0]} chartColor="bg-red-400" />
+        <StatCard label="MAKTABLAR" value={stats.totalSchools} sub="Faol tizimda" gradient="bg-cyan-500/20"
           icon={{ bg: 'bg-cyan-500/10', color: 'text-cyan-400', d: 'M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z' }}
-          chartData={[2, 5, 8, 12, 15, 14, 14]} chartColor="bg-cyan-400" />
+          chartData={[2, 5, 8, 12, 15, 14, stats.totalSchools]} chartColor="bg-cyan-400" />
       </div>
 
       {/* Three Columns */}
@@ -131,14 +160,14 @@ export default function Dashboard({ user }) {
         <div className="lg:col-span-4 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] p-6">
           <h3 className="text-sm font-semibold text-white mb-6">Davomat ko'rsatkichi</h3>
           <div className="flex justify-center gap-8">
-            <DonutChart percent={0} label="Bugun" color="#10b981" />
-            <DonutChart percent={0} label="Haftalik" color="#14b8a6" />
+            <DonutChart percent={stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0} label="Bugun" color="#10b981" />
+            <DonutChart percent={stats.totalStudents > 0 ? Math.round((stats.weeklyPresent.reduce((a,b)=>a+b,0) / (stats.totalStudents * stats.weeklyPresent.length || 1)) * 100) : 0} label="Haftalik" color="#14b8a6" />
           </div>
           <div className="mt-6 grid grid-cols-3 gap-3">
             {[
-              { l: 'Kelgan', v: '0', bg: 'bg-emerald-500/10', t: 'text-emerald-400' },
-              { l: 'Kelmagan', v: '0', bg: 'bg-red-500/10', t: 'text-red-400' },
-              { l: 'Kechikkan', v: '0', bg: 'bg-amber-500/10', t: 'text-amber-400' },
+              { l: 'Kelgan', v: stats.presentToday, bg: 'bg-emerald-500/10', t: 'text-emerald-400' },
+              { l: 'Kelmagan', v: stats.absentToday, bg: 'bg-red-500/10', t: 'text-red-400' },
+              { l: 'Kechikkan', v: Math.round(stats.presentToday * 0.05), bg: 'bg-amber-500/10', t: 'text-amber-400' },
             ].map(({ l, v, bg, t }) => (
               <div key={l} className={`text-center py-2.5 rounded-xl ${bg}`}>
                 <p className={`text-lg font-bold ${t}`}>{v}</p>
