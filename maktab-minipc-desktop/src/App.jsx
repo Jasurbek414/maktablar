@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react'
-import { Activity, Settings, CheckCircle2, RefreshCw, Server, Users, BookOpen, GraduationCap, Clock } from 'lucide-react'
+import { Activity, Settings, CheckCircle2, RefreshCw, Server, Users, BookOpen, GraduationCap, Clock, LogIn } from 'lucide-react'
 
 const { ipcRenderer } = window.require('electron')
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [authError, setAuthError] = useState('')
+  const [loginForm, setLoginForm] = useState({ login: '', password: '', apiKey: '' })
+
   const [activeTab, setActiveTab] = useState('dashboard')
   const [config, setConfig] = useState({ apiKey: '', deviceName: '', localIp: '' })
   const [terminals, setTerminals] = useState([])
   const [events, setEvents] = useState([])
-  
-  // New local data state
   const [students, setStudents] = useState([])
   const [classes, setClasses] = useState([])
   const [teachers, setTeachers] = useState([])
-  
   const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [schoolInfo, setSchoolInfo] = useState(null)
 
   const loadData = () => {
     ipcRenderer.invoke('get-events').then(setEvents)
@@ -24,23 +27,30 @@ export default function App() {
     ipcRenderer.invoke('get-teachers').then(setTeachers)
   }
 
+  // Dastur ochilganda tekshirish: oldindan login qilinganmi?
   useEffect(() => {
-    ipcRenderer.invoke('get-config').then(setConfig)
-    loadData()
+    ipcRenderer.invoke('get-config').then(cfg => {
+      if (cfg.apiKey && cfg.login) {
+        setConfig(cfg)
+        setIsAuthenticated(true)
+        if (cfg.schoolName) setSchoolInfo({ schoolName: cfg.schoolName, districtName: cfg.districtName, provinceName: cfg.provinceName })
+      }
+      setAuthLoading(false)
+    })
+  }, [])
 
+  useEffect(() => {
+    if (!isAuthenticated) return
+    loadData()
     const termListener = (e, terms) => setTerminals(terms)
     const evListener = (e, ev) => setEvents(prev => [ev, ...prev].slice(0, 50))
-    
     ipcRenderer.on('terminal-update', termListener)
     ipcRenderer.on('new-event', evListener)
-
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
-
     const itv = setInterval(loadData, 10000)
-
     return () => {
       ipcRenderer.removeListener('terminal-update', termListener)
       ipcRenderer.removeListener('new-event', evListener)
@@ -48,12 +58,115 @@ export default function App() {
       window.removeEventListener('offline', handleOffline)
       clearInterval(itv)
     }
-  }, [])
+  }, [isAuthenticated])
 
-  const saveConfig = () => {
-    ipcRenderer.invoke('save-config', config).then(() => alert('Saqlandi!'))
+  const handleLogin = async () => {
+    if (!loginForm.login || !loginForm.password || !loginForm.apiKey) {
+      setAuthError('Barcha maydonlarni to\'ldiring')
+      return
+    }
+    setAuthError('')
+    setAuthLoading(true)
+    try {
+      const result = await ipcRenderer.invoke('authenticate', loginForm)
+      if (result.success) {
+        setIsAuthenticated(true)
+        setConfig(result.config)
+        setSchoolInfo(result.schoolInfo)
+      } else {
+        setAuthError(result.error || 'Kirish amalga oshmadi')
+      }
+    } catch(e) {
+      setAuthError('Server bilan bog\'lanib bo\'lmadi')
+    }
+    setAuthLoading(false)
   }
 
+  const handleLogout = async () => {
+    await ipcRenderer.invoke('logout')
+    setIsAuthenticated(false)
+    setLoginForm({ login: '', password: '', apiKey: '' })
+    setSchoolInfo(null)
+  }
+
+  // ═══════════════ LOGIN EKRANI ═══════════════
+  if (authLoading && !isAuthenticated) {
+    return <div className="flex h-screen bg-[#020504] items-center justify-center">
+      <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"/>
+    </div>
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen bg-[#020504] items-center justify-center">
+        <div className="w-full max-w-md p-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Server size={32} className="text-emerald-400" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+              Maktab Mini-PC
+            </h1>
+            <p className="text-sm text-gray-400 mt-2">Platformadan berilgan login, parol va API kalitni kiriting</p>
+          </div>
+
+          <div className="bg-[#0a0f0d] p-6 rounded-2xl border border-[#1a2520] space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Login</label>
+              <input 
+                value={loginForm.login}
+                onChange={e => setLoginForm({...loginForm, login: e.target.value})}
+                className="w-full bg-[#020504] border border-[#1a2520] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="Platformadan berilgan login"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Parol</label>
+              <input 
+                value={loginForm.password}
+                onChange={e => setLoginForm({...loginForm, password: e.target.value})}
+                type="password"
+                className="w-full bg-[#020504] border border-[#1a2520] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="Platformadan berilgan parol"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">API Kalit</label>
+              <input 
+                value={loginForm.apiKey}
+                onChange={e => setLoginForm({...loginForm, apiKey: e.target.value})}
+                className="w-full bg-[#020504] border border-[#1a2520] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors font-mono text-sm"
+                placeholder="Platformadan berilgan maxfiy kalit"
+              />
+            </div>
+
+            {authError && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
+                {authError}
+              </div>
+            )}
+
+            <button 
+              onClick={handleLogin}
+              disabled={authLoading}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+            >
+              <LogIn size={18} />
+              {authLoading ? 'Tekshirilmoqda...' : 'Kirish'}
+            </button>
+          </div>
+
+          <p className="text-center text-xs text-gray-600 mt-4">
+            Login va parolni platformadan admin yaratadi
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ═══════════════ ASOSIY DASTUR ═══════════════
   const TabButton = ({ id, icon: Icon, label }) => (
     <button 
       onClick={() => setActiveTab(id)}
@@ -71,7 +184,8 @@ export default function App() {
           <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
             Maktab Mini-PC
           </h1>
-          <p className="text-xs text-gray-400 mt-1">v2.1.0 Offline Dashboard</p>
+          {schoolInfo && <p className="text-xs text-emerald-400/70 mt-1">{schoolInfo.schoolName}</p>}
+          <p className="text-[10px] text-gray-500 mt-0.5">v2.1.0 Offline Dashboard</p>
         </div>
 
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
@@ -115,6 +229,10 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold">Umumiy Holat</h2>
+            {schoolInfo && <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4">
+              <p className="text-sm text-emerald-400 font-medium">{schoolInfo.schoolName}</p>
+              <p className="text-xs text-slate-500">{schoolInfo.districtName} • {schoolInfo.provinceName}</p>
+            </div>}
             <div className="grid grid-cols-4 gap-4">
               <div className="bg-[#0a0f0d] p-5 rounded-2xl border border-[#1a2520]">
                 <h3 className="text-gray-400 mb-1 text-sm">O'quvchilar</h3>
@@ -145,31 +263,16 @@ export default function App() {
             <div className="bg-[#0a0f0d] rounded-2xl border border-[#1a2520] overflow-hidden">
               <table className="w-full text-left text-sm">
                 <thead className="bg-white/5 text-gray-400 uppercase text-xs">
-                  <tr>
-                    <th className="px-6 py-4">F.I.SH / ID</th>
-                    <th className="px-6 py-4">Vaqt</th>
-                    <th className="px-6 py-4">Holat</th>
-                    <th className="px-6 py-4">Sinxronizatsiya</th>
-                  </tr>
+                  <tr><th className="px-6 py-4">F.I.SH / ID</th><th className="px-6 py-4">Vaqt</th><th className="px-6 py-4">Holat</th><th className="px-6 py-4">Sinxronizatsiya</th></tr>
                 </thead>
                 <tbody className="divide-y divide-[#1a2520]">
                   {events.length === 0 && <tr><td colSpan="4" className="text-center py-6 text-gray-500">Hech qanday ma'lumot topilmadi</td></tr>}
                   {events.map((e, i) => (
                     <tr key={i} className="hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-white">{e.studentName}</div>
-                        <div className="text-xs text-gray-500">ID: {e.studentId} | Qurilma: {e.deviceSerial}</div>
-                      </td>
+                      <td className="px-6 py-4"><div className="font-medium text-white">{e.studentName}</div><div className="text-xs text-gray-500">ID: {e.studentId} | Qurilma: {e.deviceSerial}</div></td>
                       <td className="px-6 py-4 text-gray-300">{new Date(e.timestamp).toLocaleString()}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${e.eventType === 'IN' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                          {e.eventType === 'IN' ? 'KIRDI' : 'CHIQDI'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {e.synced ? <span className="text-emerald-500 flex items-center gap-1"><CheckCircle2 size={14}/> Jo'natildi</span> : 
-                                    <span className="text-amber-500 flex items-center gap-1"><RefreshCw size={14} className="animate-spin"/> Kutmoqda</span>}
-                      </td>
+                      <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-bold ${e.eventType === 'IN' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>{e.eventType === 'IN' ? 'KIRDI' : 'CHIQDI'}</span></td>
+                      <td className="px-6 py-4">{e.synced ? <span className="text-emerald-500 flex items-center gap-1"><CheckCircle2 size={14}/>Jo'natildi</span> : <span className="text-amber-500 flex items-center gap-1"><RefreshCw size={14} className="animate-spin"/>Kutmoqda</span>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -188,13 +291,8 @@ export default function App() {
               {students.length === 0 && <div className="text-gray-500">O'quvchilar ro'yxati bo'sh. Platformadan ulanishni tekshiring.</div>}
               {students.map(s => (
                 <div key={s.id} className="bg-[#0a0f0d] p-4 rounded-xl border border-[#1a2520] flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
-                    {s.fullName.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="font-medium">{s.fullName}</div>
-                    <div className="text-xs text-gray-500">ID: {s.id} | Sinf: {s.className || "Biriktirilmagan"}</div>
-                  </div>
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">{s.fullName.charAt(0)}</div>
+                  <div><div className="font-medium">{s.fullName}</div><div className="text-xs text-gray-500">ID: {s.id} | Sinf: {s.className || "Biriktirilmagan"}</div></div>
                 </div>
               ))}
             </div>
@@ -209,10 +307,7 @@ export default function App() {
               {classes.map(c => (
                 <div key={c.id} className="bg-[#0a0f0d] p-5 rounded-xl border border-[#1a2520] flex items-center gap-4">
                   <BookOpen size={24} className="text-cyan-400" />
-                  <div>
-                    <div className="font-bold text-lg">{c.name}</div>
-                    <div className="text-xs text-gray-500">ID: {c.id}</div>
-                  </div>
+                  <div><div className="font-bold text-lg">{c.name}</div><div className="text-xs text-gray-500">ID: {c.id}</div></div>
                 </div>
               ))}
             </div>
@@ -226,13 +321,8 @@ export default function App() {
               {teachers.length === 0 && <div className="text-gray-500">O'qituvchilar ro'yxati bo'sh.</div>}
               {teachers.map(t => (
                 <div key={t.id} className="bg-[#0a0f0d] p-4 rounded-xl border border-[#1a2520] flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold">
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <div className="font-medium">{t.fullName}</div>
-                    <div className="text-xs text-blue-400 uppercase tracking-wider">{t.role}</div>
-                  </div>
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold"><Users size={20} /></div>
+                  <div><div className="font-medium">{t.fullName}</div><div className="text-xs text-blue-400 uppercase tracking-wider">{t.role}</div></div>
                 </div>
               ))}
             </div>
@@ -243,23 +333,14 @@ export default function App() {
           <div className="space-y-6">
             <h2 className="text-2xl font-bold">Face ID Qurilmalar</h2>
             <div className="grid grid-cols-2 gap-4">
-              {terminals.length === 0 && <div className="text-gray-500 col-span-2">Ushbu tarmoqda birorta ham terminal ulanmagan. Terminal sozlamalaridan Server IP siga ushbu kompyuter IP sini yozing.</div>}
+              {terminals.length === 0 && <div className="text-gray-500 col-span-2">Ushbu tarmoqda birorta ham terminal ulanmagan.</div>}
               {terminals.map(t => (
                 <div key={t.id} className="bg-[#0a0f0d] p-5 rounded-2xl border border-[#1a2520] flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl ${t.status === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                      <Server size={24} />
-                    </div>
-                    <div>
-                      <div className="font-bold">{t.id}</div>
-                      <div className="text-xs text-gray-400">IP: {t.addr}</div>
-                    </div>
+                    <div className={`p-3 rounded-xl ${t.status === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}><Server size={24} /></div>
+                    <div><div className="font-bold">{t.id}</div><div className="text-xs text-gray-400">IP: {t.addr}</div></div>
                   </div>
-                  <div className="text-right">
-                    <div className={`text-sm font-medium ${t.status === 'ONLINE' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {t.status}
-                    </div>
-                  </div>
+                  <div className="text-right"><div className={`text-sm font-medium ${t.status === 'ONLINE' ? 'text-emerald-400' : 'text-rose-400'}`}>{t.status}</div></div>
                 </div>
               ))}
             </div>
@@ -268,35 +349,22 @@ export default function App() {
 
         {activeTab === 'settings' && (
           <div className="space-y-6 max-w-xl">
-            <h2 className="text-2xl font-bold">Platformaga Ulanish</h2>
+            <h2 className="text-2xl font-bold">Ulanish Ma'lumotlari</h2>
             <div className="bg-[#0a0f0d] p-6 rounded-2xl border border-[#1a2520] space-y-4">
-              
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Login (Ixtiyoriy yozing)</label>
-                <input 
-                  value={config.deviceName || ''} 
-                  onChange={e => setConfig({...config, deviceName: e.target.value})}
-                  className="w-full bg-[#020504] border border-[#1a2520] rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 transition-colors"
-                  placeholder="Masalan: maktab_45_admin"
-                />
+              {schoolInfo && <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4 mb-2">
+                <p className="text-sm text-emerald-400 font-semibold">{schoolInfo.schoolName}</p>
+                <p className="text-xs text-slate-500">{schoolInfo.districtName} • {schoolInfo.provinceName}</p>
+              </div>}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-gray-400">Login:</span><span className="text-white font-mono">{config.login || '—'}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">API Kalit:</span><span className="text-cyan-400 font-mono text-xs">{config.apiKey || '—'}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Lokal IP:</span><span className="text-white font-mono">{config.localIp || '—'}</span></div>
               </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Parol / API Kalit (Ixtiyoriy yozing)</label>
-                <input 
-                  value={config.apiKey || ''} 
-                  onChange={e => setConfig({...config, apiKey: e.target.value})}
-                  type="password"
-                  className="w-full bg-[#020504] border border-[#1a2520] rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 transition-colors"
-                  placeholder="Maxfiy parolni kiriting"
-                />
-              </div>
-
               <button 
-                onClick={saveConfig}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3 rounded-xl transition-all"
+                onClick={handleLogout}
+                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-medium py-3 rounded-xl transition-all"
               >
-                Saqlash va Ulanish
+                Chiqish (Logout)
               </button>
             </div>
           </div>

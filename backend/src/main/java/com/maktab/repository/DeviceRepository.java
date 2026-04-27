@@ -11,6 +11,7 @@ import java.util.Optional;
 @Repository
 public interface DeviceRepository extends JpaRepository<Device, Long> {
     Optional<Device> findByApiKey(String apiKey);
+    Optional<Device> findByLogin(String login);
     List<Device> findBySchoolId(Long schoolId);
     List<Device> findBySchoolIdIn(List<Long> schoolIds);
     List<Device> findByStatus(Device.DeviceStatus status);

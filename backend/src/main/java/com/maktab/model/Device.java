@@ -19,6 +19,14 @@ public class Device {
     @Column(nullable = false, unique = true)
     private String apiKey;
 
+    /** Platformada admin tomonidan yaratilgan login */
+    @Column(unique = true)
+    private String login;
+
+    /** Platformada admin tomonidan yaratilgan parol (ochiq matn) */
+    @Column
+    private String password;
+
     @Column(nullable = false)
     private String deviceName;
 
