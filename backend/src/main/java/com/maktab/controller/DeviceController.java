@@ -177,12 +177,14 @@ public class DeviceController {
     /** Yangi terminal qo'shish — POST /api/devices/{deviceId}/terminals */
     @PostMapping("/{deviceId}/terminals")
     public ResponseEntity<?> addTerminal(@PathVariable Long deviceId, @RequestBody Map<String, Object> body) {
-        if (!deviceRepo.existsById(deviceId)) {
+        Device device = deviceRepo.findById(deviceId).orElse(null);
+        if (device == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "Mini-PC topilmadi"));
         }
 
         FaceTerminal t = new FaceTerminal();
         t.setDeviceId(deviceId);
+        t.setSchoolId(device.getSchoolId());
         t.setName((String) body.getOrDefault("name", "Terminal"));
         t.setSerialNumber((String) body.get("serialNumber"));
         t.setModel((String) body.getOrDefault("model", "DS-K1T341CMF"));
@@ -230,11 +232,13 @@ public class DeviceController {
             Long deviceId = t.getDeviceId();
             terminalRepo.deleteById(id);
             // Mini-PC dagi terminal sonini yangilash
-            long count = terminalRepo.countByDeviceId(deviceId);
-            deviceRepo.findById(deviceId).ifPresent(d -> {
-                d.setFaceTerminalCount((int) count);
-                deviceRepo.save(d);
-            });
+            if (deviceId != null) {
+                long count = terminalRepo.countByDeviceId(deviceId);
+                deviceRepo.findById(deviceId).ifPresent(d -> {
+                    d.setFaceTerminalCount((int) count);
+                    deviceRepo.save(d);
+                });
+            }
             return ResponseEntity.ok(Map.of("success", true));
         }).orElse(ResponseEntity.notFound().build());
     }

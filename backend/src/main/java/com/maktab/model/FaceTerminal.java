@@ -20,9 +20,13 @@ public class FaceTerminal {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Qaysi Mini-PC ga ulangan */
-    @Column(nullable = false)
+    /** Qaysi Mini-PC ga ulangan (Cloud ISUP uchun null bo'lishi mumkin) */
+    @Column(nullable = true)
     private Long deviceId;
+
+    /** Qaysi maktabga tegishli */
+    @Column(nullable = true)
+    private Long schoolId;
 
     /** Qurilma nomi (masalan: "1-qavat kirish") */
     @Column(nullable = false)
