@@ -32,6 +32,8 @@ export default function Devices({ user }) {
   const [credProv, setCredProv] = useState('');
   const [credDist, setCredDist] = useState('');
   const [createdCreds, setCreatedCreds] = useState(null);
+  const [cmdResult, setCmdResult] = useState(null);
+  const [cmdLoading, setCmdLoading] = useState(false);
 
   const isAdmin = ['SUPERADMIN','ADMIN'].includes(user?.role);
 
@@ -102,6 +104,22 @@ export default function Devices({ user }) {
         setDetail(updated);
     }
     load();
+  };
+
+  const sendCmd = async (commandType, targetTerminal = null) => {
+    if (!detail) return;
+    setCmdLoading(true); setCmdResult(null);
+    try {
+      await api.post(`/api/devices/${detail.id}/commands`, { commandType, targetTerminal });
+      setTimeout(async () => {
+        try {
+          const cmds = await api.get(`/api/devices/${detail.id}/commands`);
+          const latest = cmds.find(c => c.commandType === commandType);
+          setCmdResult(latest);
+        } catch(e) {}
+        setCmdLoading(false);
+      }, 5000);
+    } catch(e) { setCmdLoading(false); setCmdResult({ status: 'FAILED', result: 'Yuborib bo\'lmadi' }); }
   };
 
   const submitCreateCreds = async () => {
@@ -279,6 +297,21 @@ export default function Devices({ user }) {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Remote Control */}
+          <div className="rounded-xl bg-purple-500/[0.05] border border-purple-500/10 p-4">
+            <p className="text-[12px] font-semibold text-purple-400 mb-3">🎮 Masofaviy boshqaruv</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[['GET_STATUS','📊 Holat','text-blue-400 bg-blue-500/10 hover:bg-blue-500/20'],['LIST_TERMINALS','📋 Terminallar','text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20'],['SYNC_FACES','🔄 Sinxronlash','text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'],['GET_ATTENDANCE','📝 Davomat','text-orange-400 bg-orange-500/10 hover:bg-orange-500/20'],['GET_LOGS','📄 Loglar','text-slate-300 bg-white/[0.04] hover:bg-white/[0.08]'],['REBOOT','🔁 Qayta yuklash','text-red-400 bg-red-500/10 hover:bg-red-500/20']].map(([cmd, label, cls]) => (
+                <button key={cmd} onClick={()=>sendCmd(cmd)} disabled={cmdLoading} className={`px-3 py-2 rounded-lg text-[11px] font-medium transition-all ${cls} disabled:opacity-50`}>{label}</button>
+              ))}
+            </div>
+            {cmdLoading && <div className="mt-3 flex items-center gap-2 text-[11px] text-purple-400"><div className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin"/>Buyruq bajarilmoqda...</div>}
+            {cmdResult && <div className={`mt-3 rounded-lg p-3 text-[11px] ${cmdResult.status==='COMPLETED'?'bg-emerald-500/10 border border-emerald-500/10':'bg-red-500/10 border border-red-500/10'}`}>
+              <p className={`font-semibold mb-1 ${cmdResult.status==='COMPLETED'?'text-emerald-400':'text-red-400'}`}>{cmdResult.status==='COMPLETED'?'✅ Bajarildi':'❌ Xatolik'}</p>
+              <pre className="text-[10px] text-slate-300 whitespace-pre-wrap max-h-32 overflow-y-auto font-mono">{cmdResult.result}</pre>
+            </div>}
           </div>
 
           {/* Connection guide */}

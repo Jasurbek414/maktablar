@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.maktab.model.DeviceCommand;
+import com.maktab.repository.DeviceCommandRepository;
 
 /**
  * Qurilmalar boshqaruvi — Mini-PC + Face ID terminallar
@@ -33,6 +35,7 @@ public class DeviceController {
     @Autowired private SchoolRepository schoolRepo;
     @Autowired private DistrictRepository districtRepo;
     @Autowired private ProvinceRepository provinceRepo;
+    @Autowired private DeviceCommandRepository commandRepo;
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     //  PLATFORMADAN KALIT YARATISH (ADMIN)
@@ -448,5 +451,78 @@ public class DeviceController {
         m.put("lastEventAt", t.getLastEventAt() != null ? t.getLastEventAt().toString() : null);
         m.put("createdAt", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
         return m;
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  REMOTE COMMANDS (Platforma → Mini-PC → Terminal)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /** Platforma buyruq yuboradi — POST /api/devices/{deviceId}/commands */
+    @PostMapping("/{deviceId}/commands")
+    public ResponseEntity<?> sendCommand(@PathVariable Long deviceId, @RequestBody Map<String, Object> body) {
+        Device device = deviceRepo.findById(deviceId).orElse(null);
+        if (device == null) return ResponseEntity.badRequest().body(Map.of("error", "Qurilma topilmadi"));
+
+        DeviceCommand cmd = new DeviceCommand();
+        cmd.setDeviceId(deviceId);
+        cmd.setCommandType((String) body.get("commandType"));
+        cmd.setTargetTerminal((String) body.get("targetTerminal"));
+        cmd.setParams(body.containsKey("params") ? body.get("params").toString() : null);
+        cmd.setStatus(DeviceCommand.CommandStatus.PENDING);
+        cmd.setCreatedAt(LocalDateTime.now());
+        commandRepo.save(cmd);
+
+        return ResponseEntity.ok(Map.of("id", cmd.getId(), "status", "PENDING", "message", "Buyruq yuborildi"));
+    }
+
+    /** Buyruqlar tarixi — GET /api/devices/{deviceId}/commands */
+    @GetMapping("/{deviceId}/commands")
+    public List<Map<String, Object>> getCommands(@PathVariable Long deviceId) {
+        return commandRepo.findByDeviceIdOrderByCreatedAtDesc(deviceId).stream().map(c -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", c.getId());
+            m.put("commandType", c.getCommandType());
+            m.put("targetTerminal", c.getTargetTerminal());
+            m.put("status", c.getStatus().name());
+            m.put("result", c.getResult());
+            m.put("createdAt", c.getCreatedAt() != null ? c.getCreatedAt().toString() : null);
+            m.put("executedAt", c.getExecutedAt() != null ? c.getExecutedAt().toString() : null);
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    /** Mini-PC kutayotgan buyruqlarni oladi — GET /api/devices/commands/pending */
+    @GetMapping("/commands/pending")
+    public List<Map<String, Object>> getPendingCommands(@RequestHeader("X-Api-Key") String apiKey) {
+        Device device = deviceRepo.findByApiKey(apiKey).orElse(null);
+        if (device == null) return Collections.emptyList();
+
+        List<DeviceCommand> pending = commandRepo.findByDeviceIdAndStatus(device.getId(), DeviceCommand.CommandStatus.PENDING);
+        // PENDING → EXECUTING
+        pending.forEach(c -> { c.setStatus(DeviceCommand.CommandStatus.EXECUTING); commandRepo.save(c); });
+
+        return pending.stream().map(c -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", c.getId());
+            m.put("commandType", c.getCommandType());
+            m.put("targetTerminal", c.getTargetTerminal());
+            m.put("params", c.getParams());
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    /** Mini-PC buyruq natijasini qaytaradi — PUT /api/devices/commands/{id}/result */
+    @PutMapping("/commands/{id}/result")
+    public ResponseEntity<?> reportResult(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        DeviceCommand cmd = commandRepo.findById(id).orElse(null);
+        if (cmd == null) return ResponseEntity.notFound().build();
+
+        boolean success = Boolean.TRUE.equals(body.get("success"));
+        cmd.setStatus(success ? DeviceCommand.CommandStatus.COMPLETED : DeviceCommand.CommandStatus.FAILED);
+        cmd.setResult((String) body.get("result"));
+        cmd.setExecutedAt(LocalDateTime.now());
+        commandRepo.save(cmd);
+
+        return ResponseEntity.ok(Map.of("status", "ok"));
     }
 }
