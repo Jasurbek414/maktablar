@@ -265,10 +265,25 @@ public class AttendanceController {
                     .map(a -> a.getStudent().getId()).distinct().count();
         }
 
+        long totalDevices = 0;
+        long onlineDevices = 0;
+        OffsetDateTime threshold = OffsetDateTime.now().minusMinutes(5);
+        if (schoolId != null) {
+            List<DeviceHeartbeat> hbs = heartbeatRepo.findBySchoolId(schoolId);
+            totalDevices = hbs.size();
+            onlineDevices = hbs.stream().filter(h -> h.getLastSeen() != null && h.getLastSeen().isAfter(threshold)).count();
+        } else {
+            List<DeviceHeartbeat> hbs = heartbeatRepo.findAll();
+            totalDevices = hbs.size();
+            onlineDevices = hbs.stream().filter(h -> h.getLastSeen() != null && h.getLastSeen().isAfter(threshold)).count();
+        }
+
         data.put("totalStudents", totalStudents);
         data.put("totalSchools", totalSchools);
         data.put("presentToday", presentToday);
         data.put("absentToday", Math.max(0, totalStudents - presentToday));
+        data.put("totalDevices", totalDevices);
+        data.put("onlineDevices", onlineDevices);
 
         // Mock chart data for week
         List<Long> weeklyPresent = Arrays.asList(
