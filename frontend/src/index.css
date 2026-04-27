@@ -168,3 +168,24 @@ select:focus {
 .light-theme .content-area .bg-black\/20 { background-color: var(--bg-main) !important; }
 .light-theme .content-area .bg-\[\#0a0f0d\]\/80 { background-color: rgba(248, 250, 252, 0.9) !important; }
 
+/* Sidebar Theme Integration */
+.light-theme aside {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-light) !important;
+}
+.light-theme aside .text-white, 
+.light-theme aside .text-slate-200 {
+  color: var(--text-primary) !important;
+}
+.light-theme aside .text-emerald-400 {
+  color: #059669 !important; /* emerald-600 for better contrast */
+}
+.light-theme aside .bg-gradient-to-r.text-white {
+  color: #047857 !important; /* text-emerald-700 for active nav link */
+}
+.light-theme aside .w-9.h-9 .text-white {
+  color: #ffffff !important; /* keep brand logo icon white */
+}
+.light-theme aside .border-emerald-500\/\[0\.08\] {
+  border-color: var(--border-light) !important;
+}
