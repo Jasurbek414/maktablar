@@ -43,8 +43,8 @@ export default function Devices({ user }) {
 
   useEffect(() => { load(); const i = setInterval(load, 30000); return () => clearInterval(i); }, [load]);
 
-  const filteredDists = selProv ? districts.filter(d => d.province?.id?.toString() === selProv) : districts;
-  const filteredSchools = selDist ? schools.filter(s => s.district?.id?.toString() === selDist) : selProv ? schools.filter(s => districts.filter(d => d.province?.id?.toString() === selProv).map(d=>d.id).includes(s.district?.id)) : schools;
+  const filteredDists = selProv ? districts.filter(d => d.provinceId?.toString() === selProv) : districts;
+  const filteredSchools = selDist ? schools.filter(s => s.districtId?.toString() === selDist) : selProv ? schools.filter(s => districts.filter(d => d.provinceId?.toString() === selProv).map(d=>d.id).includes(s.districtId)) : schools;
 
   const filtered = devices.filter(d => {
     if (!search) return true;
