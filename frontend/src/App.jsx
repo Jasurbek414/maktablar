@@ -292,7 +292,7 @@ export default function App() {
     <Router>
       <div className="h-screen flex overflow-hidden bg-[#0a0f0d]">
         <Sidebar user={user} />
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="content-area flex-1 flex flex-col overflow-hidden">
           <header className="relative z-50 h-14 shrink-0 flex items-center justify-between px-6 border-b border-emerald-500/[0.06] bg-[#0a0f0d]/80 backdrop-blur-md">
             <span className="text-xs text-slate-600">{roleLabel[user?.role] || 'Panel'}</span>
             <div className="flex items-center gap-2">
