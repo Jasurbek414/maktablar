@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.transaction.annotation.Transactional;
+import com.maktab.repository.SchoolClassRepository;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,6 +24,7 @@ public class DistrictController {
     @Autowired private ProvinceRepository provinceRepository;
     @Autowired private SchoolRepository schoolRepository;
     @Autowired private StudentRepository studentRepository;
+    @Autowired private SchoolClassRepository classRepository;
 
     @GetMapping
     public List<Map<String, Object>> getAll(@RequestParam(required = false) Long provinceId) {
@@ -89,10 +92,19 @@ public class DistrictController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    @Transactional
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         if (!districtRepository.existsById(id)) return ResponseEntity.notFound().build();
+        
+        List<School> schools = schoolRepository.findByDistrictId(id);
+        for (School s : schools) {
+            studentRepository.deleteAll(studentRepository.findBySchoolId(s.getId()));
+            classRepository.deleteAll(classRepository.findBySchoolId(s.getId()));
+        }
+        schoolRepository.deleteAll(schools);
         districtRepository.deleteById(id);
+        
         return ResponseEntity.ok(Map.of("message", "O'chirildi"));
     }
 }
