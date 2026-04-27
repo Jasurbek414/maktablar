@@ -24,7 +24,9 @@ const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`);
-  db.run(`CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY, fullName TEXT)`);
+  db.run(`CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY, fullName TEXT, className TEXT)`);
+  db.run(`CREATE TABLE IF NOT EXISTS classes (id INTEGER PRIMARY KEY, name TEXT)`);
+  db.run(`CREATE TABLE IF NOT EXISTS teachers (id INTEGER PRIMARY KEY, fullName TEXT, role TEXT)`);
   db.run(`CREATE TABLE IF NOT EXISTS attendance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     studentId INTEGER,
@@ -188,39 +190,64 @@ async function syncEvents() {
   });
 }
 
-// Sync students loop every 5 minutes
-async function syncStudents() {
+// Sync school data loop every 5 minutes
+async function syncSchoolData() {
   const apiKey = await getConfig('apiKey');
   const schoolId = await getConfig('schoolId');
   if (!apiKey || !schoolId) return;
 
   try {
-    const resp = await axios.get(`${mainBackend}/api/attendance/students?schoolId=${schoolId}`, {
-      headers: { 'X-Api-Key': apiKey },
-      timeout: 10000
+    // Sync Students
+    const respStudents = await axios.get(`${mainBackend}/api/attendance/students?schoolId=${schoolId}`, {
+      headers: { 'X-Api-Key': apiKey }, timeout: 10000
     });
-    
-    if (resp.status === 200 && resp.data.students) {
+    if (respStudents.status === 200 && respStudents.data.students) {
       db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         db.run('DELETE FROM students');
-        const stmt = db.prepare('INSERT INTO students (id, fullName) VALUES (?, ?)');
-        resp.data.students.forEach(s => {
-          stmt.run(s.id, s.fullName);
+        const stmt = db.prepare('INSERT INTO students (id, fullName, className) VALUES (?, ?, ?)');
+        respStudents.data.students.forEach(s => {
+          stmt.run(s.id, s.fullName, s.className || '');
         });
         stmt.finalize();
         db.run('COMMIT');
       });
-      logInfo(`Synced ${resp.data.students.length} students`);
+      logInfo(`Synced ${respStudents.data.students.length} students`);
+    }
+
+    // Sync Classes
+    const respClasses = await axios.get(`${mainBackend}/api/classes?schoolId=${schoolId}`, { timeout: 10000 });
+    if (respClasses.status === 200) {
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        db.run('DELETE FROM classes');
+        const stmt = db.prepare('INSERT INTO classes (id, name) VALUES (?, ?)');
+        respClasses.data.forEach(c => stmt.run(c.id, `${c.grade || ''}${c.section || ''} - ${c.name}`));
+        stmt.finalize();
+        db.run('COMMIT');
+      });
+    }
+
+    // Sync Teachers
+    const respTeachers = await axios.get(`${mainBackend}/api/users?role=TEACHER&schoolId=${schoolId}`, { timeout: 10000 });
+    if (respTeachers.status === 200) {
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        db.run('DELETE FROM teachers');
+        const stmt = db.prepare('INSERT INTO teachers (id, fullName, role) VALUES (?, ?, ?)');
+        respTeachers.data.forEach(t => stmt.run(t.id, t.fullName, t.role));
+        stmt.finalize();
+        db.run('COMMIT');
+      });
     }
   } catch (e) {
-    logInfo('Student sync failed:', e.message);
+    logInfo('School data sync failed:', e.message);
   }
 }
 
 // Initial triggers and intervals
-setTimeout(syncStudents, 5000);
-setInterval(syncStudents, 300000);
+setTimeout(syncSchoolData, 5000);
+setInterval(syncSchoolData, 300000);
 
 // Sync loop every 30 seconds
 setInterval(syncEvents, 30000);
@@ -324,4 +351,16 @@ ipcMain.handle('get-events', async () => {
   return new Promise((resolve) => {
     db.all(`SELECT * FROM attendance ORDER BY id DESC LIMIT 50`, (err, rows) => resolve(rows || []));
   });
+});
+
+ipcMain.handle('get-students', async () => {
+  return new Promise((resolve) => db.all(`SELECT * FROM students ORDER BY fullName ASC`, (err, rows) => resolve(rows || [])));
+});
+
+ipcMain.handle('get-classes', async () => {
+  return new Promise((resolve) => db.all(`SELECT * FROM classes ORDER BY name ASC`, (err, rows) => resolve(rows || [])));
+});
+
+ipcMain.handle('get-teachers', async () => {
+  return new Promise((resolve) => db.all(`SELECT * FROM teachers ORDER BY fullName ASC`, (err, rows) => resolve(rows || [])));
 });
