@@ -15,7 +15,7 @@ function MiniChart({ data, color }) {
 
 function StatCard({ label, value, sub, icon, gradient, chartData, chartColor }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] p-5 hover:border-emerald-500/20 transition-all duration-300">
+    <div className="group relative overflow-hidden rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] p-5 hover:border-emerald-500/20 transition-all duration-300">
       <div className={`absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${gradient}`} />
       <div className="relative flex items-start justify-between">
         <div>
@@ -122,10 +122,10 @@ export default function Dashboard({ user }) {
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600/20 via-[#0d1a14] to-teal-600/10 border border-emerald-500/[0.12] p-6">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600/20 via-[#0d1a14] to-teal-600/10 border border-emerald-500/[0.12] shadow-[0_4px_24px_-8px_rgba(16,185,129,0.15)] p-6">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
         <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl translate-y-1/2" />
-        <div className="relative flex items-center justify-between">
+        <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <p className="text-slate-400 text-sm">{greeting()}</p>
             <h1 className="text-2xl font-bold text-white mt-1">{user?.fullName}</h1>
@@ -161,7 +161,7 @@ export default function Dashboard({ user }) {
       {/* Three Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Donut */}
-        <div className="lg:col-span-4 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] p-6">
+        <div className="lg:col-span-4 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] p-6">
           <h3 className="text-sm font-semibold text-white mb-6">Davomat ko'rsatkichi</h3>
           <div className="flex justify-center gap-8">
             <DonutChart percent={stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0} label="Bugun" color="#10b981" />
@@ -182,7 +182,7 @@ export default function Dashboard({ user }) {
         </div>
 
         {/* Activity */}
-        <div className="lg:col-span-5 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] p-6">
+        <div className="lg:col-span-5 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] p-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-sm font-semibold text-white">Oxirgi voqealar</h3>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10">
@@ -205,7 +205,7 @@ export default function Dashboard({ user }) {
         </div>
 
         {/* Quick Actions */}
-        <div className="lg:col-span-3 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] p-6">
+        <div className="lg:col-span-3 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] p-6 flex flex-col h-full">
           <h3 className="text-sm font-semibold text-white mb-4">Tezkor amallar</h3>
           <div className="grid grid-cols-2 gap-3">
             <Action onClick={() => navigate('/students')} label="O'quvchi" icon="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" gradient="bg-gradient-to-br from-emerald-500/5 to-transparent" />
@@ -213,13 +213,15 @@ export default function Dashboard({ user }) {
             <Action onClick={() => navigate('/attendance')} label="Hisobot" icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" gradient="bg-gradient-to-br from-cyan-500/5 to-transparent" />
             <Action onClick={() => navigate('/classes')} label="Sozlama" icon="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" gradient="bg-gradient-to-br from-amber-500/5 to-transparent" />
           </div>
-          <div className="mt-4 p-3 rounded-xl border border-emerald-500/[0.06] bg-white/[0.01]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <StatusDot online={stats.onlineDevices > 0} />
-                <span className="text-xs text-slate-500">Qurilmalar</span>
+          <div className="mt-auto pt-4">
+            <div className="p-3 rounded-xl border border-emerald-500/[0.06] bg-white/[0.01]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <StatusDot online={stats.onlineDevices > 0} />
+                  <span className="text-xs text-slate-500">Qurilmalar</span>
+                </div>
+                <span className="text-xs font-mono text-slate-600">{stats.onlineDevices} / {stats.totalDevices}</span>
               </div>
-              <span className="text-xs font-mono text-slate-600">{stats.onlineDevices} / {stats.totalDevices}</span>
             </div>
           </div>
         </div>
