@@ -29,7 +29,7 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#0a0f0d] relative overflow-hidden">
+    <div className="min-h-screen flex bg-[#020504] relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-emerald-600/[0.07] rounded-full blur-[120px]" />
         <div className="absolute bottom-1/4 right-1/3 w-[400px] h-[400px] bg-teal-600/[0.05] rounded-full blur-[100px]" />

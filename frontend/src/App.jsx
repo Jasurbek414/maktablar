@@ -263,7 +263,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0f0d] flex items-center justify-center">
+      <div className="min-h-screen bg-[#020504] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -290,10 +290,10 @@ export default function App() {
 
   return (
     <Router>
-      <div className="h-screen flex overflow-hidden bg-[#0a0f0d]">
+      <div className="h-screen flex overflow-hidden bg-[#020504]">
         <Sidebar user={user} />
         <div className="content-area flex-1 flex flex-col overflow-hidden">
-          <header className="relative z-50 h-14 shrink-0 flex items-center justify-between px-6 border-b border-emerald-500/[0.06] bg-[#0a0f0d]/80 backdrop-blur-md">
+          <header className="relative z-50 h-14 shrink-0 flex items-center justify-between px-6 border-b border-emerald-500/[0.08] bg-[#020504]/80 backdrop-blur-md">
             <span className="text-xs text-slate-600">{roleLabel[user?.role] || 'Panel'}</span>
             <div className="flex items-center gap-2">
               <ThemeToggle />
