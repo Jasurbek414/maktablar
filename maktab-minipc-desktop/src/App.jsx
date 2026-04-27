@@ -5,7 +5,7 @@ const { ipcRenderer } = window.require('electron')
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [config, setConfig] = useState({ apiKey: '', schoolId: '', localIp: '' })
+  const [config, setConfig] = useState({ apiKey: '', deviceName: '', localIp: '' })
   const [terminals, setTerminals] = useState([])
   const [events, setEvents] = useState([])
   
@@ -272,12 +272,12 @@ export default function App() {
             <div className="bg-[#0a0f0d] p-6 rounded-2xl border border-[#1a2520] space-y-4">
               
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Maktab ID (Platformadan olingan)</label>
+                <label className="block text-sm text-gray-400 mb-2">Qurilma (Mini-PC) Nomi</label>
                 <input 
-                  value={config.schoolId || ''} 
-                  onChange={e => setConfig({...config, schoolId: e.target.value})}
+                  value={config.deviceName || ''} 
+                  onChange={e => setConfig({...config, deviceName: e.target.value})}
                   className="w-full bg-[#020504] border border-[#1a2520] rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 transition-colors"
-                  placeholder="Masalan: 2"
+                  placeholder="Masalan: Andijon 2-maktab Mini-PC"
                 />
               </div>
 

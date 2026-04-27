@@ -25,6 +25,8 @@ export default function Devices({ user }) {
   const [showTermForm, setShowTermForm] = useState(false);
   const [termForm, setTermForm] = useState({ name: '', direction: 'ENTRANCE', serialNumber: '', model: 'DS-K1T341CMF', ipAddress: '' });
   const [delTarget, setDelTarget] = useState(null);
+  const [assignForm, setAssignForm] = useState(null);
+  const [assignSchoolId, setAssignSchoolId] = useState('');
 
   const isAdmin = ['SUPERADMIN','ADMIN'].includes(user?.role);
 
@@ -55,7 +57,7 @@ export default function Devices({ user }) {
   // Maktab bo'yicha guruhlash
   const grouped = {};
   filtered.forEach(d => {
-    const key = d.schoolName || `Maktab #${d.schoolId}`;
+    const key = d.schoolName || (d.schoolId ? `Maktab #${d.schoolId}` : 'Biriktirilmagan');
     if (!grouped[key]) grouped[key] = { schoolName: key, provinceName: d.provinceName, districtName: d.districtName, devices: [] };
     grouped[key].devices.push(d);
   });
@@ -79,6 +81,17 @@ export default function Devices({ user }) {
     if (!delTarget) return;
     await api.del(`/api/devices/${delTarget}`);
     setDelTarget(null); setDetail(null); load();
+  };
+
+  const submitAssign = async () => {
+    if (!assignForm || !assignSchoolId) return;
+    await api.put(`/api/devices/${assignForm.id}/assign-school`, { schoolId: assignSchoolId });
+    setAssignForm(null); setAssignSchoolId('');
+    if (detail && detail.id === assignForm.id) {
+        const updated = await api.get(`/api/devices/${detail.id}`);
+        setDetail(updated);
+    }
+    load();
   };
 
   if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"/></div>;
@@ -183,7 +196,13 @@ export default function Devices({ user }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04] sticky top-0 bg-[#111916] z-10">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${detail.status==='ONLINE'?'bg-emerald-500/15 text-emerald-400':'bg-slate-800/60 text-slate-500'}`}><I d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></div>
-            <div><h3 className="text-[15px] font-semibold text-white">{detail.deviceName}</h3><p className="text-[11px] text-slate-500">{detail.schoolName} • {detail.districtName} • {detail.provinceName}</p></div>
+            <div>
+              <h3 className="text-[15px] font-semibold text-white">{detail.deviceName}</h3>
+              <div className="flex items-center gap-2">
+                <p className="text-[11px] text-slate-500">{detail.schoolName ? `${detail.schoolName} • ${detail.districtName} • ${detail.provinceName}` : 'Hali maktabga biriktirilmagan'}</p>
+                {!detail.schoolName && <button onClick={()=>setAssignForm(detail)} className="text-[10px] text-emerald-400 hover:underline">Biriktirish</button>}
+              </div>
+            </div>
           </div>
           <button onClick={()=>setDetail(null)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.05]"><I d="M6 18L18 6M6 6l12 12" c="w-5 h-5"/></button>
         </div>
@@ -248,6 +267,24 @@ export default function Devices({ user }) {
       </div>
     </div>}
 
+    {/* Assign Modal */}
+    {assignForm && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="bg-[#111916] border border-emerald-500/10 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+        <h3 className="text-lg font-bold text-white">Maktabga biriktirish</h3>
+        <p className="text-xs text-slate-400">Mini-PC: <span className="font-semibold text-white">{assignForm.deviceName}</span></p>
+        <div className="space-y-3">
+          <select value={assignSchoolId} onChange={e=>setAssignSchoolId(e.target.value)} className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+            <option value="">-- Maktabni tanlang --</option>
+            {schools.map(s => <option key={s.id} value={s.id}>{s.districtName} - {s.name}</option>)}
+          </select>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={()=>setAssignForm(null)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Bekor</button>
+          <button onClick={submitAssign} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl">Saqlash</button>
+        </div>
+      </div>
+    </div>}
+    
     {/* Delete confirm */}
     {delTarget && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={()=>setDelTarget(null)}>
       <div className="bg-[#111916] border border-red-500/15 rounded-2xl w-full max-w-sm p-6" onClick={e=>e.stopPropagation()}>

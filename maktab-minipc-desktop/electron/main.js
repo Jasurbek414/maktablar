@@ -193,11 +193,10 @@ async function syncEvents() {
 // Sync school data loop every 5 minutes
 async function syncSchoolData() {
   const apiKey = await getConfig('apiKey');
-  const schoolId = await getConfig('schoolId');
-  if (!apiKey || !schoolId) return;
+  if (!apiKey) return;
 
   try {
-    const resp = await axios.get(`${mainBackend}/api/attendance/offline-data?schoolId=${schoolId}`, {
+    const resp = await axios.get(`${mainBackend}/api/attendance/offline-data`, {
       headers: { 'X-Api-Key': apiKey }, timeout: 10000
     });
     
@@ -327,21 +326,20 @@ app.on('activate', () => {
 ipcMain.handle('get-config', async () => {
   return {
     apiKey: await getConfig('apiKey'),
-    schoolId: await getConfig('schoolId'),
+    deviceName: await getConfig('deviceName'),
     localIp: getLocalIp()
   };
 });
 
-ipcMain.handle('save-config', async (e, { apiKey, schoolId }) => {
+ipcMain.handle('save-config', async (e, { apiKey, deviceName }) => {
   await setConfig('apiKey', apiKey);
-  await setConfig('schoolId', schoolId);
+  await setConfig('deviceName', deviceName);
   
   // Avtomatik ravishda Backend ga ro'yxatdan o'tkazish
   try {
     await axios.post(`${mainBackend}/api/devices/register`, {
       apiKey: apiKey,
-      schoolId: schoolId,
-      deviceName: os.hostname() + " (Mini-PC)",
+      deviceName: deviceName || (os.hostname() + " (Mini-PC)"),
       localIp: getLocalIp()
     }, { timeout: 5000 });
   } catch(err) {

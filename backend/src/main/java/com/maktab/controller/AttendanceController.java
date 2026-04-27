@@ -220,16 +220,20 @@ public class AttendanceController {
     // ─── Mini-PC: unified offline data sync ───
     @GetMapping("/offline-data")
     public ResponseEntity<?> getOfflineData(
-            @RequestHeader("X-Api-Key") String apiKey,
-            @RequestParam Long schoolId) {
+            @RequestHeader("X-Api-Key") String apiKey) {
         
         Device device = deviceRepo.findByApiKey(apiKey).orElse(null);
-        if (device == null || !device.getSchoolId().equals(schoolId)) {
-            return ResponseEntity.status(403).body(Map.of("error", "Invalid API Key or School ID"));
+        if (device == null) {
+            return ResponseEntity.status(403).body(Map.of("error", "Invalid API Key"));
         }
+        if (device.getSchoolId() == null) {
+            return ResponseEntity.status(400).body(Map.of("error", "Device not assigned to any school yet"));
+        }
+        
+        Long effectiveSchoolId = device.getSchoolId();
 
         // Students
-        List<Map<String, Object>> students = studentRepo.findBySchoolId(schoolId).stream().map(s -> {
+        List<Map<String, Object>> students = studentRepo.findBySchoolId(effectiveSchoolId).stream().map(s -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", s.getId());
             m.put("fullName", s.getFullName());
@@ -244,7 +248,7 @@ public class AttendanceController {
         }).collect(Collectors.toList());
 
         // Classes
-        List<Map<String, Object>> classes = classRepo.findBySchoolIdOrderByGradeAscSectionAsc(schoolId).stream().map(c -> {
+        List<Map<String, Object>> classes = classRepo.findBySchoolIdOrderByGradeAscSectionAsc(effectiveSchoolId).stream().map(c -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", c.getId());
             m.put("name", (c.getGrade() != null ? c.getGrade() : "") + (c.getSection() != null ? c.getSection() : "") + " - " + c.getName());
@@ -252,7 +256,7 @@ public class AttendanceController {
         }).collect(Collectors.toList());
 
         // Teachers
-        List<Map<String, Object>> teachers = userRepo.findByRoleAndSchoolId(User.Role.TEACHER, schoolId).stream().map(t -> {
+        List<Map<String, Object>> teachers = userRepo.findByRoleAndSchoolId(User.Role.TEACHER, effectiveSchoolId).stream().map(t -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", t.getId());
             m.put("fullName", t.getFullName());
