@@ -95,3 +95,33 @@ select:focus {
   animation: barGrow 0.8s ease-out forwards;
   transform-origin: bottom;
 }
+
+/* Light Theme Overrides */
+.light-theme {
+  --bg-main: #f4f7f6;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-light: rgba(0,0,0,0.08);
+}
+
+.light-theme body, .light-theme .bg-\[\#0a0f0d\] { background-color: var(--bg-main) !important; color: var(--text-primary) !important; }
+.light-theme .bg-\[\#0d1a14\], .light-theme .bg-\[\#0a120e\] { background-color: var(--bg-card) !important; }
+.light-theme .hover\:bg-\[\#11221b\]:hover { background-color: var(--bg-card-hover) !important; }
+.light-theme .bg-\[\#111916\] { background-color: var(--bg-card) !important; }
+.light-theme .text-white, .light-theme .text-slate-100, .light-theme .text-slate-200 { color: var(--text-primary) !important; }
+.light-theme .text-slate-300, .light-theme .text-slate-400 { color: var(--text-secondary) !important; }
+.light-theme .text-slate-500, .light-theme .text-slate-600 { color: var(--text-muted) !important; }
+.light-theme .border-emerald-500\/\[0\.08\], .light-theme .border-emerald-500\/\[0\.1\], .light-theme .border-emerald-500\/\[0\.06\], .light-theme .border-emerald-500\/\[0\.05\] { border-color: var(--border-light) !important; }
+.light-theme .border-white\/\[0\.04\], .light-theme .border-white\/\[0\.05\] { border-color: var(--border-light) !important; }
+.light-theme .bg-white\/\[0\.03\], .light-theme .bg-white\/\[0\.02\] { background-color: var(--bg-main) !important; }
+.light-theme .hover\:bg-white\/\[0\.04\]:hover { background-color: #e2e8f0 !important; }
+.light-theme select { background-color: #ffffff !important; color: #0f172a !important; border: 1px solid var(--border-light); }
+.light-theme select option { background-color: #ffffff !important; color: #0f172a !important; }
+.light-theme .donut::after { background: var(--bg-card) !important; }
+.light-theme .shadow-emerald-500\/20 { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important; }
+.light-theme .bg-black\/20 { background-color: var(--bg-main) !important; }
+.light-theme .bg-[#0a0f0d]\/80 { background-color: rgba(244, 247, 246, 0.9) !important; }
+
