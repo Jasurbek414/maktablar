@@ -27,6 +27,9 @@ export default function Devices({ user }) {
   const [delTarget, setDelTarget] = useState(null);
   const [assignForm, setAssignForm] = useState(null);
   const [assignSchoolId, setAssignSchoolId] = useState('');
+  const [showCreateCreds, setShowCreateCreds] = useState(false);
+  const [credForm, setCredForm] = useState({ schoolId: '', login: '', password: '' });
+  const [createdCreds, setCreatedCreds] = useState(null);
 
   const isAdmin = ['SUPERADMIN','ADMIN'].includes(user?.role);
 
@@ -94,13 +97,26 @@ export default function Devices({ user }) {
     load();
   };
 
+  const submitCreateCreds = async () => {
+    if (!credForm.schoolId || !credForm.login || !credForm.password) return alert('Barcha maydonlarni to\'ldiring');
+    try {
+      const res = await api.post('/api/devices/create-credentials', credForm);
+      setCreatedCreds(res);
+      setCredForm({ schoolId: '', login: '', password: '' });
+      load();
+    } catch(e) { alert(e.response?.data?.error || 'Xatolik yuz berdi'); }
+  };
+
   if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"/></div>;
 
   return (<div className="space-y-6">
     {/* Header */}
     <div className="flex items-center justify-between">
       <div><h1 className="text-2xl font-bold text-white">Qurilmalar nazorati</h1><p className="text-sm text-slate-500 mt-1">Viloyat → Tuman → Maktab → Mini-PC → Face ID terminallar</p></div>
-      <button onClick={load} className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:text-emerald-400 transition-all"><I d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" c="w-4 h-4"/></button>
+      <div className="flex gap-2">
+        {isAdmin && <button onClick={()=>{setShowCreateCreds(true);setCreatedCreds(null)}} className="px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium hover:bg-emerald-500/20 transition-all">+ Kalit yaratish</button>}
+        <button onClick={load} className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:text-emerald-400 transition-all"><I d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" c="w-4 h-4"/></button>
+      </div>
     </div>
 
     {/* Stats */}
@@ -282,6 +298,39 @@ export default function Devices({ user }) {
           <button onClick={()=>setAssignForm(null)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Bekor</button>
           <button onClick={submitAssign} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl">Saqlash</button>
         </div>
+      </div>
+    </div>}
+    {/* Create Credentials Modal */}
+    {showCreateCreds && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="bg-[#111916] border border-emerald-500/10 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        {!createdCreds ? <>
+          <h3 className="text-lg font-bold text-white">Yangi Mini-PC uchun kalit yaratish</h3>
+          <p className="text-xs text-slate-400">Maktab tanlang va ixtiyoriy login/parol kiriting. Tizim API kalit avtomatik generatsiya qiladi.</p>
+          <div className="space-y-3">
+            <select value={credForm.schoolId} onChange={e=>setCredForm({...credForm,schoolId:e.target.value})} className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+              <option value="">-- Maktabni tanlang --</option>
+              {filteredSchools.map(s => <option key={s.id} value={s.id}>{s.districtName} - {s.name}</option>)}
+            </select>
+            <input value={credForm.login} onChange={e=>setCredForm({...credForm,login:e.target.value})} placeholder="Login (masalan: maktab45_admin)" className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none placeholder-slate-600"/>
+            <input value={credForm.password} onChange={e=>setCredForm({...credForm,password:e.target.value})} placeholder="Parol (masalan: secret123)" className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none placeholder-slate-600"/>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button onClick={()=>setShowCreateCreds(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Bekor</button>
+            <button onClick={submitCreateCreds} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl">Yaratish</button>
+          </div>
+        </> : <>
+          <h3 className="text-lg font-bold text-emerald-400">✅ Kalit yaratildi!</h3>
+          <p className="text-xs text-slate-400">Quyidagi ma'lumotlarni Desktop dasturga kiriting:</p>
+          <div className="bg-[#020504] border border-emerald-500/20 rounded-xl p-4 space-y-2 font-mono text-sm">
+            <div className="flex justify-between"><span className="text-slate-500">Maktab:</span><span className="text-white">{createdCreds.schoolName}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Login:</span><span className="text-emerald-400 font-bold">{createdCreds.login}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">Parol:</span><span className="text-emerald-400 font-bold">{createdCreds.password}</span></div>
+            <div className="flex justify-between"><span className="text-slate-500">API Kalit:</span><span className="text-cyan-400 font-bold text-xs">{createdCreds.apiKey}</span></div>
+          </div>
+          <div className="flex justify-end pt-2">
+            <button onClick={()=>setShowCreateCreds(false)} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl">Yopish</button>
+          </div>
+        </>}
       </div>
     </div>}
     

@@ -19,8 +19,10 @@ import java.util.stream.Collectors;
 /**
  * Qurilmalar boshqaruvi — Mini-PC + Face ID terminallar
  *
- * Arxitektura:
- * Viloyat → Tuman → Maktab → Mini-PC server → Face ID terminallar (KIRISH / CHIQISH)
+ * YANGI OQIM:
+ * 1. Admin platformada maktab tanlab → login/parol/apiKey generatsiya qiladi
+ * 2. Texnik xodim desktop dasturga login/parol/apiKey kiritadi
+ * 3. Desktop avtomatik maktabga biriktiriladi
  */
 @RestController
 @RequestMapping("/api/devices")
@@ -33,7 +35,113 @@ public class DeviceController {
     @Autowired private ProvinceRepository provinceRepo;
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  MINI-PC REGISTRATION & HEARTBEAT
+    //  PLATFORMADAN KALIT YARATISH (ADMIN)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /** Admin maktab uchun login/parol/apiKey yaratadi — POST /api/devices/create-credentials */
+    @PostMapping("/create-credentials")
+    public ResponseEntity<?> createCredentials(@RequestBody Map<String, Object> body) {
+        Long schoolId = Long.valueOf(body.get("schoolId").toString());
+        String login = (String) body.get("login");
+        String password = (String) body.get("password");
+
+        // Validatsiya
+        if (login == null || login.isBlank() || password == null || password.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Login va parol bo'sh bo'lmasligi kerak"));
+        }
+        if (!schoolRepo.existsById(schoolId)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Maktab topilmadi"));
+        }
+        // Login unikal bo'lishi kerak
+        if (deviceRepo.findByLogin(login).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Bu login allaqachon mavjud"));
+        }
+
+        // API kalit generatsiya
+        String apiKey = UUID.randomUUID().toString().replace("-", "").substring(0, 24);
+
+        Device device = new Device();
+        device.setLogin(login);
+        device.setPassword(password);
+        device.setApiKey(apiKey);
+        device.setSchoolId(schoolId);
+        device.setDeviceName("Mini-PC (" + login + ")");
+        device.setStatus(Device.DeviceStatus.OFFLINE);
+        device.setRegisteredAt(LocalDateTime.now());
+        deviceRepo.save(device);
+
+        // Maktab ma'lumotlari
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", device.getId());
+        result.put("login", login);
+        result.put("password", password);
+        result.put("apiKey", apiKey);
+        schoolRepo.findById(schoolId).ifPresent(s -> {
+            result.put("schoolName", s.getName());
+        });
+        result.put("message", "Kalit muvaffaqiyatli yaratildi! Ushbu ma'lumotlarni desktop dasturga kiriting.");
+
+        return ResponseEntity.ok(result);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  DESKTOP DASTURDAN KIRISH (LOGIN)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /** Desktop dastur login/parol/apiKey bilan kiradi — POST /api/devices/authenticate */
+    @PostMapping("/authenticate")
+    public ResponseEntity<?> authenticate(@RequestBody Map<String, Object> body) {
+        String login = (String) body.get("login");
+        String password = (String) body.get("password");
+        String apiKey = (String) body.get("apiKey");
+        String localIp = (String) body.getOrDefault("localIp", "");
+        String macAddress = (String) body.getOrDefault("macAddress", "");
+
+        if (login == null || password == null || apiKey == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Login, parol va API kalit majburiy"));
+        }
+
+        // Tekshirish: login + parol + apiKey barchasi mos kelishi kerak
+        Optional<Device> optDevice = deviceRepo.findByLogin(login);
+        if (optDevice.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("error", "Noto'g'ri login"));
+        }
+
+        Device device = optDevice.get();
+        if (!device.getPassword().equals(password) || !device.getApiKey().equals(apiKey)) {
+            return ResponseEntity.status(401).body(Map.of("error", "Login, parol yoki API kalit noto'g'ri"));
+        }
+
+        // Muvaffaqiyat — qurilmani ONLINE qilish
+        device.setStatus(Device.DeviceStatus.ONLINE);
+        device.setLastHeartbeat(LocalDateTime.now());
+        device.setLocalIp(localIp);
+        if (macAddress != null && !macAddress.isBlank()) device.setMacAddress(macAddress);
+        deviceRepo.save(device);
+
+        // Javob — maktab ma'lumotlari bilan
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", device.getId());
+        result.put("schoolId", device.getSchoolId());
+        result.put("apiKey", device.getApiKey());
+        result.put("status", "authenticated");
+
+        schoolRepo.findById(device.getSchoolId()).ifPresent(s -> {
+            result.put("schoolName", s.getName());
+            if (s.getDistrict() != null) {
+                result.put("districtName", s.getDistrict().getName());
+                if (s.getDistrict().getProvince() != null) {
+                    result.put("provinceName", s.getDistrict().getProvince().getName());
+                }
+            }
+        });
+
+        result.put("message", "Muvaffaqiyatli kirildi! Maktabga avtomatik biriktirildi.");
+        return ResponseEntity.ok(result);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  LEGACY: REGISTER & HEARTBEAT
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     /** Mini-PC ro'yxatdan o'tishi — POST /api/devices/register */
@@ -44,22 +152,16 @@ public class DeviceController {
         String localIp = (String) body.getOrDefault("localIp", "");
         String macAddress = (String) body.getOrDefault("macAddress", "");
 
-        Long schoolId = null;
-        if (body.containsKey("schoolId") && body.get("schoolId") != null && !body.get("schoolId").toString().isEmpty()) {
-            try { schoolId = Long.valueOf(body.get("schoolId").toString()); } catch (Exception e) {}
+        Device device = deviceRepo.findByApiKey(apiKey).orElse(null);
+        if (device == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Noto'g'ri API kalit. Platformadan to'g'ri kalitni oling."));
         }
 
-        Device device = deviceRepo.findByApiKey(apiKey).orElse(new Device());
-        device.setApiKey(apiKey);
-        if (schoolId != null) device.setSchoolId(schoolId);
         device.setDeviceName(deviceName);
         device.setLocalIp(localIp);
-        device.setMacAddress(macAddress);
+        if (macAddress != null && !macAddress.isBlank()) device.setMacAddress(macAddress);
         device.setStatus(Device.DeviceStatus.ONLINE);
         device.setLastHeartbeat(LocalDateTime.now());
-        if (device.getRegisteredAt() == null) {
-            device.setRegisteredAt(LocalDateTime.now());
-        }
         deviceRepo.save(device);
 
         return ResponseEntity.ok(Map.of(
@@ -141,22 +243,21 @@ public class DeviceController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    /** Qurilma o'chirish */
+    /** Qurilma maktabga biriktirish */
     @PutMapping("/{id}/assign-school")
     public ResponseEntity<?> assignSchool(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         Device device = deviceRepo.findById(id).orElseThrow(() -> new RuntimeException("Device not found"));
-        Long schoolId = Long.valueOf(body.get("schoolId").toString());
-        if (!schoolRepo.existsById(schoolId)) {
+        Long sid = Long.valueOf(body.get("schoolId").toString());
+        if (!schoolRepo.existsById(sid)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Maktab topilmadi"));
         }
-        device.setSchoolId(schoolId);
+        device.setSchoolId(sid);
         deviceRepo.save(device);
         return ResponseEntity.ok(Map.of("message", "Maktabga muvaffaqiyatli biriktirildi"));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
-        // Bog'liq terminallarni ham o'chirish
         List<FaceTerminal> terminals = terminalRepo.findByDeviceId(id);
         terminalRepo.deleteAll(terminals);
         deviceRepo.deleteById(id);
@@ -179,14 +280,12 @@ public class DeviceController {
     //  FACE ID TERMINALLAR BOSHQARUVI
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    /** Terminal ro'yxati — GET /api/devices/{deviceId}/terminals */
     @GetMapping("/{deviceId}/terminals")
     public List<Map<String, Object>> getTerminals(@PathVariable Long deviceId) {
         return terminalRepo.findByDeviceId(deviceId).stream()
             .map(this::toTerminalMap).collect(Collectors.toList());
     }
 
-    /** Yangi terminal qo'shish — POST /api/devices/{deviceId}/terminals */
     @PostMapping("/{deviceId}/terminals")
     public ResponseEntity<?> addTerminal(@PathVariable Long deviceId, @RequestBody Map<String, Object> body) {
         Device device = deviceRepo.findById(deviceId).orElse(null);
@@ -209,7 +308,6 @@ public class DeviceController {
         t.setCreatedAt(LocalDateTime.now());
         terminalRepo.save(t);
 
-        // Mini-PC dagi terminal sonini yangilash
         long count = terminalRepo.countByDeviceId(deviceId);
         deviceRepo.findById(deviceId).ifPresent(d -> {
             d.setFaceTerminalCount((int) count);
@@ -219,7 +317,6 @@ public class DeviceController {
         return ResponseEntity.ok(toTerminalMap(t));
     }
 
-    /** Terminal tahrirlash — PUT /api/devices/terminals/{id} */
     @PutMapping("/terminals/{id}")
     public ResponseEntity<?> updateTerminal(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return terminalRepo.findById(id).map(t -> {
@@ -237,13 +334,11 @@ public class DeviceController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    /** Terminal o'chirish — DELETE /api/devices/terminals/{id} */
     @DeleteMapping("/terminals/{id}")
     public ResponseEntity<?> deleteTerminal(@PathVariable Long id) {
         return terminalRepo.findById(id).map(t -> {
             Long deviceId = t.getDeviceId();
             terminalRepo.deleteById(id);
-            // Mini-PC dagi terminal sonini yangilash
             if (deviceId != null) {
                 long count = terminalRepo.countByDeviceId(deviceId);
                 deviceRepo.findById(deviceId).ifPresent(d -> {
@@ -256,10 +351,9 @@ public class DeviceController {
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  HIERARCHICAL OVERVIEW
+    //  OVERVIEW & SCHEDULED
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    /** GET /api/devices/overview — umumiy statistika (Province→District→School→Device) */
     @GetMapping("/overview")
     public Map<String, Object> overview() {
         List<Device> allDevices = deviceRepo.findAll();
@@ -286,10 +380,6 @@ public class DeviceController {
         );
     }
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  SCHEDULED: OFFLINE DETECTION
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
     @Scheduled(fixedRate = 120000)
     public void checkOfflineDevices() {
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(2);
@@ -310,6 +400,7 @@ public class DeviceController {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", d.getId());
         m.put("deviceName", d.getDeviceName());
+        m.put("login", d.getLogin());
         m.put("schoolId", d.getSchoolId());
         m.put("localIp", d.getLocalIp());
         m.put("macAddress", d.getMacAddress());
@@ -318,20 +409,20 @@ public class DeviceController {
         m.put("registeredAt", d.getRegisteredAt() != null ? d.getRegisteredAt().toString() : null);
         m.put("faceTerminalCount", d.getFaceTerminalCount());
 
-        // School → District → Province
-        schoolRepo.findById(d.getSchoolId()).ifPresent(s -> {
-            m.put("schoolName", s.getName());
-            if (s.getDistrict() != null) {
-                m.put("districtId", s.getDistrict().getId());
-                m.put("districtName", s.getDistrict().getName());
-                if (s.getDistrict().getProvince() != null) {
-                    m.put("provinceId", s.getDistrict().getProvince().getId());
-                    m.put("provinceName", s.getDistrict().getProvince().getName());
+        if (d.getSchoolId() != null) {
+            schoolRepo.findById(d.getSchoolId()).ifPresent(s -> {
+                m.put("schoolName", s.getName());
+                if (s.getDistrict() != null) {
+                    m.put("districtId", s.getDistrict().getId());
+                    m.put("districtName", s.getDistrict().getName());
+                    if (s.getDistrict().getProvince() != null) {
+                        m.put("provinceId", s.getDistrict().getProvince().getId());
+                        m.put("provinceName", s.getDistrict().getProvince().getName());
+                    }
                 }
-            }
-        });
+            });
+        }
 
-        // Terminallar
         long entrance = terminals.stream().filter(t -> t.getDirection() == FaceTerminal.Direction.ENTRANCE).count();
         long exit = terminals.stream().filter(t -> t.getDirection() == FaceTerminal.Direction.EXIT).count();
         m.put("entranceTerminals", entrance);

@@ -326,27 +326,78 @@ app.on('activate', () => {
 ipcMain.handle('get-config', async () => {
   return {
     apiKey: await getConfig('apiKey'),
+    login: await getConfig('login'),
     deviceName: await getConfig('deviceName'),
+    schoolName: await getConfig('schoolName'),
+    districtName: await getConfig('districtName'),
+    provinceName: await getConfig('provinceName'),
     localIp: getLocalIp()
   };
 });
 
+// Yangi: Platformadan berilgan login/parol/apiKey bilan kirish
+ipcMain.handle('authenticate', async (e, { login, password, apiKey }) => {
+  try {
+    const resp = await axios.post(`${mainBackend}/api/devices/authenticate`, {
+      login, password, apiKey,
+      localIp: getLocalIp(),
+      macAddress: ''
+    }, { timeout: 10000 });
+
+    if (resp.status === 200 && resp.data.status === 'authenticated') {
+      // Config saqlash
+      await setConfig('login', login);
+      await setConfig('apiKey', apiKey);
+      await setConfig('deviceName', 'Mini-PC (' + login + ')');
+      await setConfig('schoolId', resp.data.schoolId?.toString() || '');
+      await setConfig('schoolName', resp.data.schoolName || '');
+      await setConfig('districtName', resp.data.districtName || '');
+      await setConfig('provinceName', resp.data.provinceName || '');
+
+      logInfo(`Authenticated: ${login} -> ${resp.data.schoolName}`);
+      
+      // Darhol sinxronizatsiyani boshlash
+      syncSchoolData();
+
+      return {
+        success: true,
+        config: {
+          apiKey, login,
+          deviceName: 'Mini-PC (' + login + ')',
+          localIp: getLocalIp()
+        },
+        schoolInfo: {
+          schoolName: resp.data.schoolName,
+          districtName: resp.data.districtName,
+          provinceName: resp.data.provinceName
+        }
+      };
+    }
+    return { success: false, error: 'Server javob bermadi' };
+  } catch(err) {
+    const msg = err.response?.data?.error || err.message;
+    logInfo('Authentication failed:', msg);
+    return { success: false, error: msg };
+  }
+});
+
+// Chiqish (logout)
+ipcMain.handle('logout', async () => {
+  await setConfig('login', '');
+  await setConfig('apiKey', '');
+  await setConfig('deviceName', '');
+  await setConfig('schoolId', '');
+  await setConfig('schoolName', '');
+  await setConfig('districtName', '');
+  await setConfig('provinceName', '');
+  logInfo('Logged out');
+  return true;
+});
+
+// Legacy: save-config (endi ishlatilmaydi, lekin xavfsizlik uchun saqlab qo'yildi)
 ipcMain.handle('save-config', async (e, { apiKey, deviceName }) => {
   await setConfig('apiKey', apiKey);
   await setConfig('deviceName', deviceName);
-  
-  // Avtomatik ravishda Backend ga ro'yxatdan o'tkazish
-  try {
-    await axios.post(`${mainBackend}/api/devices/register`, {
-      apiKey: apiKey,
-      deviceName: deviceName || (os.hostname() + " (Mini-PC)"),
-      localIp: getLocalIp()
-    }, { timeout: 5000 });
-  } catch(err) {
-    logInfo("Auto-register failed:", err.message);
-  }
-
-  // Darhol sinxronizatsiyani boshlash
   syncSchoolData();
   return true;
 });
