@@ -15,6 +15,7 @@ const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`);
+  db.run(`CREATE TABLE IF NOT EXISTS students (id INTEGER PRIMARY KEY, fullName TEXT)`);
   db.run(`CREATE TABLE IF NOT EXISTS attendance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     studentId INTEGER,
@@ -97,7 +98,6 @@ function getTerminalsArray() {
 
 function handleFaceEvent(deviceSerial, eventData) {
   const studentId = eventData.employeeNo || 0;
-  const studentName = eventData.name || 'Unknown';
   let eventType = 'IN';
   
   if (eventData.minor === 0x4C || eventData.minor === 0x4E) {
@@ -106,11 +106,16 @@ function handleFaceEvent(deviceSerial, eventData) {
 
   const timestamp = eventData.dateTime || new Date().toISOString();
 
-  db.run(`INSERT INTO attendance (studentId, studentName, eventType, timestamp, deviceSerial, synced) VALUES (?, ?, ?, ?, ?, 0)`, 
-    [studentId, studentName, eventType, timestamp, deviceSerial], function() {
-      if (mainWindow) {
-        mainWindow.webContents.send('new-event', { id: this.lastID, studentId, studentName, eventType, timestamp, deviceSerial });
-      }
+  // Try to find student name from local DB, fallback to eventData.name or 'Noma`lum'
+  db.get(`SELECT fullName FROM students WHERE id = ?`, [studentId], (err, row) => {
+    const studentName = row ? row.fullName : (eventData.name || "Noma'lum");
+    
+    db.run(`INSERT INTO attendance (studentId, studentName, eventType, timestamp, deviceSerial, synced) VALUES (?, ?, ?, ?, ?, 0)`, 
+      [studentId, studentName, eventType, timestamp, deviceSerial], function() {
+        if (mainWindow) {
+          mainWindow.webContents.send('new-event', { id: this.lastID, studentId, studentName, eventType, timestamp, deviceSerial });
+        }
+    });
   });
 }
 
@@ -161,6 +166,40 @@ async function syncEvents() {
     isSyncing = false;
   });
 }
+
+// Sync students loop every 5 minutes
+async function syncStudents() {
+  const apiKey = await getConfig('apiKey');
+  const schoolId = await getConfig('schoolId');
+  if (!apiKey || !schoolId) return;
+
+  try {
+    const resp = await axios.get(`${mainBackend}/api/attendance/students?schoolId=${schoolId}`, {
+      headers: { 'X-Api-Key': apiKey },
+      timeout: 10000
+    });
+    
+    if (resp.status === 200 && resp.data.students) {
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        db.run('DELETE FROM students');
+        const stmt = db.prepare('INSERT INTO students (id, fullName) VALUES (?, ?)');
+        resp.data.students.forEach(s => {
+          stmt.run(s.id, s.fullName);
+        });
+        stmt.finalize();
+        db.run('COMMIT');
+      });
+      console.log(`Synced ${resp.data.students.length} students`);
+    }
+  } catch (e) {
+    console.log('Student sync failed:', e.message);
+  }
+}
+
+// Initial triggers and intervals
+setTimeout(syncStudents, 5000);
+setInterval(syncStudents, 300000);
 
 // Sync loop every 30 seconds
 setInterval(syncEvents, 30000);
