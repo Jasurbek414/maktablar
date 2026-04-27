@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
 
 /**
  * Face ID terminal — Mini-PC serverga ulangan yuz tanish qurilmasi.
- * Har bir Mini-PC da kamida 2 ta terminal bo'ladi: KIRISH va CHIQISH.
+ * Istalgan model va ishlab chiqaruvchi qo'llab-quvvatlanadi.
+ * Serial Number — asosiy identifikator (IP o'zgarganda ham topiladi).
  */
 @Data
 @NoArgsConstructor
@@ -20,7 +21,7 @@ public class FaceTerminal {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Qaysi Mini-PC ga ulangan (Cloud ISUP uchun null bo'lishi mumkin) */
+    /** Qaysi Mini-PC ga ulangan */
     @Column(nullable = true)
     private Long deviceId;
 
@@ -32,13 +33,21 @@ public class FaceTerminal {
     @Column(nullable = false)
     private String name;
 
-    /** Hikvision serial raqami */
-    @Column
+    /** Serial raqami — ASOSIY IDENTIFIKATOR */
+    @Column(unique = true)
     private String serialNumber;
 
-    /** Qurilma modeli (masalan: DS-K1T341CMF) */
+    /** Ishlab chiqaruvchi (Hikvision, ZKTeco, Dahua, ...) */
+    @Column
+    private String brand;
+
+    /** Qurilma modeli */
     @Column
     private String model;
+
+    /** MAC manzili — ikkinchi darajali identifikator */
+    @Column
+    private String macAddress;
 
     /** Yo'nalishi — KIRISH yoki CHIQISH */
     @Enumerated(EnumType.STRING)
@@ -50,9 +59,13 @@ public class FaceTerminal {
     @Column(nullable = false)
     private TerminalStatus status = TerminalStatus.OFFLINE;
 
-    /** Terminal IP manzili (lokal tarmoq) */
+    /** Terminal IP manzili (lokal tarmoq — o'zgarishi mumkin) */
     @Column
     private String ipAddress;
+
+    /** Ulanish porti */
+    @Column
+    private Integer port;
 
     /** Firmware versiyasi */
     @Column
@@ -73,6 +86,10 @@ public class FaceTerminal {
     /** Ro'yxatdan o'tgan yuzlar soni */
     @Column
     private Integer registeredFaces = 0;
+
+    /** Qo'shimcha izoh */
+    @Column
+    private String notes;
 
     public enum Direction {
         ENTRANCE,   // Kirish eshigi

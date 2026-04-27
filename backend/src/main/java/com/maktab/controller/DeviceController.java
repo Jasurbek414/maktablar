@@ -301,13 +301,17 @@ public class DeviceController {
         t.setSchoolId(device.getSchoolId());
         t.setName((String) body.getOrDefault("name", "Terminal"));
         t.setSerialNumber((String) body.get("serialNumber"));
-        t.setModel((String) body.getOrDefault("model", "DS-K1T341CMF"));
+        t.setBrand((String) body.getOrDefault("brand", ""));
+        t.setModel((String) body.getOrDefault("model", ""));
+        t.setMacAddress((String) body.get("macAddress"));
         t.setDirection(FaceTerminal.Direction.valueOf(
             body.getOrDefault("direction", "ENTRANCE").toString()));
         t.setStatus(FaceTerminal.TerminalStatus.OFFLINE);
         t.setIpAddress((String) body.get("ipAddress"));
+        t.setPort(body.get("port") != null ? Integer.parseInt(body.get("port").toString()) : null);
         t.setFirmwareVersion((String) body.get("firmwareVersion"));
         t.setRegisteredFaces(0);
+        t.setNotes((String) body.get("notes"));
         t.setCreatedAt(LocalDateTime.now());
         terminalRepo.save(t);
 
@@ -441,12 +445,16 @@ public class DeviceController {
         m.put("deviceId", t.getDeviceId());
         m.put("name", t.getName());
         m.put("serialNumber", t.getSerialNumber());
+        m.put("brand", t.getBrand());
         m.put("model", t.getModel());
+        m.put("macAddress", t.getMacAddress());
         m.put("direction", t.getDirection().name());
         m.put("status", t.getStatus().name());
         m.put("ipAddress", t.getIpAddress());
+        m.put("port", t.getPort());
         m.put("firmwareVersion", t.getFirmwareVersion());
         m.put("registeredFaces", t.getRegisteredFaces());
+        m.put("notes", t.getNotes());
         m.put("lastSeen", t.getLastSeen() != null ? t.getLastSeen().toString() : null);
         m.put("lastEventAt", t.getLastEventAt() != null ? t.getLastEventAt().toString() : null);
         m.put("createdAt", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
