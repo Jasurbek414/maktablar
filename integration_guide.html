@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: Arial, sans-serif; line-height: 1.6; margin: 40px; color: #333; }
+h1, h2, h3 { color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: Consolas, monospace; }
+pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; font-family: Consolas, monospace; }
+ul { padding-left: 20px; }
+li { margin-bottom: 5px; }
+</style>
+</head>
+<body>
+<h1>Maktab Platformasi: Face ID Qurilmalarini Integratsiya Qilish Qo'llanmasi</h1>
+<p>Ushbu qo'llanma "Maktab Platformasi" tizimiga yuzni tanish (Face ID) qurilmalarini (xususan Hikvision terminallarini) qanday qilib ikki xil usulda ulash mumkinligini tushuntiradi.</p>
+<hr />
+<h2>1-USUL: Mini-PC orqali lokal integratsiya (Joriy usul)</h2>
+<p>Bu usulda har bir maktabning mahalliy tarmog'iga (LAN) bitta kompyuter (Mini-PC yoki oddiy kompyuter) o'rnatiladi. Face ID terminallar ushbu Mini-PC'ga ulanadi va Mini-PC olingan ma'lumotlarni markaziy serverga jo'natadi.</p>
+<h3>1.1 Afzalliklari</h3>
+<ul>
+<li><strong>Oflayn barqarorlik:</strong> Internet uzilib qolsa ham, Mini-PC davomatni o'z bazasida saqlab turadi. Internet ulanishi bilan barchasini serverga jo'natadi.</li>
+<li><strong>Tezkorlik:</strong> Mahalliy tarmoq doirasida ishlagani sababli qurilmalar va Mini-PC o'rtasida aloqa juda tez bo'ladi.</li>
+<li><strong>Qurilmalar yuklamasi kam:</strong> Face ID terminallar og'ir ishlarni emas, faqat yuzni tanib olishni amalga oshiradi, qolgan hamma narsa Mini-PC da bajariladi.</li>
+</ul>
+<h3>1.2 O'rnatish va Sozlash</h3>
+<ol>
+<li><strong>Maktab tarmog'ini sozlash:</strong></li>
+<li>Mini-PC va barcha Face ID terminallar bitta Switch (tarmoq) orqali ulanadi.</li>
+<li>
+<p>Mini-PC'ning lokal IP manzili statik bo'lishi kerak (masalan, <code>192.168.1.100</code>).</p>
+</li>
+<li>
+<p><strong>Mini-PC dasturini o'rnatish:</strong></p>
+</li>
+<li>Mini-PC'ga Docker va Docker Compose o'rnatilgan bo'lishi lozim.</li>
+<li>Platformaning <code>mini-pc</code> papkasi ichidagi dastur olinadi.</li>
+<li>
+<p><code>config.py</code> (yoki <code>.env</code>) faylida quyidagi ma'lumotlar kiritiladi:</p>
+<ul>
+<li><code>SCHOOL_ID</code> — Maktabning platformadagi noyob ID'si (Masalan: <code>2</code>)</li>
+<li><code>API_KEY</code> — Ushbu Mini-PC uchun generatsiya qilingan maxfiy kalit.</li>
+<li><code>MAIN_BACKEND</code> — <code>https://maktab.ecos.uz</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Ishga tushirish:</strong></p>
+</li>
+<li>Dasturni ishga tushirish uchun quyidagi komanda yoziladi:
+     <code>bash
+     docker compose up -d</code></li>
+<li>
+<p>Dastur ishga tushgach, avtomatik ravishda 7660 portida ISUP/EHome serverni ko'taradi.</p>
+</li>
+<li>
+<p><strong>Face ID Terminallarni sozlash:</strong></p>
+</li>
+<li>Hikvision qurilmasining menyusiga (yoki web interfeysiga) kirib, <strong>Network -&gt; Advanced -&gt; ISUP (EHome)</strong> bo'limiga o'tiladi.</li>
+<li>ISUP versiyasini <code>V5.0</code> qilib tanlang.</li>
+<li>Server manziliga Mini-PC'ning IP manzilini yozing (masalan, <code>192.168.1.100</code>).</li>
+<li>Server porti: <code>7660</code> (default).</li>
+<li>Device ID va Password ixtiyoriy (yoki xavfsizlik uchun belgilangan) kiritiladi.</li>
+<li>Saqlang va qurilmani qayta ishga tushiring.</li>
+</ol>
+<p>Mini-PC avtomatik ravishda onlayn qurilmalarni aniqlaydi, yuz skaner qilinganda "IN" yoki "OUT" ma'lumotini shakllantirib, <code>maktab.ecos.uz</code> ga jo'natadi!</p>
+<hr />
+<h2>2-USUL: Cloud ISUP Server orqali to'g'ridan-to'g'ri integratsiya (Kelajak modeli)</h2>
+<p>Bu usulda hech qanday lokal Mini-PC ishlatilmaydi. Barcha maktablardagi Face ID terminallar internet orqali to'g'ridan-to'g'ri yagona markaziy bulut (Cloud) ISUP serveriga ulanadi.</p>
+<h3>2.1 Afzalliklari</h3>
+<ul>
+<li><strong>Infratuzilma xarajati arzon:</strong> Maktablarga qo'shimcha Mini-PC xarid qilish shart emas. Bitta router va internet bo'lsa kifoya.</li>
+<li><strong>Markazlashgan boshqaruv:</strong> Barcha maktablardagi qurilmalar va ularning holatlari bitta serverdan kuzatib boriladi. Xatoliklar oson topiladi.</li>
+<li><strong>Oson o'rnatish:</strong> Texnik xodim faqatgina IP manzil va Cloud IP kiritishi orqaligina terminallarni ulashi mumkin.</li>
+</ul>
+<h3>2.2 O'rnatish va Sozlash</h3>
+<p>Platforma 2-usul uchun allaqachon tayyorlangan (Arxitekturada <code>schoolId</code> terminallarga to'g'ridan-to'g'ri ulandi va <code>deviceId</code> ixtiyoriyga aylantirildi).</p>
+<ol>
+<li><strong>Cloud ISUP Serverini yoqish:</strong></li>
+<li>Markaziy serverda (VPS yoki Dedicated Server) global darajadagi katta ISUP EHome Server ishga tushiriladi.</li>
+<li>
+<p>Ushbu server statik Public IP manzilga ega bo'lishi shart.</p>
+</li>
+<li>
+<p><strong>Face ID Terminallarni sozlash:</strong></p>
+</li>
+<li>Maktabdagi Hikvision qurilmasi internetga ulangan bo'lishi shart.</li>
+<li><strong>Network -&gt; Advanced -&gt; ISUP (EHome)</strong> bo'limiga kiriladi.</li>
+<li>Server manziliga <strong>Markaziy Cloud ISUP</strong> serverining Public IP manzili (yoki domeni) yoziladi.</li>
+<li>
+<p>Device ID (Device Name) maydoniga alohida ahamiyat beriladi. Bu maydon orqali Cloud ISUP server bu terminal qaysi maktabga tegishli ekanini aniqlaydi. Masalan, maktab ID si va eshik ID si: <code>SCH002_ENTRANCE_01</code>.</p>
+</li>
+<li>
+<p><strong>Cloud ISUP Server logikasi:</strong></p>
+</li>
+<li>Yuz tasdiqlanganda Cloud ISUP Server olingan ma'lumotni darhol o'qib, <code>POST https://maktab.ecos.uz/api/attendance</code> API'siga yuboradi:
+     <code>json
+     {
+       "studentId": 105,
+       "type": "IN",
+       "timestamp": "2026-04-27T08:00:00+05:00",
+       "deviceSerial": "SCH002_ENTRANCE_01"
+     }</code></li>
+</ol>
+<h3>2.3 Mumkin bo'lgan xatarlar va tavsiyalar</h3>
+<ul>
+<li><strong>Internet uzilishi:</strong> Agar maktabda internet uzilib qolsa, ma'lumotlar qurilmaning o'z xotirasida yig'ilib turadi. Internet kelganda ularni yig'ib jo'natish imkoni ISUP v5 protokolida mavjud, biroq uni Cloud Server to'g'ri ishlashi uchun maxsus bufer arxitekturasi kerak bo'ladi.</li>
+<li><strong>Katta yuklama (High Load):</strong> O'zbekiston bo'ylab minglab maktablar ulansa, Cloud ISUP Server minglab ochiq TCP socketlarni ushlab turishi kerak. Bu Linux yadrosida ulanishlar sonini (ulimit) ko'tarish va Async/Go kabi kuchli texnologiyalardan foydalanishni talab etadi.</li>
+</ul>
+</body>
+</html>
