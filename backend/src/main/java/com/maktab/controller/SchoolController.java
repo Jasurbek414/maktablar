@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -98,9 +99,14 @@ public class SchoolController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    @Transactional
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         if (!schoolRepository.existsById(id)) return ResponseEntity.notFound().build();
+        
+        studentRepository.deleteAll(studentRepository.findBySchoolId(id));
+        classRepository.deleteAll(classRepository.findBySchoolId(id));
+        
         schoolRepository.deleteById(id);
         return ResponseEntity.ok(Map.of("message", "O'chirildi"));
     }
