@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/attendance").permitAll() // mini-pc event
                 .requestMatchers("/api/attendance/sync").permitAll() // mini-pc batch sync
                 .requestMatchers("/api/attendance/students").permitAll() // mini-pc student list
+                .requestMatchers("/api/attendance/offline-data").permitAll() // mini-pc offline data
                 .requestMatchers("/api/devices/**").permitAll() // qurilmalar
                 .requestMatchers("/api/students/face/**").permitAll() // mini-pc dan
                 .requestMatchers("/api/files/**").permitAll() // rasm serve

@@ -197,51 +197,44 @@ async function syncSchoolData() {
   if (!apiKey || !schoolId) return;
 
   try {
-    // Sync Students
-    const respStudents = await axios.get(`${mainBackend}/api/attendance/students?schoolId=${schoolId}`, {
+    const resp = await axios.get(`${mainBackend}/api/attendance/offline-data?schoolId=${schoolId}`, {
       headers: { 'X-Api-Key': apiKey }, timeout: 10000
     });
-    if (respStudents.status === 200 && respStudents.data.students) {
+    
+    if (resp.status === 200 && resp.data) {
       db.serialize(() => {
         db.run('BEGIN TRANSACTION');
+        
+        // Students
         db.run('DELETE FROM students');
-        const stmt = db.prepare('INSERT INTO students (id, fullName, className) VALUES (?, ?, ?)');
-        respStudents.data.students.forEach(s => {
-          stmt.run(s.id, s.fullName, s.className || '');
-        });
-        stmt.finalize();
-        db.run('COMMIT');
-      });
-      logInfo(`Synced ${respStudents.data.students.length} students`);
-    }
+        if (resp.data.students) {
+          const stmtS = db.prepare('INSERT INTO students (id, fullName, className) VALUES (?, ?, ?)');
+          resp.data.students.forEach(s => stmtS.run(s.id, s.fullName, s.className || ''));
+          stmtS.finalize();
+        }
 
-    // Sync Classes
-    const respClasses = await axios.get(`${mainBackend}/api/classes?schoolId=${schoolId}`, { timeout: 10000 });
-    if (respClasses.status === 200) {
-      db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
+        // Classes
         db.run('DELETE FROM classes');
-        const stmt = db.prepare('INSERT INTO classes (id, name) VALUES (?, ?)');
-        respClasses.data.forEach(c => stmt.run(c.id, `${c.grade || ''}${c.section || ''} - ${c.name}`));
-        stmt.finalize();
-        db.run('COMMIT');
-      });
-    }
+        if (resp.data.classes) {
+          const stmtC = db.prepare('INSERT INTO classes (id, name) VALUES (?, ?)');
+          resp.data.classes.forEach(c => stmtC.run(c.id, c.name));
+          stmtC.finalize();
+        }
 
-    // Sync Teachers
-    const respTeachers = await axios.get(`${mainBackend}/api/users?role=TEACHER&schoolId=${schoolId}`, { timeout: 10000 });
-    if (respTeachers.status === 200) {
-      db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
+        // Teachers
         db.run('DELETE FROM teachers');
-        const stmt = db.prepare('INSERT INTO teachers (id, fullName, role) VALUES (?, ?, ?)');
-        respTeachers.data.forEach(t => stmt.run(t.id, t.fullName, t.role));
-        stmt.finalize();
+        if (resp.data.teachers) {
+          const stmtT = db.prepare('INSERT INTO teachers (id, fullName, role) VALUES (?, ?, ?)');
+          resp.data.teachers.forEach(t => stmtT.run(t.id, t.fullName, t.role));
+          stmtT.finalize();
+        }
+
         db.run('COMMIT');
       });
+      logInfo(`Offline Sync OK: ${resp.data.students?.length} students, ${resp.data.classes?.length} classes, ${resp.data.teachers?.length} teachers`);
     }
   } catch (e) {
-    logInfo('School data sync failed:', e.message);
+    logInfo('School data sync failed:', e.response ? e.response.status : e.message);
   }
 }
 

@@ -4,10 +4,9 @@ import com.maktab.model.Attendance;
 import com.maktab.model.Device;
 import com.maktab.model.DeviceHeartbeat;
 import com.maktab.model.Student;
-import com.maktab.repository.AttendanceRepository;
-import com.maktab.repository.DeviceRepository;
-import com.maktab.repository.DeviceHeartbeatRepository;
-import com.maktab.repository.StudentRepository;
+import com.maktab.model.User;
+import com.maktab.repository.*;
+import com.maktab.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +23,9 @@ public class AttendanceController {
     @Autowired private StudentRepository studentRepo;
     @Autowired private DeviceHeartbeatRepository heartbeatRepo;
     @Autowired private DeviceRepository deviceRepo;
-    @Autowired private com.maktab.service.NotificationService notificationService;
+    @Autowired private SchoolClassRepository classRepo;
+    @Autowired private UserRepository userRepo;
+    @Autowired private NotificationService notificationService;
 
     // ─── Mini-PC: single event ───
     @PostMapping
@@ -226,6 +227,50 @@ public class AttendanceController {
             return m;
         }).collect(Collectors.toList());
         return ResponseEntity.ok(Map.of("students", result, "count", result.size()));
+    }
+
+    // ─── Mini-PC: unified offline data sync ───
+    @GetMapping("/offline-data")
+    public ResponseEntity<?> getOfflineData(
+            @RequestHeader("X-Api-Key") String apiKey,
+            @RequestParam Long schoolId) {
+        
+        Device device = deviceRepo.findByApiKey(apiKey).orElse(null);
+        if (device == null || !device.getSchoolId().equals(schoolId)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Invalid API Key or School ID"));
+        }
+
+        // Students
+        List<Map<String, Object>> students = studentRepo.findBySchoolId(schoolId).stream().map(s -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", s.getId());
+            m.put("fullName", s.getFirstName() + " " + s.getLastName());
+            m.put("className", s.getSchoolClass() != null ? s.getSchoolClass().getGrade() + s.getSchoolClass().getSection() : "");
+            return m;
+        }).collect(Collectors.toList());
+
+        // Classes
+        List<Map<String, Object>> classes = classRepo.findBySchoolIdOrderByGradeAscSectionAsc(schoolId).stream().map(c -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", c.getId());
+            m.put("name", (c.getGrade() != null ? c.getGrade() : "") + (c.getSection() != null ? c.getSection() : "") + " - " + c.getName());
+            return m;
+        }).collect(Collectors.toList());
+
+        // Teachers
+        List<Map<String, Object>> teachers = userRepo.findByRoleAndSchoolId(User.Role.TEACHER, schoolId).stream().map(t -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", t.getId());
+            m.put("fullName", t.getFullName());
+            m.put("role", t.getRole().name());
+            return m;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(Map.of(
+            "students", students,
+            "classes", classes,
+            "teachers", teachers
+        ));
     }
 
     // ─── Frontend: Dashboard Overview ───
