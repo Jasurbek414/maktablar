@@ -342,6 +342,21 @@ ipcMain.handle('get-config', async () => {
 ipcMain.handle('save-config', async (e, { apiKey, schoolId }) => {
   await setConfig('apiKey', apiKey);
   await setConfig('schoolId', schoolId);
+  
+  // Avtomatik ravishda Backend ga ro'yxatdan o'tkazish
+  try {
+    await axios.post(`${mainBackend}/api/devices/register`, {
+      apiKey: apiKey,
+      schoolId: schoolId,
+      deviceName: os.hostname() + " (Mini-PC)",
+      localIp: getLocalIp()
+    }, { timeout: 5000 });
+  } catch(err) {
+    logInfo("Auto-register failed:", err.message);
+  }
+
+  // Darhol sinxronizatsiyani boshlash
+  syncSchoolData();
   return true;
 });
 
