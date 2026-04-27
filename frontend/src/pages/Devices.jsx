@@ -29,6 +29,8 @@ export default function Devices({ user }) {
   const [assignSchoolId, setAssignSchoolId] = useState('');
   const [showCreateCreds, setShowCreateCreds] = useState(false);
   const [credForm, setCredForm] = useState({ schoolId: '', login: '', password: '' });
+  const [credProv, setCredProv] = useState('');
+  const [credDist, setCredDist] = useState('');
   const [createdCreds, setCreatedCreds] = useState(null);
 
   const isAdmin = ['SUPERADMIN','ADMIN'].includes(user?.role);
@@ -305,12 +307,21 @@ export default function Devices({ user }) {
       <div className="bg-[#111916] border border-emerald-500/10 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
         {!createdCreds ? <>
           <h3 className="text-lg font-bold text-white">Yangi Mini-PC uchun kalit yaratish</h3>
-          <p className="text-xs text-slate-400">Maktab tanlang va ixtiyoriy login/parol kiriting. Tizim API kalit avtomatik generatsiya qiladi.</p>
+          <p className="text-xs text-slate-400">Viloyat, tuman va maktabni tanlang. Login va parolni ixtiyoriy kiriting.</p>
           <div className="space-y-3">
-            <select value={credForm.schoolId} onChange={e=>setCredForm({...credForm,schoolId:e.target.value})} className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
-              <option value="">-- Maktabni tanlang --</option>
-              {filteredSchools.map(s => <option key={s.id} value={s.id}>{s.districtName} - {s.name}</option>)}
+            <select value={credProv} onChange={e=>{setCredProv(e.target.value);setCredDist('');setCredForm({...credForm,schoolId:''})}} className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+              <option value="">-- Viloyatni tanlang --</option>
+              {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
+            <select value={credDist} onChange={e=>{setCredDist(e.target.value);setCredForm({...credForm,schoolId:''})}} className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none" disabled={!credProv}>
+              <option value="">-- Tumanni tanlang --</option>
+              {districts.filter(d=>d.provinceId?.toString()===credProv).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <select value={credForm.schoolId} onChange={e=>setCredForm({...credForm,schoolId:e.target.value})} className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none" disabled={!credDist}>
+              <option value="">-- Maktabni tanlang --</option>
+              {schools.filter(s=>s.districtId?.toString()===credDist).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <div className="border-t border-white/[0.04] pt-3"></div>
             <input value={credForm.login} onChange={e=>setCredForm({...credForm,login:e.target.value})} placeholder="Login (masalan: maktab45_admin)" className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none placeholder-slate-600"/>
             <input value={credForm.password} onChange={e=>setCredForm({...credForm,password:e.target.value})} placeholder="Parol (masalan: secret123)" className="w-full bg-[#0a0f0d] border border-[#1a2520] rounded-xl px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none placeholder-slate-600"/>
           </div>
@@ -321,14 +332,14 @@ export default function Devices({ user }) {
         </> : <>
           <h3 className="text-lg font-bold text-emerald-400">✅ Kalit yaratildi!</h3>
           <p className="text-xs text-slate-400">Quyidagi ma'lumotlarni Desktop dasturga kiriting:</p>
-          <div className="bg-[#020504] border border-emerald-500/20 rounded-xl p-4 space-y-2 font-mono text-sm">
-            <div className="flex justify-between"><span className="text-slate-500">Maktab:</span><span className="text-white">{createdCreds.schoolName}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">Login:</span><span className="text-emerald-400 font-bold">{createdCreds.login}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">Parol:</span><span className="text-emerald-400 font-bold">{createdCreds.password}</span></div>
-            <div className="flex justify-between"><span className="text-slate-500">API Kalit:</span><span className="text-cyan-400 font-bold text-xs">{createdCreds.apiKey}</span></div>
+          <div className="bg-[#020504] border border-emerald-500/20 rounded-xl p-4 space-y-3 font-mono text-sm">
+            <div><span className="text-[10px] text-slate-600 uppercase block">Maktab</span><span className="text-white">{createdCreds.schoolName}</span></div>
+            <div><span className="text-[10px] text-slate-600 uppercase block">Login</span><span className="text-emerald-400 font-bold text-lg">{createdCreds.login}</span></div>
+            <div><span className="text-[10px] text-slate-600 uppercase block">Parol</span><span className="text-emerald-400 font-bold text-lg">{createdCreds.password}</span></div>
+            <div><span className="text-[10px] text-slate-600 uppercase block">API Kalit</span><span className="text-cyan-400 font-bold select-all">{createdCreds.apiKey}</span></div>
           </div>
           <div className="flex justify-end pt-2">
-            <button onClick={()=>setShowCreateCreds(false)} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl">Yopish</button>
+            <button onClick={()=>{setShowCreateCreds(false);setCredProv('');setCredDist('')}} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-xl">Yopish</button>
           </div>
         </>}
       </div>
