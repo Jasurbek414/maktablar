@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function MiniChart({ data, color }) {
   const max = Math.max(...data, 1);
@@ -47,9 +48,9 @@ function DonutChart({ percent, label, color }) {
   );
 }
 
-function Action({ label, icon, gradient }) {
+function Action({ label, icon, gradient, onClick }) {
   return (
-    <button className="group flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] hover:border-emerald-500/20 transition-all duration-300 relative overflow-hidden">
+    <button onClick={onClick} className="group flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] hover:border-emerald-500/20 transition-all duration-300 relative overflow-hidden">
       <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${gradient}`} />
       <div className="relative w-11 h-11 rounded-xl bg-white/[0.04] flex items-center justify-center text-slate-400 group-hover:text-white group-hover:scale-110 transition-all duration-300">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
@@ -71,12 +72,15 @@ function StatusDot({ online }) {
 }
 
 export default function Dashboard({ user }) {
+  const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalSchools: 0,
     presentToday: 0,
     absentToday: 0,
+    totalDevices: 0,
+    onlineDevices: 0,
     weeklyPresent: [0, 0, 0, 0, 0, 0, 0]
   });
 
@@ -204,18 +208,18 @@ export default function Dashboard({ user }) {
         <div className="lg:col-span-3 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] p-6">
           <h3 className="text-sm font-semibold text-white mb-4">Tezkor amallar</h3>
           <div className="grid grid-cols-2 gap-3">
-            <Action label="O'quvchi" icon="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" gradient="bg-gradient-to-br from-emerald-500/5 to-transparent" />
-            <Action label="Sinxron" icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" gradient="bg-gradient-to-br from-teal-500/5 to-transparent" />
-            <Action label="Hisobot" icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" gradient="bg-gradient-to-br from-cyan-500/5 to-transparent" />
-            <Action label="Sozlama" icon="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" gradient="bg-gradient-to-br from-amber-500/5 to-transparent" />
+            <Action onClick={() => navigate('/students')} label="O'quvchi" icon="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" gradient="bg-gradient-to-br from-emerald-500/5 to-transparent" />
+            <Action onClick={() => navigate('/devices')} label="Sinxron" icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" gradient="bg-gradient-to-br from-teal-500/5 to-transparent" />
+            <Action onClick={() => navigate('/attendance')} label="Hisobot" icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" gradient="bg-gradient-to-br from-cyan-500/5 to-transparent" />
+            <Action onClick={() => navigate('/classes')} label="Sozlama" icon="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" gradient="bg-gradient-to-br from-amber-500/5 to-transparent" />
           </div>
           <div className="mt-4 p-3 rounded-xl border border-emerald-500/[0.06] bg-white/[0.01]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <StatusDot online={false} />
+                <StatusDot online={stats.onlineDevices > 0} />
                 <span className="text-xs text-slate-500">Qurilmalar</span>
               </div>
-              <span className="text-xs font-mono text-slate-600">0 / 0</span>
+              <span className="text-xs font-mono text-slate-600">{stats.onlineDevices} / {stats.totalDevices}</span>
             </div>
           </div>
         </div>
