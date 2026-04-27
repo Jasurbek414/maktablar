@@ -251,12 +251,132 @@ setInterval(async () => {
     try {
       const activeCount = Array.from(connectedTerminals.values()).filter(t => t.status === 'ONLINE').length;
       await axios.post(`${mainBackend}/api/devices/heartbeat`, 
-        { faceTerminalCount: activeCount }, 
+        { faceTerminalCount: activeCount, localIp: getLocalIp() }, 
         { headers: { 'X-Api-Key': apiKey }, timeout: 5000 }
       );
     } catch (e) {}
   }
 }, 60000);
+
+// ----------------------------------------------------
+// REMOTE COMMAND POLLING (Platforma → Mini-PC → Terminal)
+// ----------------------------------------------------
+async function pollCommands() {
+  const apiKey = await getConfig('apiKey');
+  if (!apiKey) return;
+
+  try {
+    const resp = await axios.get(`${mainBackend}/api/devices/commands/pending`, {
+      headers: { 'X-Api-Key': apiKey }, timeout: 5000
+    });
+
+    if (resp.data && resp.data.length > 0) {
+      for (const cmd of resp.data) {
+        logInfo(`Command received: ${cmd.commandType} (id=${cmd.id})`);
+        await executeCommand(cmd);
+      }
+    }
+  } catch (e) {
+    // Silent — server might be down
+  }
+}
+
+async function executeCommand(cmd) {
+  const apiKey = await getConfig('apiKey');
+  let success = false;
+  let result = '';
+
+  try {
+    switch (cmd.commandType) {
+      case 'GET_STATUS': {
+        const terminals = getTerminalsArray();
+        result = JSON.stringify({
+          online: terminals.filter(t => t.status === 'ONLINE').length,
+          offline: terminals.filter(t => t.status !== 'ONLINE').length,
+          terminals: terminals.map(t => ({ id: t.id, addr: t.addr, status: t.status }))
+        });
+        success = true;
+        break;
+      }
+
+      case 'REBOOT': {
+        // ISUP reboot command to specific terminal
+        const termId = cmd.targetTerminal;
+        const terminal = connectedTerminals.get(termId);
+        if (terminal && terminal.socket) {
+          const rebootCmd = Buffer.alloc(32);
+          rebootCmd.write('ISUP', 0);
+          rebootCmd.writeUInt16LE(5, 4);
+          rebootCmd.writeUInt16LE(0x0050, 6); // Reboot command type
+          terminal.socket.write(rebootCmd);
+          result = `Terminal ${termId} ga qayta yuklash buyrug'i yuborildi`;
+          success = true;
+        } else {
+          result = `Terminal ${termId || 'noma\'lum'} topilmadi yoki ulanmagan`;
+          success = false;
+        }
+        break;
+      }
+
+      case 'LIST_TERMINALS': {
+        const terminals = getTerminalsArray();
+        result = JSON.stringify(terminals);
+        success = true;
+        break;
+      }
+
+      case 'SYNC_FACES': {
+        await syncSchoolData();
+        result = 'Sinxronizatsiya boshlandi';
+        success = true;
+        break;
+      }
+
+      case 'GET_LOGS': {
+        try {
+          const logs = fs.readFileSync(logPath, 'utf-8').split('\n').slice(-30).join('\n');
+          result = logs;
+          success = true;
+        } catch (e) {
+          result = 'Log faylni o\'qib bo\'lmadi';
+          success = false;
+        }
+        break;
+      }
+
+      case 'GET_ATTENDANCE': {
+        const rows = await new Promise((resolve) => {
+          db.all('SELECT * FROM attendance ORDER BY id DESC LIMIT 50', (err, rows) => resolve(rows || []));
+        });
+        result = JSON.stringify(rows);
+        success = true;
+        break;
+      }
+
+      default:
+        result = `Noma'lum buyruq: ${cmd.commandType}`;
+        success = false;
+    }
+  } catch (e) {
+    result = `Xatolik: ${e.message}`;
+    success = false;
+  }
+
+  // Natijani platformaga qaytarish
+  try {
+    await axios.put(`${mainBackend}/api/devices/commands/${cmd.id}/result`, 
+      { success, result },
+      { headers: { 'X-Api-Key': apiKey }, timeout: 5000 }
+    );
+    logInfo(`Command ${cmd.id} result reported: ${success ? 'OK' : 'FAIL'}`);
+  } catch (e) {
+    logInfo(`Failed to report command result: ${e.message}`);
+  }
+}
+
+// Command polling every 10 seconds
+setInterval(pollCommands, 10000);
+setTimeout(pollCommands, 3000);
 
 
 // ----------------------------------------------------
