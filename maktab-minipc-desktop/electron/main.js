@@ -4,10 +4,19 @@ const net = require('net');
 const sqlite3 = require('sqlite3').verbose();
 const axios = require('axios');
 const fs = require('fs');
+const os = require('os');
 
 let mainWindow;
 let tray = null;
 let isQuiting = false;
+
+// Logging Init
+const logPath = path.join(app.getPath('userData'), 'minipc.log');
+function logInfo(...args) {
+  const msg = `[${new Date().toISOString()}] ${args.join(' ')}\n`;
+  fs.appendFileSync(logPath, msg);
+  console.log(...args);
+}
 
 // Database Init
 const dbPath = path.join(app.getPath('userData'), 'minipc.db');
@@ -120,8 +129,20 @@ function handleFaceEvent(deviceSerial, eventData) {
 }
 
 server.listen(7660, '0.0.0.0', () => {
-  console.log('ISUP Server listening on port 7660');
+  logInfo('ISUP Server listening on port 7660');
 });
+
+function getLocalIp() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
 
 // ----------------------------------------------------
 // SYNC ENGINE
@@ -161,7 +182,7 @@ async function syncEvents() {
         db.run(`UPDATE attendance SET synced = 1 WHERE id IN (${ids})`);
       }
     } catch (e) {
-      console.log('Sync failed:', e.message);
+      logInfo('Sync failed:', e.message);
     }
     isSyncing = false;
   });
@@ -190,10 +211,10 @@ async function syncStudents() {
         stmt.finalize();
         db.run('COMMIT');
       });
-      console.log(`Synced ${resp.data.students.length} students`);
+      logInfo(`Synced ${resp.data.students.length} students`);
     }
   } catch (e) {
-    console.log('Student sync failed:', e.message);
+    logInfo('Student sync failed:', e.message);
   }
 }
 
@@ -243,6 +264,15 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
+  // Set Auto-Start on Windows Boot
+  if (!isDev) {
+    app.setLoginItemSettings({
+      openAtLogin: true,
+      path: app.getPath('exe'),
+      args: ['--hidden']
+    });
+  }
+
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
@@ -277,7 +307,8 @@ app.on('activate', () => {
 ipcMain.handle('get-config', async () => {
   return {
     apiKey: await getConfig('apiKey'),
-    schoolId: await getConfig('schoolId')
+    schoolId: await getConfig('schoolId'),
+    localIp: getLocalIp()
   };
 });
 

@@ -5,9 +5,10 @@ const { ipcRenderer } = window.require('electron')
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [config, setConfig] = useState({ apiKey: '', schoolId: '' })
+  const [config, setConfig] = useState({ apiKey: '', schoolId: '', localIp: '' })
   const [terminals, setTerminals] = useState([])
   const [events, setEvents] = useState([])
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
 
   useEffect(() => {
     // Load Initial Data
@@ -22,6 +23,11 @@ export default function App() {
     ipcRenderer.on('terminal-update', termListener)
     ipcRenderer.on('new-event', evListener)
 
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
     const itv = setInterval(() => {
       ipcRenderer.invoke('get-events').then(setEvents)
       ipcRenderer.invoke('get-terminals').then(setTerminals)
@@ -30,6 +36,8 @@ export default function App() {
     return () => {
       ipcRenderer.removeListener('terminal-update', termListener)
       ipcRenderer.removeListener('new-event', evListener)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
       clearInterval(itv)
     }
   }, [])
@@ -73,14 +81,26 @@ export default function App() {
         </nav>
         
         <div className="p-4 m-4 rounded-xl bg-white/5 border border-white/10 text-sm">
-          <div className="flex items-center gap-2 mb-2 text-emerald-400">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-            </span>
-            Server ishlayapti
+          <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+            <div className="text-gray-400">Internet</div>
+            <div className={`flex items-center gap-1 ${isOnline ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <span className={`relative flex h-2 w-2 mr-1`}>
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isOnline ? 'bg-emerald-400' : 'bg-rose-400'} opacity-75`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+              </span>
+              {isOnline ? 'Aktiv' : 'Uzilgan!'}
+            </div>
           </div>
-          <div className="text-gray-400 text-xs font-mono">Port: 7660 TCP</div>
+          <div className="flex flex-col gap-1 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Lokal IP:</span>
+              <span className="font-mono text-white">{config.localIp || '...'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">ISUP Port:</span>
+              <span className="font-mono text-white">7660 TCP</span>
+            </div>
+          </div>
         </div>
       </div>
 
