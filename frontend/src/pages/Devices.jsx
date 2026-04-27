@@ -23,7 +23,7 @@ export default function Devices({ user }) {
   const [search, setSearch] = useState('');
   const [detail, setDetail] = useState(null);
   const [showTermForm, setShowTermForm] = useState(false);
-  const [termForm, setTermForm] = useState({ name: '', direction: 'ENTRANCE', serialNumber: '', model: 'DS-K1T341CMF', ipAddress: '' });
+  const [termForm, setTermForm] = useState({ name: '', direction: 'ENTRANCE', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', notes: '' });
   const [delTarget, setDelTarget] = useState(null);
   const [assignForm, setAssignForm] = useState(null);
   const [assignSchoolId, setAssignSchoolId] = useState('');
@@ -79,7 +79,7 @@ export default function Devices({ user }) {
     await api.post(`/api/devices/${detail.id}/terminals`, termForm);
     const updated = await api.get(`/api/devices/${detail.id}`);
     setDetail(updated); setShowTermForm(false);
-    setTermForm({ name: '', direction: 'ENTRANCE', serialNumber: '', model: 'DS-K1T341CMF', ipAddress: '' });
+    setTermForm({ name: '', direction: 'ENTRANCE', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', notes: '' });
     load();
   };
 
@@ -232,28 +232,26 @@ export default function Devices({ user }) {
     ))}
 
     {/* Detail modal */}
-    {detail && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={()=>setDetail(null)}>
-      <div className="bg-[#111916] border border-emerald-500/10 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e=>e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04] sticky top-0 bg-[#111916] z-10">
+    {detail && <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={()=>{setDetail(null);setCmdResult(null)}}>
+      <div className="bg-gradient-to-b from-[#131d17] to-[#0d140f] border border-emerald-500/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04] sticky top-0 bg-[#131d17]/95 backdrop-blur-xl z-10">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${detail.status==='ONLINE'?'bg-emerald-500/15 text-emerald-400':'bg-slate-800/60 text-slate-500'}`}><I d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></div>
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${detail.status==='ONLINE'?'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/20':'bg-slate-800/60 text-slate-500 ring-1 ring-white/[0.06]'}`}><I d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></div>
             <div>
-              <h3 className="text-[15px] font-semibold text-white">{detail.deviceName}</h3>
-              <div className="flex items-center gap-2">
-                <p className="text-[11px] text-slate-500">{detail.schoolName ? `${detail.schoolName} • ${detail.districtName} • ${detail.provinceName}` : 'Hali maktabga biriktirilmagan'}</p>
-                {!detail.schoolName && <button onClick={()=>setAssignForm(detail)} className="text-[10px] text-emerald-400 hover:underline">Biriktirish</button>}
-              </div>
+              <h3 className="text-[15px] font-bold text-white">{detail.deviceName}</h3>
+              <p className="text-[11px] text-slate-500">{detail.schoolName ? `${detail.schoolName} • ${detail.districtName} • ${detail.provinceName}` : <span className="text-amber-400">Maktabga biriktirilmagan</span>}</p>
             </div>
           </div>
-          <button onClick={()=>setDetail(null)} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.05]"><I d="M6 18L18 6M6 6l12 12" c="w-5 h-5"/></button>
+          <button onClick={()=>{setDetail(null);setCmdResult(null)}} className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/[0.05]"><I d="M6 18L18 6M6 6l12 12" c="w-5 h-5"/></button>
         </div>
-
         <div className="px-6 py-5 space-y-5">
-          <div className="flex items-center gap-3"><SB status={detail.status}/><span className="text-[11px] text-slate-600">IP: {detail.localIp} • MAC: {detail.macAddress || '—'}</span></div>
-
-          <div className="grid grid-cols-3 gap-3">
-            {[['Kirish terminallari', detail.entranceTerminals||0, 'text-cyan-400 bg-cyan-500/10'], ['Chiqish terminallari', detail.exitTerminals||0, 'text-orange-400 bg-orange-500/10'], ['Heartbeat', timeAgo(detail.lastHeartbeat), 'text-slate-300 bg-white/[0.03]']].map(([l,v,c],i) => (
-              <div key={i} className={`rounded-xl p-3 ${c.split(' ').slice(1).join(' ')}`}><p className="text-[10px] text-slate-600">{l}</p><p className={`text-lg font-bold mt-1 ${c.split(' ')[0]}`}>{v}</p></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3"><SB status={detail.status}/><span className="text-[11px] text-slate-600">IP: <span className="text-slate-400 font-mono">{detail.localIp||'—'}</span></span></div>
+            <span className="text-[10px] text-slate-700">Heartbeat: {timeAgo(detail.lastHeartbeat)}</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {[['Terminallar',(detail.terminals||[]).length,'text-purple-400 bg-purple-500/10'],['Kirish',detail.entranceTerminals||0,'text-cyan-400 bg-cyan-500/10'],['Chiqish',detail.exitTerminals||0,'text-orange-400 bg-orange-500/10'],['Yuzlar',(detail.terminals||[]).reduce((s,t)=>s+(t.registeredFaces||0),0),'text-pink-400 bg-pink-500/10']].map(([l,v,c],i) => (
+              <div key={i} className={`rounded-xl p-3 ${c.split(' ').slice(1).join(' ')} border border-white/[0.03]`}><p className="text-[9px] text-slate-600 uppercase">{l}</p><p className={`text-lg font-bold mt-1 ${c.split(' ')[0]}`}>{v}</p></div>
             ))}
           </div>
 
@@ -264,18 +262,24 @@ export default function Devices({ user }) {
               <button onClick={()=>setShowTermForm(!showTermForm)} className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-all">+ Terminal qo'shish</button>
             </div>
 
-            {showTermForm && <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-3 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <input value={termForm.name} onChange={e=>setTermForm({...termForm,name:e.target.value})} placeholder="Terminal nomi" className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500/30"/>
-                <select value={termForm.direction} onChange={e=>setTermForm({...termForm,direction:e.target.value})} className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-sm text-slate-300 focus:outline-none">
+            {showTermForm && <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 mb-3 space-y-3">
+              <p className="text-[11px] font-semibold text-slate-400">Yangi Face ID qurilma</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <input value={termForm.name} onChange={e=>setTermForm({...termForm,name:e.target.value})} placeholder="Nomi (1-qavat kirish)" className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
+                <select value={termForm.direction} onChange={e=>setTermForm({...termForm,direction:e.target.value})} className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white focus:outline-none">
                   <option value="ENTRANCE">⬇ Kirish</option><option value="EXIT">⬆ Chiqish</option>
                 </select>
-                <input value={termForm.serialNumber} onChange={e=>setTermForm({...termForm,serialNumber:e.target.value})} placeholder="Serial raqam" className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500/30"/>
-                <input value={termForm.ipAddress} onChange={e=>setTermForm({...termForm,ipAddress:e.target.value})} placeholder="IP manzil" className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500/30"/>
+                <input value={termForm.brand} onChange={e=>setTermForm({...termForm,brand:e.target.value})} placeholder="Brend (Hikvision, ZKTeco...)" className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
+                <input value={termForm.model} onChange={e=>setTermForm({...termForm,model:e.target.value})} placeholder="Model" className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
+                <input value={termForm.serialNumber} onChange={e=>setTermForm({...termForm,serialNumber:e.target.value})} placeholder="Serial raqam (asosiy ID)" className="px-3 py-2.5 rounded-lg bg-black/30 border border-amber-500/20 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/40"/>
+                <input value={termForm.macAddress} onChange={e=>setTermForm({...termForm,macAddress:e.target.value})} placeholder="MAC manzil" className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
+                <input value={termForm.ipAddress} onChange={e=>setTermForm({...termForm,ipAddress:e.target.value})} placeholder="IP manzil" className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
+                <input value={termForm.port} onChange={e=>setTermForm({...termForm,port:e.target.value})} placeholder="Port (80, 8000...)" className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
               </div>
+              <input value={termForm.notes} onChange={e=>setTermForm({...termForm,notes:e.target.value})} placeholder="Izoh (ixtiyoriy)" className="w-full px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
               <div className="flex justify-end gap-2">
                 <button onClick={()=>setShowTermForm(false)} className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-300">Bekor</button>
-                <button onClick={addTerminal} className="px-4 py-1.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-500 transition-all">Saqlash</button>
+                <button onClick={addTerminal} className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/20">Saqlash</button>
               </div>
             </div>}
 
@@ -284,15 +288,27 @@ export default function Devices({ user }) {
             ) : (
               <div className="space-y-2">
                 {(detail.terminals||[]).map(t => (
-                  <div key={t.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] group">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${t.direction==='ENTRANCE'?'bg-cyan-500/10 text-cyan-400':'bg-orange-500/10 text-orange-400'}`}>
-                      <I d={t.direction==='ENTRANCE'?'M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3':'M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18'} c="w-4 h-4"/>
+                  <div key={t.id} className="rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] transition-all group">
+                    <div className="flex items-center gap-3 p-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${t.direction==='ENTRANCE'?'bg-cyan-500/10 text-cyan-400':'bg-orange-500/10 text-orange-400'}`}>
+                        <I d={t.direction==='ENTRANCE'?'M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3':'M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18'} c="w-4.5 h-4.5"/>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2"><p className="text-[13px] font-semibold text-white">{t.name}</p><SB status={t.status}/></div>
+                        <div className="flex items-center gap-3 mt-0.5 text-[10px] text-slate-600">
+                          {t.brand && <span className="text-slate-500">{t.brand}</span>}
+                          {t.model && <span>{t.model}</span>}
+                          {t.serialNumber && <span className="text-amber-500/80 font-mono">SN: {t.serialNumber}</span>}
+                        </div>
+                      </div>
+                      <div className="text-right mr-1">
+                        <p className="text-[10px] text-slate-600">IP: <span className="text-slate-400 font-mono">{t.ipAddress||'—'}</span></p>
+                        {t.macAddress && <p className="text-[10px] text-slate-700">MAC: {t.macAddress}</p>}
+                        {t.registeredFaces>0 && <p className="text-[10px] text-pink-400">{t.registeredFaces} yuz</p>}
+                      </div>
+                      <button onClick={()=>delTerminal(t.id)} className="p-1.5 rounded text-slate-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><I d="M6 18L18 6M6 6l12 12" c="w-3.5 h-3.5"/></button>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2"><p className="text-[13px] font-medium text-slate-200">{t.name}</p><SB status={t.status}/></div>
-                      <p className="text-[10px] text-slate-600">{t.direction==='ENTRANCE'?'Kirish':'Chiqish'} • {t.model||'—'} • IP: {t.ipAddress||'—'} • SN: {t.serialNumber||'—'}</p>
-                    </div>
-                    <button onClick={()=>delTerminal(t.id)} className="p-1.5 rounded text-slate-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><I d="M6 18L18 6M6 6l12 12" c="w-3.5 h-3.5"/></button>
+                    {t.notes && <div className="px-4 pb-2"><p className="text-[10px] text-slate-600 italic">💬 {t.notes}</p></div>}
                   </div>
                 ))}
               </div>
