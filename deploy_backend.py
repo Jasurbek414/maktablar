@@ -24,7 +24,7 @@ print("Ulandi!")
 
 print("\n=== MAKTAB BACKEND DEPLOY ===")
 run(ssh, "cd /root/maktab-platforma && git pull origin main")
-run(ssh, "cd /root/maktab-platforma/backend && chmod +x mvnw && ./mvnw clean package -DskipTests")
+run(ssh, "cd /root/maktab-platforma/backend && mvn clean package -DskipTests")
 run(ssh, "pkill -f 'java -jar target/backend-0.0.1-SNAPSHOT.jar' || true")
 run(ssh, "cd /root/maktab-platforma/backend && nohup java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.datasource.url=jdbc:postgresql://localhost:5432/maktabdb --spring.datasource.username=postgres --spring.datasource.password= --spring.jpa.hibernate.ddl-auto=update > /var/log/maktab-backend.log 2>&1 &")
 run(ssh, "sleep 5 && pgrep -f 'java -jar'")
