@@ -117,8 +117,11 @@ select:focus {
 }
 
 /* Cards & Containers */
-.light-theme .content-area .bg-\[\#0d1a14\] { 
+.light-theme .content-area .bg-\[\#0d1a14\],
+.light-theme .content-area .from-\[\#0d1a14\],
+.light-theme .content-area .to-\[\#0a1410\] { 
   background-color: var(--bg-card) !important; 
+  background-image: none !important;
   box-shadow: var(--card-shadow) !important;
   border-color: var(--border-light) !important;
 }
@@ -137,6 +140,10 @@ select:focus {
 .light-theme .content-area .border-emerald-500\/\[0\.05\], 
 .light-theme .content-area .border-emerald-500\/\[0\.12\],
 .light-theme .content-area .border-emerald-500\/\[0\.04\] { border-color: var(--border-light) !important; }
+
+.light-theme .content-area .hover\:border-emerald-500\/20:hover,
+.light-theme .content-area .hover\:border-emerald-500\/25:hover { border-color: #cbd5e1 !important; }
+
 .light-theme .content-area .border-white\/\[0\.04\], 
 .light-theme .content-area .border-white\/\[0\.05\],
 .light-theme .content-area .border-slate-700 { border-color: var(--border-light) !important; }
