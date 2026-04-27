@@ -209,24 +209,15 @@ public class AttendanceController {
     @GetMapping("/students")
     public ResponseEntity<?> getStudentsForDevice(
             @RequestHeader(value = "X-Api-Key", required = false) String apiKey,
-            @RequestParam Long schoolId) {
-        // API key tekshirish
-        if (apiKey != null) {
-            Device device = deviceRepo.findByApiKey(apiKey).orElse(null);
-            if (device == null || !device.getSchoolId().equals(schoolId)) {
-                return ResponseEntity.status(401).body(Map.of("error", "Ruxsat yo'q"));
-            }
-        }
-        List<Student> students = studentRepo.findBySchoolId(schoolId);
+    public ResponseEntity<?> getStudentsList(@RequestParam(required = false) Long schoolId) {
+        List<Student> students = schoolId != null ? studentRepo.findBySchoolId(schoolId) : studentRepo.findAll();
         List<Map<String, Object>> result = students.stream().map(s -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", s.getId());
             m.put("fullName", s.getFullName());
-            m.put("classId", s.getClassId());
-            m.put("photoUrl", s.getPhotoUrl());
             return m;
         }).collect(Collectors.toList());
-        return ResponseEntity.ok(Map.of("students", result, "count", result.size()));
+        return ResponseEntity.ok(Map.of("students", result));
     }
 
     // ─── Mini-PC: unified offline data sync ───
@@ -244,8 +235,14 @@ public class AttendanceController {
         List<Map<String, Object>> students = studentRepo.findBySchoolId(schoolId).stream().map(s -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id", s.getId());
-            m.put("fullName", s.getFirstName() + " " + s.getLastName());
-            m.put("className", s.getSchoolClass() != null ? s.getSchoolClass().getGrade() + s.getSchoolClass().getSection() : "");
+            m.put("fullName", s.getFullName());
+            if (s.getClassId() != null) {
+                classRepo.findById(s.getClassId()).ifPresent(c -> {
+                    m.put("className", (c.getGrade() != null ? c.getGrade() : "") + (c.getSection() != null ? c.getSection() : "") + " - " + c.getName());
+                });
+            } else {
+                m.put("className", "");
+            }
             return m;
         }).collect(Collectors.toList());
 
