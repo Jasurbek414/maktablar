@@ -59,12 +59,17 @@ export default function Devices({ user }) {
     return (d.deviceName||'').toLowerCase().includes(s) || (d.schoolName||'').toLowerCase().includes(s) || (d.localIp||'').includes(s);
   });
 
-  // Maktab bo'yicha guruhlash
+  // Maktab bo'yicha guruhlash va Viloyat → Tuman → Maktab tartibida saralash
   const grouped = {};
   filtered.forEach(d => {
     const key = d.schoolName || (d.schoolId ? `Maktab #${d.schoolId}` : 'Biriktirilmagan');
-    if (!grouped[key]) grouped[key] = { schoolName: key, provinceName: d.provinceName, districtName: d.districtName, devices: [] };
+    if (!grouped[key]) grouped[key] = { schoolName: key, provinceName: d.provinceName || '', districtName: d.districtName || '', devices: [] };
     grouped[key].devices.push(d);
+  });
+  const sortedGroups = Object.values(grouped).sort((a, b) => {
+    if (a.provinceName !== b.provinceName) return (a.provinceName || '').localeCompare(b.provinceName || '', 'uz');
+    if (a.districtName !== b.districtName) return (a.districtName || '').localeCompare(b.districtName || '', 'uz');
+    return (a.schoolName || '').localeCompare(b.schoolName || '', 'uz');
   });
 
   const addTerminal = async () => {
@@ -159,21 +164,21 @@ export default function Devices({ user }) {
       </div>
     </div>}
 
-    {/* Device list grouped by school */}
-    {Object.keys(grouped).length === 0 ? (
+    {/* Device list grouped by school — sorted: Viloyat → Tuman → Maktab */}
+    {sortedGroups.length === 0 ? (
       <div className="flex flex-col items-center py-20 rounded-2xl bg-white/[0.01] border border-white/[0.04]">
         <div className="w-14 h-14 rounded-2xl bg-slate-800/50 flex items-center justify-center mb-3"><I d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" c="w-7 h-7 text-slate-600"/></div>
         <p className="text-slate-400 font-medium">Qurilmalar topilmadi</p>
         <p className="text-xs text-slate-600 mt-1">Mini-PC ro'yxatdan o'tganda bu yerda ko'rinadi</p>
       </div>
-    ) : Object.values(grouped).map((g, gi) => (
+    ) : sortedGroups.map((g, gi) => (
       <div key={gi} className="space-y-3">
         {/* School header */}
         <div className="flex items-center gap-2 px-1">
           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center"><I d="M12 14l9-5-9-5-9 5 9 5z" c="w-4 h-4 text-emerald-400"/></div>
           <div>
             <p className="text-sm font-semibold text-slate-200">{g.schoolName}</p>
-            <p className="text-[10px] text-slate-600">{g.provinceName && g.districtName ? `${g.provinceName} / ${g.districtName}` : ''}</p>
+            <p className="text-[10px] text-slate-600">{[g.provinceName, g.districtName].filter(Boolean).join(' / ')}</p>
           </div>
           <span className="ml-auto text-[11px] text-slate-600">{g.devices.length} ta Mini-PC</span>
         </div>
