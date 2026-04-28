@@ -29,8 +29,7 @@ echo "Java: $(java -version 2>&1 | head -1)"
 # 5. INSTALL POSTGRESQL
 echo -e "\n[5/10] Installing PostgreSQL..."
 sudo apt-get install -y postgresql postgresql-contrib
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+sudo service postgresql start
 
 # Create databases
 echo -e "\n[5b] Creating databases..."
@@ -39,11 +38,11 @@ sudo -u postgres psql -c "CREATE DATABASE gilamdb;" 2>/dev/null || echo "gilamdb
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres123';" 2>/dev/null
 echo "PostgreSQL ready!"
 
-# 6. INSTALL NGINX
-echo -e "\n[6/10] Installing Nginx..."
+# 6. INSTALL NGINX & PM2
+echo -e "\n[6/10] Installing Nginx and PM2..."
 sudo apt-get install -y nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
+sudo service nginx start
+sudo npm install -g pm2
 
 # 7. CLONE PROJECTS
 echo -e "\n[7/10] Cloning projects..."
@@ -139,52 +138,21 @@ NGINX
 sudo ln -sf /etc/nginx/sites-available/maktab /etc/nginx/sites-enabled/
 sudo ln -sf /etc/nginx/sites-available/gilam /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t && sudo systemctl reload nginx
+sudo nginx -t && sudo service nginx reload
 echo "Nginx configured!"
 
-# SYSTEMD SERVICES
+# START BACKENDS WITH PM2
+echo -e "\n[11/11] Starting Backends with PM2..."
 
-# Maktab Backend Service
-sudo tee /etc/systemd/system/maktab-backend.service > /dev/null << 'SVC'
-[Unit]
-Description=Maktab Backend (Spring Boot)
-After=network.target postgresql.service
+# Maktab Backend
+cd /home/team/maktab-platforma/backend
+pm2 start "java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.datasource.url=jdbc:postgresql://localhost:5432/maktabdb --spring.datasource.username=postgres --spring.datasource.password=postgres123 --spring.jpa.hibernate.ddl-auto=update --server.port=8081" --name "maktab-backend"
 
-[Service]
-User=team
-WorkingDirectory=/home/team/maktab-platforma/backend
-ExecStart=/usr/bin/java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.datasource.url=jdbc:postgresql://localhost:5432/maktabdb --spring.datasource.username=postgres --spring.datasource.password=postgres123 --spring.jpa.hibernate.ddl-auto=update --server.port=8081
-Restart=always
-RestartSec=5
+# Gilam Backend
+cd /home/team/gilam-platforma/backend
+DATABASE_URL="postgresql://postgres:postgres123@localhost:5432/gilamdb" PORT=3001 NODE_ENV=production pm2 start index.js --name "gilam-backend"
 
-[Install]
-WantedBy=multi-user.target
-SVC
-
-# Gilam Backend Service
-sudo tee /etc/systemd/system/gilam-backend.service > /dev/null << 'SVC'
-[Unit]
-Description=Gilam Backend (Node.js)
-After=network.target postgresql.service
-
-[Service]
-User=team
-WorkingDirectory=/home/team/gilam-platforma/backend
-Environment=DATABASE_URL=postgresql://postgres:postgres123@localhost:5432/gilamdb
-Environment=PORT=3001
-Environment=NODE_ENV=production
-ExecStart=/usr/bin/node index.js
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-SVC
-
-sudo systemctl daemon-reload
-sudo systemctl enable maktab-backend gilam-backend
-sudo systemctl start maktab-backend
-sudo systemctl start gilam-backend
+pm2 save
 
 echo ""
 echo "=========================================="
@@ -194,6 +162,4 @@ echo "  Maktab: http://localhost:8080"
 echo "  Gilam:  http://localhost:8090"
 echo "  Maktab API: http://localhost:8081"
 echo "  Gilam API:  http://localhost:3001"
-echo ""
-echo "  Next: Set up Cloudflare tunnels"
 echo "=========================================="
