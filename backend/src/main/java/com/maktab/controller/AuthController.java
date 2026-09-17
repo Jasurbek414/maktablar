@@ -3,6 +3,7 @@ package com.maktab.controller;
 import com.maktab.model.User;
 import com.maktab.repository.UserRepository;
 import com.maktab.security.JwtUtil;
+import com.maktab.service.I18nService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +25,9 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private I18nService i18n;
+
     /**
      * Login endpoint
      * POST /api/auth/login
@@ -35,22 +39,17 @@ public class AuthController {
                 .orElse(null);
 
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(401).body(Map.of("error", "Login yoki parol noto'g'ri"));
+            return ResponseEntity.status(401).body(Map.of("error", i18n.msg("error.auth.invalid_credentials")));
+        }
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            return ResponseEntity.status(403).body(Map.of("error", i18n.msg("error.auth.user_deactivated")));
         }
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getId());
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
-        response.put("user", Map.of(
-                "id", user.getId(),
-                "username", user.getUsername(),
-                "fullName", user.getFullName(),
-                "role", user.getRole().name(),
-                "provinceId", user.getProvinceId() != null ? user.getProvinceId() : "",
-                "districtId", user.getDistrictId() != null ? user.getDistrictId() : "",
-                "schoolId", user.getSchoolId() != null ? user.getSchoolId() : ""
-        ));
+        response.put("user", selfMap(user));
 
         return ResponseEntity.ok(response);
     }
@@ -63,30 +62,93 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<?> me(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(401).body(Map.of("error", "Token topilmadi"));
+            return ResponseEntity.status(401).body(Map.of("error", i18n.msg("error.auth.token_missing")));
         }
 
         String token = authHeader.substring(7);
         if (!jwtUtil.validateToken(token)) {
-            return ResponseEntity.status(401).body(Map.of("error", "Token yaroqsiz"));
+            return ResponseEntity.status(401).body(Map.of("error", i18n.msg("error.auth.token_invalid")));
         }
 
         String username = jwtUtil.getUsernameFromToken(token);
         User user = userRepository.findByUsername(username).orElse(null);
 
         if (user == null) {
-            return ResponseEntity.status(404).body(Map.of("error", "Foydalanuvchi topilmadi"));
+            return ResponseEntity.status(404).body(Map.of("error", i18n.msg("error.user.not_found")));
         }
 
-        return ResponseEntity.ok(Map.of(
-                "id", user.getId(),
-                "username", user.getUsername(),
-                "fullName", user.getFullName(),
-                "role", user.getRole().name(),
-                "provinceId", user.getProvinceId() != null ? user.getProvinceId() : "",
-                "districtId", user.getDistrictId() != null ? user.getDistrictId() : "",
-                "schoolId", user.getSchoolId() != null ? user.getSchoolId() : ""
-        ));
+        return ResponseEntity.ok(selfMap(user));
+    }
+
+    /**
+     * Joriy foydalanuvchi o'z profilini yangilaydi (faqat o'zi — rol/ko'lam
+     * maydonlariga tegilmaydi, shuning uchun rol-boshqaruv cheklovlariga muhtoj emas).
+     * PATCH /api/auth/me
+     */
+    @PatchMapping("/me")
+    public ResponseEntity<?> updateMe(@RequestHeader("Authorization") String authHeader,
+                                       @RequestBody Map<String, Object> body) {
+        User user = resolveSelf(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", i18n.msg("error.auth.token_invalid")));
+        }
+        if (body.get("fullName") != null && !body.get("fullName").toString().isBlank()) {
+            user.setFullName(body.get("fullName").toString());
+        }
+        if (body.containsKey("phone")) {
+            Object phone = body.get("phone");
+            user.setPhone(phone != null ? phone.toString() : null);
+        }
+        userRepository.save(user);
+        return ResponseEntity.ok(selfMap(user));
+    }
+
+    /**
+     * Joriy foydalanuvchi o'z parolini o'zgartiradi (joriy parolni bilishi shart).
+     * POST /api/auth/change-password
+     * Body: { "oldPassword": "...", "newPassword": "..." }
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestHeader("Authorization") String authHeader,
+                                             @RequestBody Map<String, String> body) {
+        User user = resolveSelf(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", i18n.msg("error.auth.token_invalid")));
+        }
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+        if (oldPassword == null || !passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return ResponseEntity.status(400).body(Map.of("error", i18n.msg("error.auth.current_password_incorrect")));
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.status(400).body(Map.of("error", i18n.msg("error.auth.new_password_min_length")));
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("message", i18n.msg("success.password_changed")));
+    }
+
+    /** Joriy foydalanuvchining o'ziga tegishli javoblarda (login/me/updateMe) qaytariladigan xarita. */
+    private Map<String, Object> selfMap(User user) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", user.getId());
+        m.put("username", user.getUsername());
+        m.put("fullName", user.getFullName());
+        m.put("role", user.getRole().name());
+        m.put("provinceId", user.getProvinceId() != null ? user.getProvinceId() : "");
+        m.put("districtId", user.getDistrictId() != null ? user.getDistrictId() : "");
+        m.put("schoolId", user.getSchoolId() != null ? user.getSchoolId() : "");
+        m.put("phone", user.getPhone());
+        m.put("subject", user.getSubject());
+        return m;
+    }
+
+    private User resolveSelf(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
+        String token = authHeader.substring(7);
+        if (!jwtUtil.validateToken(token)) return null;
+        String username = jwtUtil.getUsernameFromToken(token);
+        return userRepository.findByUsername(username).orElse(null);
     }
 
     // DTO

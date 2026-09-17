@@ -1,0 +1,31 @@
+# Ikkala frontend'ni (oddiy foydalanuvchilar + superadmin) bitta nginx orqali
+# bitta domenda xizmat qilish uchun ko'p bosqichli (multi-stage) build.
+# Build context — repo ildizi (docker-compose.yml'da context: . bo'lishi kerak).
+
+# ─── 1-bosqich: oddiy foydalanuvchilar frontendi (root "/") ───
+FROM node:20-alpine AS build-main
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/. .
+RUN npm run build
+
+# ─── 2-bosqich: superadmin panel frontendi ("/spd") ───
+FROM node:20-alpine AS build-admin
+WORKDIR /app
+COPY frontend-admin/package*.json ./
+RUN npm install --legacy-peer-deps
+COPY frontend-admin/. .
+# Bo'sh qoldiriladi — ikkala frontend ham bitta origin'dan xizmat qiladi,
+# shuning uchun API so'rovlari nisbiy ("/api/v1/...") yo'l bilan ketadi.
+ARG VITE_API_URL=
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build
+
+# ─── 3-bosqich: yagona nginx ───
+FROM nginx:alpine
+COPY --from=build-main /app/dist /usr/share/nginx/html
+COPY --from=build-admin /app/dist /usr/share/nginx/html/spd
+COPY nginx.unified.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

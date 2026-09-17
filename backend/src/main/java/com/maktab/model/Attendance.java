@@ -37,7 +37,7 @@ public class Attendance {
     private String photoPath; // Face ID capture rasm yo'li
 
     @Column
-    private Long miniPcDeviceId; // qaysi mini-PC dan kelgan
+    private Long routerId; // qaysi Mikrotik router orqali kelgan
 
     @Column(unique = true)
     private String syncKey; // dublikat oldini olish uchun (schoolId-studentId-timestamp-type)

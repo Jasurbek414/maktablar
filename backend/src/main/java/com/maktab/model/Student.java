@@ -29,7 +29,15 @@ public class Student {
     @Column
     private String photoUrl;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // MUHIM (2026-09-15 audit): avval LAZY edi. NotificationService#notifyGuardians va
+    // #createAttendanceNotification @Async (alohida thread)da ishlaydi — u yerda Hibernate
+    // sessiyasi allaqachon yopilgan bo'ladi, shu sabab student.getSchool().getName()
+    // LazyInitializationException tashlardi. Bu xato catch (Exception) ichida JIM YUTILARDI
+    // → ota-onaga Telegram xabari UMUMAN ketmasdi va web bildirishnoma ham yaratilmasdi,
+    // lekin panel "yuborildi" deb ko'rsatardi. Pastdagi `guardians` allaqachon EAGER
+    // bo'lgani kabi, `school` ham EAGER qilindi (School — kichik jadval, qo'shimcha yuk
+    // sezilarli emas, va u allaqachon deyarli har bir mapper'da o'qiladi).
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
 

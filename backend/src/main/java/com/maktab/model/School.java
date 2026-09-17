@@ -19,6 +19,19 @@ public class School {
     @Column(nullable = false)
     private String name;
 
+    @Column
+    private String address;
+
+    @Column
+    private String phone;
+
+    /** Maktabning rasmiy raqami/kodi (masalan "56" yoki "56-IITM") — nomdan alohida, ixtiyoriy. */
+    @Column(name = "school_number")
+    private String schoolNumber;
+
+    @Column(name = "founded_year")
+    private Integer foundedYear;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "district_id", nullable = false)
     private District district;

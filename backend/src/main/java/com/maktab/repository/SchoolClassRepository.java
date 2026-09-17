@@ -8,5 +8,6 @@ import java.util.List;
 @Repository
 public interface SchoolClassRepository extends JpaRepository<SchoolClass, Long> {
     List<SchoolClass> findBySchoolId(Long schoolId);
+    List<SchoolClass> findBySchoolIdIn(List<Long> schoolIds);
     List<SchoolClass> findBySchoolIdOrderByGradeAscSectionAsc(Long schoolId);
 }

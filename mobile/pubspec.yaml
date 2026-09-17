@@ -1,0 +1,59 @@
+name: maktab_davomad_mobile
+description: Maktab Davomad — ota-onalar va direktorlar uchun mobil ilova
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management — Riverpod (kod generatsiyasiz, barqaror versiya)
+  flutter_riverpod: ^2.5.1
+
+  # Navigatsiya — Flutter jamoasining rasmiy routeri
+  go_router: ^14.2.0
+
+  # HTTP client
+  dio: ^5.4.3+1
+
+  # JWT tokenni xavfsiz saqlash
+  flutter_secure_storage: ^9.2.2
+
+  # Grafiklar — davomat statistikasi uchun
+  fl_chart: ^0.68.0
+
+  # Tarmoq rasmlarini keshlash bilan yuklash (o'quvchi/o'qituvchi rasmlari)
+  cached_network_image: ^3.3.1
+
+  # Sana/vaqt formatlash
+  intl: ^0.19.0
+
+  # Push-bildirishnomalar (Firebase loyihasi sozlanishi kerak — README.md ga qarang).
+  # MUHIM: flutter_local_notifications ATAYLAB qo'shilmadi — u Android'da "core library
+  # desugaring"ni yoqishni talab qiladi, bu esa android/ papkasi build vaqtida
+  # generatsiya qilinganda qo'shimcha Gradle patch talab qiladi. Push hali Firebase
+  # loyihasiz umuman ishlamaydi, shuning uchun bu murakkablikni push HAQIQIY funksiyaga
+  # aylanadigan bosqichga qoldirdik (fon/tugatilgan holatdagi bildirishnomalarni FCM
+  # o'zi ko'rsatadi — faqat OLDINDA OCHIQ ilova holatidagi bildirishnoma banneri
+  # keyinroq qo'shiladi).
+  firebase_core: ^3.3.0
+  firebase_messaging: ^15.0.4
+
+  # Shrift — veb-ilovadagi Inter shriftiga mos
+  google_fonts: ^6.2.1
+
+  cupertino_icons: ^1.0.8
+
+  # Mavzu (kun/tun) va til tanlovini saqlash uchun
+  shared_preferences: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

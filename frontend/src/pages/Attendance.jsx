@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 
 // --- Icons ---
@@ -70,9 +71,9 @@ const ProgressBar = ({ label, value, max, color = 'bg-emerald-400' }) => {
 };
 
 // Activity Line Graph (Smooth SVG curve)
-const ActivityGraph = ({ data = [] }) => {
-  if (!data || data.length === 0) return <div className="h-full w-full flex items-center justify-center text-slate-600 text-xs">Ma'lumot yetarli emas</div>;
-  
+const ActivityGraph = ({ data = [], t }) => {
+  if (!data || data.length === 0) return <div className="h-full w-full flex items-center justify-center text-slate-600 text-xs">{t('attendance.dataInsufficient')}</div>;
+
   const max = Math.max(...data, 1);
   const width = 300;
   const height = 80;
@@ -103,17 +104,17 @@ const ActivityGraph = ({ data = [] }) => {
 };
 
 // Compact Top Analytics Dashboard
-const GlobalDashboard = ({ title, subtitle, cards, donut, bars, progresses }) => (
+const GlobalDashboard = ({ title, subtitle, cards, donut, bars, progresses, t }) => (
   <div className="mb-5 rounded-xl bg-[#0d1a14] border border-emerald-500/[0.08] p-5 overflow-hidden relative">
     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-    
+
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 relative z-10 border-b border-emerald-500/[0.05] pb-3">
       <div>
         <h2 className="text-base font-bold text-white">{title}</h2>
         {subtitle && <p className="text-[10px] text-slate-500 mt-0.5">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold uppercase tracking-widest mt-2 sm:mt-0">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Stats
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('attendance.liveStats')}
       </div>
     </div>
 
@@ -142,7 +143,7 @@ const GlobalDashboard = ({ title, subtitle, cards, donut, bars, progresses }) =>
           <div className="flex-1 w-full space-y-3">
             {bars && (
               <div>
-                <p className="text-[9px] text-slate-500 uppercase tracking-widest font-semibold mb-1.5">Taqsimot grafigi</p>
+                <p className="text-[9px] text-slate-500 uppercase tracking-widest font-semibold mb-1.5">{t('attendance.distributionChart')}</p>
                 <MiniBarChart data={bars.data} color={bars.color} />
               </div>
             )}
@@ -165,7 +166,7 @@ const NavCard = ({ icon, title, subtitle, onClick, stats, accent = 'emerald', pc
     cyan: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20 group-hover:border-cyan-500/40',
     teal: 'text-teal-400 bg-teal-500/10 border-teal-500/20 group-hover:border-teal-500/40'
   };
-  
+
   return (
     <button onClick={onClick} className="group text-left w-full rounded-xl bg-[#0d1a14] border border-emerald-500/[0.08] hover:bg-[#11221b] transition-all duration-300 overflow-hidden flex flex-col h-full relative">
       <div className="absolute inset-x-0 bottom-0 h-0.5 bg-white/[0.02]">
@@ -184,7 +185,7 @@ const NavCard = ({ icon, title, subtitle, onClick, stats, accent = 'emerald', pc
           </div>
           <svg className="w-3.5 h-3.5 text-slate-600 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
         </div>
-        
+
         {stats && (
           <div className="grid grid-cols-2 gap-2 mt-auto pt-3 border-t border-emerald-500/[0.05]">
             {stats.map((s, i) => (
@@ -205,6 +206,7 @@ const NavCard = ({ icon, title, subtitle, onClick, stats, accent = 'emerald', pc
 
 
 export default function Attendance({ user }) {
+  const { t } = useTranslation();
   const [provinces, setProvinces] = useState([]);
   const [allDistricts, setAllDistricts] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -214,7 +216,7 @@ export default function Attendance({ user }) {
   const [selSchool, setSelSchool] = useState(null);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  
+
   const [events, setEvents] = useState([]);
   const [devices, setDevices] = useState([]);
   const [students, setStudents] = useState([]);
@@ -302,38 +304,39 @@ export default function Attendance({ user }) {
   // ============================
   if (!selProv && !isDirector) {
     const provBars = provinces.slice(0, 12).map(p => ((p.studentCount||0) / maxProvStudents) * 100);
-    
+
     return (
       <div className="animate-fade-in pb-10">
-        <GlobalDashboard 
-          title="Respublika Davomat Tahlili" 
-          subtitle="Barcha viloyatlar bo'yicha markazlashtirilgan o'quvchilar va maktablar qamrovi"
+        <GlobalDashboard
+          t={t}
+          title={t('attendance.global.title')}
+          subtitle={t('attendance.global.subtitle')}
           cards={[
-            {label: 'Hududlar', value: provinces.length, icon: ICONS.prov, iconColor: 'text-emerald-400', glowColor: 'bg-emerald-500/20'},
-            {label: 'Tumanlar', value: totalProvDists, icon: ICONS.dist, iconColor: 'text-teal-400', glowColor: 'bg-teal-500/20'},
-            {label: 'Maktablar', value: totalProvSchools, icon: ICONS.school, iconColor: 'text-cyan-400', glowColor: 'bg-cyan-500/20'},
-            {label: "O'quvchilar", value: totalProvStudents, icon: ICONS.users, iconColor: 'text-amber-400', glowColor: 'bg-amber-500/20', textColor: 'text-amber-400'}
+            {label: t('attendance.hubs'), value: provinces.length, icon: ICONS.prov, iconColor: 'text-emerald-400', glowColor: 'bg-emerald-500/20'},
+            {label: t('stats.districts'), value: totalProvDists, icon: ICONS.dist, iconColor: 'text-teal-400', glowColor: 'bg-teal-500/20'},
+            {label: t('stats.schools'), value: totalProvSchools, icon: ICONS.school, iconColor: 'text-cyan-400', glowColor: 'bg-cyan-500/20'},
+            {label: t('stats.students'), value: totalProvStudents, icon: ICONS.users, iconColor: 'text-amber-400', glowColor: 'bg-amber-500/20', textColor: 'text-amber-400'}
           ]}
-          donut={{pct: Math.min(100, Math.round((totalProvSchools/10000)*100)), value: totalProvSchools, label: "Maktab", color: "#10b981"}}
+          donut={{pct: Math.min(100, Math.round((totalProvSchools/10000)*100)), value: totalProvSchools, label: t('attendance.global.donutLabel'), color: "#10b981"}}
           bars={{data: provBars, color: 'bg-emerald-500'}}
           progresses={[
-            {label: "Tizimga ulangan maktablar", value: totalProvSchools, max: 10000, color: "bg-cyan-500"},
-            {label: "Ro'yxatdagi o'quvchilar", value: totalProvStudents, max: Math.max(totalProvStudents, 6000000), color: "bg-amber-500"}
+            {label: t('attendance.global.progress.connectedSchools'), value: totalProvSchools, max: 10000, color: "bg-cyan-500"},
+            {label: t('attendance.global.progress.registeredStudents'), value: totalProvStudents, max: Math.max(totalProvStudents, 6000000), color: "bg-amber-500"}
           ]}
         />
 
         {loading ? <Loader /> : (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:'0.75rem'}}>
             {provinces.map(p => (
-              <NavCard 
+              <NavCard
                 key={p.id} icon={ICONS.prov} accent="emerald"
-                title={p.name} subtitle={`${p.districtCount||0} tuman · ${p.schoolCount||0} maktab`} 
-                onClick={() => pickProv(p)} 
+                title={p.name} subtitle={t('districts.provinceCard.subtitle', { districts: p.districtCount||0, schools: p.schoolCount||0 })}
+                onClick={() => pickProv(p)}
                 pct={((p.studentCount||0)/maxProvStudents)*100}
                 stats={[
-                  {label: 'Maktablar', value: p.schoolCount||0, color: 'text-cyan-400', dotClass: 'bg-cyan-500'},
-                  {label: "O'quvchilar", value: p.studentCount||0, color: 'text-amber-400', dotClass: 'bg-amber-500'}
-                ]} 
+                  {label: t('stats.schools'), value: p.schoolCount||0, color: 'text-cyan-400', dotClass: 'bg-cyan-500'},
+                  {label: t('stats.students'), value: p.studentCount||0, color: 'text-amber-400', dotClass: 'bg-amber-500'}
+                ]}
               />
             ))}
           </div>
@@ -356,37 +359,38 @@ export default function Attendance({ user }) {
       <div className="animate-fade-in pb-10">
         <div className="flex items-center gap-3 mb-5">
           {!isAdmin && <BackBtn onClick={goProvs} />}
-          <h1 className="text-xl font-bold text-white">{selProv.name} tahlili</h1>
+          <h1 className="text-xl font-bold text-white">{t('attendance.district.titleSuffix', { province: selProv.name })}</h1>
         </div>
 
-        <GlobalDashboard 
-          title={`${selProv.name} bo'yicha tumanlar kesimida`} 
-          subtitle="Viloyatga qarashli tumanlardagi maktab va o'quvchilar qamrovi statistikasi"
+        <GlobalDashboard
+          t={t}
+          title={t('attendance.district.title', { province: selProv.name })}
+          subtitle={t('attendance.district.subtitle')}
           cards={[
-            {label: 'Tumanlar', value: districts.length, icon: ICONS.dist, iconColor: 'text-teal-400', glowColor: 'bg-teal-500/20'},
-            {label: 'Maktablar', value: distTotalSchools, icon: ICONS.school, iconColor: 'text-cyan-400', glowColor: 'bg-cyan-500/20'},
-            {label: "O'quvchilar", value: distTotalStudents, icon: ICONS.users, iconColor: 'text-amber-400', glowColor: 'bg-amber-500/20', textColor: 'text-amber-400'},
-            {label: "O'rtacha quvvat", value: Math.round(distTotalStudents/(distTotalSchools||1)), icon: ICONS.school, iconColor: 'text-indigo-400', glowColor: 'bg-indigo-500/20'}
+            {label: t('stats.districts'), value: districts.length, icon: ICONS.dist, iconColor: 'text-teal-400', glowColor: 'bg-teal-500/20'},
+            {label: t('stats.schools'), value: distTotalSchools, icon: ICONS.school, iconColor: 'text-cyan-400', glowColor: 'bg-cyan-500/20'},
+            {label: t('stats.students'), value: distTotalStudents, icon: ICONS.users, iconColor: 'text-amber-400', glowColor: 'bg-amber-500/20', textColor: 'text-amber-400'},
+            {label: t('attendance.district.avgCapacity'), value: Math.round(distTotalStudents/(distTotalSchools||1)), icon: ICONS.school, iconColor: 'text-indigo-400', glowColor: 'bg-indigo-500/20'}
           ]}
           bars={{data: distBars, color: 'bg-teal-500'}}
           progresses={[
-            {label: "Maktablar taqsimoti", value: distTotalSchools, max: Math.max(distTotalSchools, 1000), color: "bg-cyan-500"},
-            {label: "O'quvchilar qamrovi", value: distTotalStudents, max: Math.max(distTotalStudents, 500000), color: "bg-amber-500"}
+            {label: t('attendance.district.progress.schools'), value: distTotalSchools, max: Math.max(distTotalSchools, 1000), color: "bg-cyan-500"},
+            {label: t('attendance.district.progress.students'), value: distTotalStudents, max: Math.max(distTotalStudents, 500000), color: "bg-amber-500"}
           ]}
         />
 
         {loading ? <Loader /> : (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:'0.75rem'}}>
             {districts.map(d => (
-              <NavCard 
+              <NavCard
                 key={d.id} icon={ICONS.dist} accent="teal"
-                title={d.name} subtitle={`${d.schoolCount||0} maktab`} 
-                onClick={() => pickDist(d)} 
+                title={d.name} subtitle={t('attendance.district.schoolsSuffix', { count: d.schoolCount||0 })}
+                onClick={() => pickDist(d)}
                 pct={((d.studentCount||0)/maxDistStudents)*100}
                 stats={[
-                  {label: 'Maktablar', value: d.schoolCount||0, color: 'text-cyan-400', dotClass: 'bg-cyan-500'},
-                  {label: "O'quvchilar", value: d.studentCount||0, color: 'text-amber-400', dotClass: 'bg-amber-500'}
-                ]} 
+                  {label: t('stats.schools'), value: d.schoolCount||0, color: 'text-cyan-400', dotClass: 'bg-cyan-500'},
+                  {label: t('stats.students'), value: d.studentCount||0, color: 'text-amber-400', dotClass: 'bg-amber-500'}
+                ]}
               />
             ))}
           </div>
@@ -408,34 +412,35 @@ export default function Attendance({ user }) {
       <div className="animate-fade-in pb-10">
         <div className="flex items-center gap-3 mb-5">
           <BackBtn onClick={goDists} />
-          <h1 className="text-xl font-bold text-white">{selDist.name} maktablari</h1>
+          <h1 className="text-xl font-bold text-white">{t('attendance.school.titleSuffix', { district: selDist.name })}</h1>
         </div>
 
-        <GlobalDashboard 
-          title={`${selDist.name} ro'yxati`} 
-          subtitle="Tuman miqyosidagi barcha ta'lim muassasalari va ulardagi o'quvchilar soni"
+        <GlobalDashboard
+          t={t}
+          title={t('attendance.school.title', { district: selDist.name })}
+          subtitle={t('attendance.school.subtitle')}
           cards={[
-            {label: 'Muassasalar', value: schools.length, icon: ICONS.school, iconColor: 'text-cyan-400', glowColor: 'bg-cyan-500/20'},
-            {label: "O'quvchilar", value: schTotalStudents, icon: ICONS.users, iconColor: 'text-amber-400', glowColor: 'bg-amber-500/20', textColor: 'text-amber-400'}
+            {label: t('attendance.school.institutions'), value: schools.length, icon: ICONS.school, iconColor: 'text-cyan-400', glowColor: 'bg-cyan-500/20'},
+            {label: t('stats.students'), value: schTotalStudents, icon: ICONS.users, iconColor: 'text-amber-400', glowColor: 'bg-amber-500/20', textColor: 'text-amber-400'}
           ]}
           bars={{data: schBars, color: 'bg-indigo-500'}}
           progresses={[
-            {label: "Tuman bo'yicha qamrov", value: schTotalStudents, max: Math.max(schTotalStudents, 50000), color: "bg-amber-500"}
+            {label: t('attendance.school.progress.coverage'), value: schTotalStudents, max: Math.max(schTotalStudents, 50000), color: "bg-amber-500"}
           ]}
         />
 
         {loading ? <Loader /> : (
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:'0.75rem'}}>
             {schools.map(s => (
-              <NavCard 
+              <NavCard
                 key={s.id} icon={ICONS.school} accent="cyan"
-                title={s.name} subtitle={`${s.studentCount||0} nafar o'quvchi`} 
-                onClick={() => pickSchool(s)} 
+                title={s.name} subtitle={t('attendance.school.studentsSuffix', { count: s.studentCount||0 })}
+                onClick={() => pickSchool(s)}
                 pct={((s.studentCount||0)/maxSchStudents)*100}
                 stats={[
-                  {label: "O'quvchilar", value: s.studentCount||0, color: 'text-amber-400', dotClass: 'bg-amber-500'},
-                  {label: 'Holati', value: 'Faol', color: 'text-emerald-400', dotClass: 'bg-emerald-500'}
-                ]} 
+                  {label: t('stats.students'), value: s.studentCount||0, color: 'text-amber-400', dotClass: 'bg-amber-500'},
+                  {label: t('attendance.school.statusLabel'), value: t('attendance.school.statusActive'), color: 'text-emerald-400', dotClass: 'bg-emerald-500'}
+                ]}
               />
             ))}
           </div>
@@ -458,11 +463,11 @@ export default function Attendance({ user }) {
             <p className="text-[9px] text-slate-400 uppercase tracking-widest">{selProv?.name} • {selDist?.name}</p>
           </div>
         </div>
-        <input 
-          type="date" 
-          value={date} 
+        <input
+          type="date"
+          value={date}
           onChange={e => setDate(e.target.value)}
-          className="relative z-10 h-9 px-3 rounded-lg bg-white/[0.03] border border-emerald-500/[0.2] text-emerald-400 text-sm font-medium outline-none focus:border-emerald-400 [color-scheme:dark]" 
+          className="relative z-10 h-9 px-3 rounded-lg bg-white/[0.03] border border-emerald-500/[0.2] text-emerald-400 text-sm font-medium outline-none focus:border-emerald-400 [color-scheme:dark]"
         />
       </div>
 
@@ -470,15 +475,15 @@ export default function Attendance({ user }) {
         <>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
             <div className="lg:col-span-1 bg-[#0d1a14] border border-emerald-500/[0.08] rounded-xl p-5 flex flex-col items-center justify-center relative overflow-hidden">
-              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest self-start mb-4">Davomat Ko'rsatkichi</h3>
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest self-start mb-4">{t('attendance.detail.attendanceRateTitle')}</h3>
               <PremiumDonut pct={percentage} color={percentage > 80 ? '#10b981' : percentage > 50 ? '#f59e0b' : '#ef4444'} />
               <div className="w-full grid grid-cols-2 gap-3 mt-6 border-t border-emerald-500/[0.05] pt-4">
                 <div className="text-center">
-                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-0.5">Keldi</p>
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-0.5">{t('attendance.detail.came')}</p>
                   <p className="text-xl font-bold text-emerald-400">{presentCount}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-0.5">Kelmadi</p>
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-0.5">{t('attendance.detail.didNotCome')}</p>
                   <p className="text-xl font-bold text-rose-400">{absentCount}</p>
                 </div>
               </div>
@@ -488,13 +493,13 @@ export default function Attendance({ user }) {
               <div className="bg-[#0d1a14] border border-emerald-500/[0.08] rounded-xl p-5 flex flex-col relative overflow-hidden h-full">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kirdi-chiqdi Tahlili</h3>
-                    <p className="text-[9px] text-slate-500 mt-0.5">Kunning soatlari bo'yicha oqim statistikasi</p>
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('attendance.detail.flowTitle')}</h3>
+                    <p className="text-[9px] text-slate-500 mt-0.5">{t('attendance.detail.flowSubtitle')}</p>
                   </div>
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
                 <div className="flex-1 min-h-[120px] relative mt-2">
-                  <ActivityGraph data={hourlyActivity} />
+                  <ActivityGraph data={hourlyActivity} t={t} />
                   <div className="absolute bottom-0 left-0 right-0 flex justify-between translate-y-5 text-[8px] text-slate-500 font-medium">
                     <span>07:00</span><span>09:00</span><span>11:00</span><span>13:00</span><span>15:00</span><span>18:00</span>
                   </div>
@@ -504,12 +509,12 @@ export default function Attendance({ user }) {
           </div>
 
           <div className="mb-5">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Mini-PC va Terminallar Monitori</h3>
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">{t('attendance.detail.devicesMonitorTitle')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {devices.length === 0 ? (
                 <div className="col-span-full py-3 px-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  Face ID uskunalar ulanmagan
+                  {t('attendance.detail.noDevices')}
                 </div>
               ) : devices.map(d => (
                 <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-emerald-500/[0.05]">
@@ -521,7 +526,7 @@ export default function Attendance({ user }) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-[8px] font-bold uppercase ${d.online ? 'text-emerald-400' : 'text-rose-400'}`}>{d.online ? 'Online' : 'Offline'}</p>
+                    <p className={`text-[8px] font-bold uppercase ${d.online ? 'text-emerald-400' : 'text-rose-400'}`}>{d.online ? t('attendance.detail.online') : t('attendance.detail.offline')}</p>
                     <p className="text-[7px] text-slate-500 mt-1">{new Date(d.lastSeen).toLocaleTimeString('uz')}</p>
                   </div>
                 </div>
@@ -532,17 +537,17 @@ export default function Attendance({ user }) {
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <div className="xl:col-span-2 bg-[#0d1a14] border border-emerald-500/[0.08] rounded-xl overflow-hidden h-[500px] flex flex-col">
               <div className="px-5 py-3 border-b border-emerald-500/[0.05] bg-emerald-500/[0.02] flex items-center justify-between">
-                <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Jonli Lenta (Kirdi-chiqdi)</h3>
-                <span className="text-[9px] text-slate-500 bg-black/20 px-2 py-0.5 rounded">{events.length} qayd</span>
+                <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{t('attendance.detail.liveFeedTitle')}</h3>
+                <span className="text-[9px] text-slate-500 bg-black/20 px-2 py-0.5 rounded">{t('attendance.detail.recordsSuffix', { count: events.length })}</span>
               </div>
               <div className="flex-1 overflow-auto p-3">
                 <table className="w-full text-left text-xs">
                   <thead className="sticky top-0 bg-[#0d1a14]">
                     <tr>
-                      <th className="pb-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-emerald-500/[0.05]">Vaqt</th>
-                      <th className="pb-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-emerald-500/[0.05]">O'quvchi</th>
-                      <th className="pb-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-emerald-500/[0.05] text-center">Harakat</th>
-                      <th className="pb-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-emerald-500/[0.05] text-center">Harorat</th>
+                      <th className="pb-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-emerald-500/[0.05]">{t('attendance.detail.table.time')}</th>
+                      <th className="pb-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-emerald-500/[0.05]">{t('attendance.detail.table.student')}</th>
+                      <th className="pb-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-emerald-500/[0.05] text-center">{t('attendance.detail.table.action')}</th>
+                      <th className="pb-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest border-b border-emerald-500/[0.05] text-center">{t('attendance.detail.table.temperature')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -557,7 +562,7 @@ export default function Attendance({ user }) {
                         </td>
                         <td className="py-2.5 text-center">
                           <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${e.type==='IN'?'bg-emerald-500/10 text-emerald-400':'bg-blue-500/10 text-blue-400'}`}>
-                            {e.type==='IN'?'Kirdi':'Chiqdi'}
+                            {e.type==='IN'?t('attendance.detail.entered'):t('attendance.detail.exited')}
                           </span>
                         </td>
                         <td className="py-2.5 text-center">
@@ -572,7 +577,7 @@ export default function Attendance({ user }) {
 
             <div className="bg-[#0d1a14] border border-emerald-500/[0.08] rounded-xl overflow-hidden h-[500px] flex flex-col">
               <div className="px-5 py-3 border-b border-emerald-500/[0.05] bg-emerald-500/[0.02]">
-                <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">O'quvchilar ro'yxati</h3>
+                <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{t('attendance.detail.studentsListTitle')}</h3>
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
                 {students.map(s => {

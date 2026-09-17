@@ -1,7 +1,10 @@
 package com.maktab.controller;
 
 import com.maktab.model.Notification;
+import com.maktab.model.User;
 import com.maktab.repository.NotificationRepository;
+import com.maktab.security.CurrentUserService;
+import com.maktab.service.I18nService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,19 +18,33 @@ import java.util.stream.Collectors;
 public class NotificationController {
 
     @Autowired private NotificationRepository notifRepo;
+    @Autowired private CurrentUserService currentUserService;
+    @Autowired private I18nService i18n;
 
     /**
      * Foydalanuvchi bildirishnomalarini olish
      * GET /api/notifications?userId=1&role=SUPERADMIN&limit=50
+     * MUHIM: userId/role endi client'dan ishonch bilan qabul qilinmaydi — Authorization
+     * headerdagi JWT orqali aniqlangan HAQIQIY foydalanuvchi ishlatiladi. Faqat SUPERADMIN
+     * boshqa userId/role bo'yicha ixtiyoriy so'rov qilishi mumkin (to'liq huquqli bo'lgani uchun).
      */
     @GetMapping
     public Map<String, Object> getNotifications(
-            @RequestParam Long userId,
-            @RequestParam(defaultValue = "SUPERADMIN") String role,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String role,
             @RequestParam(defaultValue = "50") int limit) {
 
-        List<Notification> all = notifRepo.findForUser(userId, role);
-        long unread = notifRepo.countUnreadForUser(userId, role);
+        User user = currentUserService.requireUser(authHeader);
+        Long effectiveUserId = user.getId();
+        String effectiveRole = user.getRole().name();
+        if (currentUserService.isSuperAdmin(user)) {
+            if (userId != null) effectiveUserId = userId;
+            if (role != null) effectiveRole = role;
+        }
+
+        List<Notification> all = notifRepo.findForUser(effectiveUserId, effectiveRole);
+        long unread = notifRepo.countUnreadForUser(effectiveUserId, effectiveRole);
 
         List<Map<String, Object>> items = all.stream()
             .limit(limit)
@@ -47,9 +64,17 @@ public class NotificationController {
      */
     @GetMapping("/unread-count")
     public Map<String, Object> getUnreadCount(
-            @RequestParam Long userId,
-            @RequestParam(defaultValue = "SUPERADMIN") String role) {
-        long count = notifRepo.countUnreadForUser(userId, role);
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String role) {
+        User user = currentUserService.requireUser(authHeader);
+        Long effectiveUserId = user.getId();
+        String effectiveRole = user.getRole().name();
+        if (currentUserService.isSuperAdmin(user)) {
+            if (userId != null) effectiveUserId = userId;
+            if (role != null) effectiveRole = role;
+        }
+        long count = notifRepo.countUnreadForUser(effectiveUserId, effectiveRole);
         return Map.of("unreadCount", count);
     }
 
@@ -58,12 +83,18 @@ public class NotificationController {
      * PUT /api/notifications/{id}/read
      */
     @PutMapping("/{id}/read")
-    public ResponseEntity<?> markRead(@PathVariable Long id) {
-        return notifRepo.findById(id).map(n -> {
-            n.setIsRead(true);
-            notifRepo.save(n);
-            return ResponseEntity.ok(Map.of("success", true));
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> markRead(@PathVariable Long id,
+                                       @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        User caller = currentUserService.requireUser(authHeader);
+        Notification n = notifRepo.findById(id).orElse(null);
+        if (n == null) return ResponseEntity.notFound().build();
+        if (!currentUserService.isSuperAdmin(caller) && caller.getRole() != User.Role.ADMIN
+                && !(n.getUserId() != null && n.getUserId().equals(caller.getId()))) {
+            return ResponseEntity.status(403).body(Map.of("error", i18n.msg("error.notification.not_yours")));
+        }
+        n.setIsRead(true);
+        notifRepo.save(n);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     /**
@@ -72,9 +103,17 @@ public class NotificationController {
      */
     @PutMapping("/read-all")
     public Map<String, Object> markAllRead(
-            @RequestParam Long userId,
-            @RequestParam(defaultValue = "SUPERADMIN") String role) {
-        notifRepo.markAllReadForUser(userId, role);
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String role) {
+        User user = currentUserService.requireUser(authHeader);
+        Long effectiveUserId = user.getId();
+        String effectiveRole = user.getRole().name();
+        if (currentUserService.isSuperAdmin(user)) {
+            if (userId != null) effectiveUserId = userId;
+            if (role != null) effectiveRole = role;
+        }
+        notifRepo.markAllReadForUser(effectiveUserId, effectiveRole);
         return Map.of("success", true);
     }
 
@@ -83,7 +122,12 @@ public class NotificationController {
      * POST /api/notifications
      */
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> create(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                     @RequestBody Map<String, Object> body) {
+        User caller = currentUserService.requireUser(authHeader);
+        if (!currentUserService.isUnrestrictedAdmin(caller)) {
+            return ResponseEntity.status(403).body(Map.of("error", i18n.msg("error.notification.create_forbidden")));
+        }
         Notification n = new Notification();
         n.setTitle((String) body.get("title"));
         n.setMessage((String) body.get("message"));
@@ -106,7 +150,15 @@ public class NotificationController {
      * Bildirishnomani o'chirish
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable Long id,
+                                     @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        User caller = currentUserService.requireUser(authHeader);
+        Notification n = notifRepo.findById(id).orElse(null);
+        if (n == null) return ResponseEntity.notFound().build();
+        if (!currentUserService.isSuperAdmin(caller) && caller.getRole() != User.Role.ADMIN
+                && !(n.getUserId() != null && n.getUserId().equals(caller.getId()))) {
+            return ResponseEntity.status(403).body(Map.of("error", i18n.msg("error.notification.not_yours")));
+        }
         notifRepo.deleteById(id);
         return ResponseEntity.ok(Map.of("success", true));
     }

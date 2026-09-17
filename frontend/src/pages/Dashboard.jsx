@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 function MiniChart({ data, color }) {
   const max = Math.max(...data, 1);
@@ -72,6 +73,7 @@ function StatusDot({ online }) {
 }
 
 export default function Dashboard({ user }) {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
   const [stats, setStats] = useState({
@@ -107,16 +109,18 @@ export default function Dashboard({ user }) {
     fetchStats();
   }, [user]);
 
-  const greeting = () => { const h = time.getHours(); return h < 12 ? 'Xayrli tong' : h < 18 ? 'Xayrli kun' : 'Xayrli kech'; };
+  const greeting = () => { const h = time.getHours(); return h < 12 ? t('dashboard.greeting.morning') : h < 18 ? t('dashboard.greeting.day') : t('dashboard.greeting.evening'); };
   const fmt = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const fmtDate = (d) => d.toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' });
+  const fmtDate = (d) => d.toLocaleDateString({ uz: 'uz-UZ', ru: 'ru-RU', en: 'en-US' }[i18n.language] || 'uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const roleSubtitle = {
-    SUPERADMIN: 'Barcha viloyatlar boshqaruvi',
-    ADMIN: user?.provinceName || 'Viloyat boshqaruvi',
-    DIRECTOR: user?.schoolName || 'Maktab boshqaruvi',
-    MUDIR: user?.schoolName || "O'quv ishlari",
-    TEACHER: user?.schoolName || "O'qituvchi",
+    SUPERADMIN: t('dashboard.roleSubtitle.SUPERADMIN'),
+    ADMIN: user?.provinceName || t('dashboard.roleSubtitle.ADMIN'),
+    REGION_DIRECTOR: user?.provinceName || t('dashboard.roleSubtitle.REGION_DIRECTOR'),
+    DISTRICT_DIRECTOR: user?.districtName || t('dashboard.roleSubtitle.DISTRICT_DIRECTOR'),
+    DIRECTOR: user?.schoolName || t('dashboard.roleSubtitle.DIRECTOR'),
+    MUDIR: user?.schoolName || t('dashboard.roleSubtitle.MUDIR'),
+    TEACHER: user?.schoolName || t('dashboard.roleSubtitle.TEACHER'),
   };
 
   return (
@@ -136,7 +140,7 @@ export default function Dashboard({ user }) {
             <p className="text-4xl font-bold text-white tabular-nums tracking-tight font-mono">{fmt(time)}</p>
             <div className="flex items-center justify-end gap-1.5 mt-2">
               <StatusDot online={true} />
-              <span className="text-[11px] text-emerald-400/80 font-medium">Tizim faol</span>
+              <span className="text-[11px] text-emerald-400/80 font-medium">{t('dashboard.systemActive')}</span>
             </div>
           </div>
         </div>
@@ -144,16 +148,16 @@ export default function Dashboard({ user }) {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="JAMI O'QUVCHILAR" value={stats.totalStudents} sub={`${stats.totalSchools} muassasa`} gradient="bg-emerald-500/20"
+        <StatCard label={t('dashboard.stats.students.label')} value={stats.totalStudents} sub={t('dashboard.stats.students.sub', { count: stats.totalSchools })} gradient="bg-emerald-500/20"
           icon={{ bg: 'bg-emerald-500/10', color: 'text-emerald-400', d: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }}
           chartData={stats.weeklyPresent.length ? stats.weeklyPresent : [0,0,0,0,0,0,0]} chartColor="bg-emerald-400" />
-        <StatCard label="BUGUN KELGAN" value={stats.presentToday} sub={`${stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0}% davomat`} gradient="bg-teal-500/20"
+        <StatCard label={t('dashboard.stats.presentToday.label')} value={stats.presentToday} sub={t('dashboard.stats.presentToday.sub', { percent: stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0 })} gradient="bg-teal-500/20"
           icon={{ bg: 'bg-teal-500/10', color: 'text-teal-400', d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' }}
           chartData={stats.weeklyPresent.length ? stats.weeklyPresent : [0,0,0,0,0,0,0]} chartColor="bg-teal-400" />
-        <StatCard label="KELMAGAN" value={stats.absentToday} sub="Sababsiz/Kasal" gradient="bg-red-500/20"
+        <StatCard label={t('dashboard.stats.absent.label')} value={stats.absentToday} sub={t('dashboard.stats.absent.sub')} gradient="bg-red-500/20"
           icon={{ bg: 'bg-red-500/10', color: 'text-red-400', d: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' }}
           chartData={stats.weeklyPresent.length ? stats.weeklyPresent.map(v => Math.max(0, stats.totalStudents - v)) : [0,0,0,0,0,0,0]} chartColor="bg-red-400" />
-        <StatCard label="MAKTABLAR" value={stats.totalSchools} sub="Faol tizimda" gradient="bg-cyan-500/20"
+        <StatCard label={t('dashboard.stats.schools.label')} value={stats.totalSchools} sub={t('dashboard.stats.schools.sub')} gradient="bg-cyan-500/20"
           icon={{ bg: 'bg-cyan-500/10', color: 'text-cyan-400', d: 'M12 14l9-5-9-5-9 5 9 5z M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z' }}
           chartData={[2, 5, 8, 12, 15, 14, stats.totalSchools]} chartColor="bg-cyan-400" />
       </div>
@@ -162,19 +166,19 @@ export default function Dashboard({ user }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Donut */}
         <div className="lg:col-span-4 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] p-6">
-          <h3 className="text-sm font-semibold text-white mb-6">Davomat ko'rsatkichi</h3>
+          <h3 className="text-sm font-semibold text-white mb-6">{t('dashboard.attendanceChart.title')}</h3>
           <div className="flex justify-center gap-8">
-            <DonutChart percent={stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0} label="Bugun" color="#10b981" />
-            <DonutChart percent={stats.totalStudents > 0 ? Math.round((stats.weeklyPresent.reduce((a,b)=>a+b,0) / (stats.totalStudents * stats.weeklyPresent.length || 1)) * 100) : 0} label="Haftalik" color="#14b8a6" />
+            <DonutChart percent={stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0} label={t('dashboard.attendanceChart.today')} color="#10b981" />
+            <DonutChart percent={stats.totalStudents > 0 ? Math.round((stats.weeklyPresent.reduce((a,b)=>a+b,0) / (stats.totalStudents * stats.weeklyPresent.length || 1)) * 100) : 0} label={t('dashboard.attendanceChart.weekly')} color="#14b8a6" />
           </div>
           <div className="mt-6 grid grid-cols-3 gap-3">
             {[
-              { l: 'Kelgan', v: stats.presentToday, bg: 'bg-emerald-500/10', t: 'text-emerald-400' },
-              { l: 'Kelmagan', v: stats.absentToday, bg: 'bg-red-500/10', t: 'text-red-400' },
-              { l: 'Kechikkan', v: Math.round(stats.presentToday * 0.05), bg: 'bg-amber-500/10', t: 'text-amber-400' },
-            ].map(({ l, v, bg, t }) => (
+              { l: t('dashboard.attendanceChart.present'), v: stats.presentToday, bg: 'bg-emerald-500/10', tc: 'text-emerald-400' },
+              { l: t('dashboard.attendanceChart.absent'), v: stats.absentToday, bg: 'bg-red-500/10', tc: 'text-red-400' },
+              { l: t('dashboard.attendanceChart.late'), v: Math.round(stats.presentToday * 0.05), bg: 'bg-amber-500/10', tc: 'text-amber-400' },
+            ].map(({ l, v, bg, tc }) => (
               <div key={l} className={`text-center py-2.5 rounded-xl ${bg}`}>
-                <p className={`text-lg font-bold ${t}`}>{v}</p>
+                <p className={`text-lg font-bold ${tc}`}>{v}</p>
                 <p className="text-[10px] text-slate-500 mt-0.5">{l}</p>
               </div>
             ))}
@@ -184,13 +188,13 @@ export default function Dashboard({ user }) {
         {/* Activity */}
         <div className="lg:col-span-5 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-semibold text-white">Oxirgi voqealar</h3>
+            <h3 className="text-sm font-semibold text-white">{t('dashboard.events.title')}</h3>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="live-dot absolute inline-flex h-full w-full rounded-full bg-emerald-400" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
               </span>
-              <span className="text-[10px] font-medium text-emerald-400">LIVE</span>
+              <span className="text-[10px] font-medium text-emerald-400">{t('dashboard.events.live')}</span>
             </div>
           </div>
           <div className="flex flex-col items-center justify-center py-10">
@@ -199,26 +203,26 @@ export default function Dashboard({ user }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-sm text-slate-500 font-medium">Voqealar yo'q</p>
-            <p className="text-xs text-slate-700 mt-1">Face ID qurilma ulangach ko'rinadi</p>
+            <p className="text-sm text-slate-500 font-medium">{t('dashboard.events.empty')}</p>
+            <p className="text-xs text-slate-700 mt-1">{t('dashboard.events.emptySub')}</p>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="lg:col-span-3 rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)] p-6 flex flex-col h-full">
-          <h3 className="text-sm font-semibold text-white mb-4">Tezkor amallar</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">{t('dashboard.quickActions.title')}</h3>
           <div className="grid grid-cols-2 gap-3">
-            <Action onClick={() => navigate('/students')} label="O'quvchi" icon="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" gradient="bg-gradient-to-br from-emerald-500/5 to-transparent" />
-            <Action onClick={() => navigate('/devices')} label="Sinxron" icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" gradient="bg-gradient-to-br from-teal-500/5 to-transparent" />
-            <Action onClick={() => navigate('/attendance')} label="Hisobot" icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" gradient="bg-gradient-to-br from-cyan-500/5 to-transparent" />
-            <Action onClick={() => navigate('/classes')} label="Sozlama" icon="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" gradient="bg-gradient-to-br from-amber-500/5 to-transparent" />
+            <Action onClick={() => navigate('/students')} label={t('dashboard.quickActions.student')} icon="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" gradient="bg-gradient-to-br from-emerald-500/5 to-transparent" />
+            <Action onClick={() => navigate('/devices')} label={t('dashboard.quickActions.sync')} icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" gradient="bg-gradient-to-br from-teal-500/5 to-transparent" />
+            <Action onClick={() => navigate('/attendance')} label={t('dashboard.quickActions.report')} icon="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" gradient="bg-gradient-to-br from-cyan-500/5 to-transparent" />
+            <Action onClick={() => navigate('/classes')} label={t('dashboard.quickActions.settings')} icon="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" gradient="bg-gradient-to-br from-amber-500/5 to-transparent" />
           </div>
           <div className="mt-auto pt-4">
             <div className="p-3 rounded-xl border border-emerald-500/[0.06] bg-white/[0.01]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <StatusDot online={stats.onlineDevices > 0} />
-                  <span className="text-xs text-slate-500">Qurilmalar</span>
+                  <span className="text-xs text-slate-500">{t('dashboard.devicesLabel')}</span>
                 </div>
                 <span className="text-xs font-mono text-slate-600">{stats.onlineDevices} / {stats.totalDevices}</span>
               </div>

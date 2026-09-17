@@ -3,6 +3,16 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/maktabdb}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+  messages:
+    basename: messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+  task:
+    scheduling:
+      pool:
+        # Standart 1 oqim: javob bermayotgan Face ID terminaliga so'rov (timeout) router holati
+        # tekshiruvi va boshqa rejalashtirilgan ishlarni ushlab turmasligi uchun.
+        size: 4
   jpa:
     hibernate:
       ddl-auto: update
@@ -12,5 +22,39 @@ spring:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:SuperSecretKeyForMaktabPlatform2026!SuperSecretKeyForMaktabPlatform2026!}
+    # Standart qiymat ATAYLAB yo'q — JwtUtil JWT_SECRET o'rnatilmagan bo'lsa ishga tushmaydi.
+    secret: ${JWT_SECRET:}
     expirationMs: 86400000
+
+  bot:
+    # Telegram bot (bot/bot.py) backendga /api/guardians/** so'rov yuborganda shu maxfiy
+    # qiymatni X-Bot-Key header orqali yuboradi — GuardianController shu bilan tekshiradi.
+    shared-secret: ${BOT_SHARED_SECRET:}
+
+  ai:
+    # AI chat (AiChatController) — Anthropic Claude API kaliti. Standart qiymat ATAYLAB
+    # bo'sh: kalit o'rnatilmaguncha AiChatController 503 qaytaradi (fail-closed, boshqa
+    # maxfiy kalitlar bilan bir xil uslub).
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    model: ${ANTHROPIC_MODEL:claude-sonnet-5}
+
+  wireguard:
+    # Markaziy WireGuard VPN server hali o'rnatilmagan (2026-08-10 holatiga ko'ra) —
+    # bu qiymatlar ATAYLAB bo'sh. Server o'rnatilgach shu ENV o'zgaruvchilar orqali
+    # to'ldiriladi; RouterController shu vaqtgacha "server hali sozlanmagan" ogohlantirishi
+    # bilan konfiguratsiya generatsiya qiladi (Router va uning kalitlari baribir tayyor bo'ladi).
+    server-public-key: ${WG_SERVER_PUBLIC_KEY:}
+    server-endpoint: ${WG_SERVER_ENDPOINT:}
+    server-port: ${WG_SERVER_PORT:51820}
+    # Routerlarga avtomatik IP tayinlash uchun ichki tarmoq (masalan 10.20.0.0/24).
+    subnet-base: ${WG_SUBNET_BASE:10.20.0}
+    allowed-ips: ${WG_ALLOWED_IPS:10.20.0.0/24}
+    # Maktab LAN'lari server tomonidan 10.30.N.0/24 orqali ko'rinadi (Mikrotik netmap) —
+    # N = router VPN IP okteti. Tafsilotlar: com.maktab.util.VpnAddressing.
+    mapped-base: ${WG_MAPPED_BASE:10.30}
+    # Backend maktab LAN'lariga chiqadigan wg-gateway peer'i (docker-compose "wg-gateway").
+    gateway-ip: ${WG_GATEWAY_IP:10.20.0.254}
+    gateway-public-key: ${WG_GATEWAY_PUBLIC_KEY:}
+    # WireGuard server (wireguard-server/ papkasi, alohida joylashtiriladi) shu maxfiy
+    # kalit bilan /api/internal/wg-peers'ni chaqirib, peer ro'yxatini sinxronlaydi.
+    sync-secret: ${WG_SYNC_SECRET:}

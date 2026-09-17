@@ -1,0 +1,57 @@
+services:
+  wireguard:
+    build: .
+    container_name: maktab-wireguard
+    restart: always
+    # MUHIM (2026-09-15, sinovdan o'tkazilgan): "network_mode: host" bilan backend
+    # konteyneridan 10.20.0.0/24'ga yetish MUVAFFAQIYATLI ishladi, LEKIN Docker Desktop
+    # Windows'da (WSL2, NAT tarmoq rejimi — networkingMode=mirrored YO'Q) bu holda UDP
+    # 51820 porti FAQAT WSL2 VM ICHIDA qoladi — Windows hostning o'zi buni butunlay
+    # KO'RMAYDI (netstat/Get-NetUDPEndpoint bo'sh natija berdi). Bu esa keyingi router
+    # port-forward qadamini butunlay ISHLAMAYDIGAN qilib qo'yardi. Shu sabab "host" rejimi
+    # BEKOR QILINDI — standart bridge + "ports:" xaritalash (tashqi UDP 51820 kafolatlangan
+    # ishlaydi) qaytarildi. Backend konteynerining VPN subnetiga yetishi kerak bo'lgan
+    # holatlar (masalan Face ID terminalga yuz rasmi push qilish) uchun ALOHIDA yechim
+    # kerak (masalan wireguard konteynerining o'zi orqali ishlaydigan "job poller" —
+    # xuddi shu konteyner backend'ni har 15s so'rab turgani kabi) — bu yerga tegilmaydi.
+    #
+    # MUHIM (2026-09-17 aniqlandi): bu konteyner backend bilan gaplashish uchun
+    # https://maktab.ecos.uz (Cloudflare Tunnel) orqali ketardi, garchi ikkalasi ham
+    # bitta VPS'da bo'lsa ham — chunki ALOHIDA docker-compose loyihasi (wireguard-server),
+    # standart tarmog'i (wireguard-server_default) backend'ning tarmog'idan (maktab_davomad_maktab)
+    # BUTUNLAY IZOLYATSIYALANGAN edi. Natijada har 15s'dagi peer-sinxronizatsiya/handshake-hisobot
+    # so'rovlari doimiy 502/timeout bilan muvaffaqiyatsiz tugardi — bu esa routerlarning WireGuard
+    # tunnellari HAQIQATDA ishlab turgan holatda ham panelda "OFFLINE" bo'lib ko'rinishiga olib
+    # kelardi. Endi bu konteyner backend'ning ICHKI tarmog'iga ham ulanadi (quyidagi "networks:"),
+    # BACKEND_URL esa Docker DNS nomi (http://backend:8080) orqali ishlaydi. Docker odatda SO'NGGI
+    # ulangan tarmoqni "default route" qilib belgilaydi (bu tarmoqda tashqi internet yo'q) —
+    # shuning uchun entrypoint.sh'dagi fix_default_route() buni avtomatik tuzatadi.
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+      WG_SYNC_SECRET: ${WG_SYNC_SECRET:?WG_SYNC_SECRET .env faylida bo'lishi shart}
+      WG_LISTEN_PORT: ${WG_LISTEN_PORT:-51820}
+      WG_SERVER_SUBNET: ${WG_SERVER_SUBNET:-10.20.0.1/24}
+      SYNC_INTERVAL: ${SYNC_INTERVAL:-15}
+      WG_MAPPED_SUPERNET: ${WG_MAPPED_SUPERNET:-10.30.0.0/16}
+      WG_GATEWAY_IP: ${WG_GATEWAY_IP:-10.20.0.254}
+    ports:
+      - "${WG_LISTEN_PORT:-51820}:${WG_LISTEN_PORT:-51820}/udp"
+    volumes:
+      - wg-data:/etc/wireguard
+    networks:
+      - default
+      - maktab_shared
+
+networks:
+  maktab_shared:
+    external: true
+    name: maktab_davomad_maktab
+
+volumes:
+  wg-data:

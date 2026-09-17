@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import { Input } from '../components/CrudPage';
 import ConfirmModal from '../components/ConfirmModal';
@@ -35,6 +36,7 @@ function MiniBar({ count, max }) {
 
 /* ══ VILOYAT CARD — premium ══ */
 function ProvinceCard({ province, maxDistricts, onClick }) {
+  const { t } = useTranslation();
   return (
     <button onClick={onClick} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-400 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -50,7 +52,7 @@ function ProvinceCard({ province, maxDistricts, onClick }) {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors truncate">{province.name}</h3>
-            <p className="text-[11px] text-slate-600 mt-0.5">{province.districtCount} ta tuman · {province.schoolCount || 0} maktab</p>
+            <p className="text-[11px] text-slate-600 mt-0.5">{t('districts.provinceCard.subtitle', { districts: province.districtCount, schools: province.schoolCount || 0 })}</p>
           </div>
           <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-300">
             <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
@@ -61,15 +63,15 @@ function ProvinceCard({ province, maxDistricts, onClick }) {
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="text-center py-1.5 rounded-lg bg-emerald-500/[0.05]">
             <p className="text-sm font-bold text-emerald-400">{province.districtCount}</p>
-            <p className="text-[8px] text-slate-600 uppercase tracking-wider">Tuman</p>
+            <p className="text-[8px] text-slate-600 uppercase tracking-wider">{t('stats.districts')}</p>
           </div>
           <div className="text-center py-1.5 rounded-lg bg-cyan-500/[0.05]">
             <p className="text-sm font-bold text-cyan-400">{province.schoolCount || 0}</p>
-            <p className="text-[8px] text-slate-600 uppercase tracking-wider">Maktab</p>
+            <p className="text-[8px] text-slate-600 uppercase tracking-wider">{t('stats.schools')}</p>
           </div>
           <div className="text-center py-1.5 rounded-lg bg-amber-500/[0.05]">
             <p className="text-sm font-bold text-amber-400">{province.studentCount || 0}</p>
-            <p className="text-[8px] text-slate-600 uppercase tracking-wider">O'quvchi</p>
+            <p className="text-[8px] text-slate-600 uppercase tracking-wider">{t('stats.students')}</p>
           </div>
         </div>
 
@@ -82,6 +84,7 @@ function ProvinceCard({ province, maxDistricts, onClick }) {
 
 /* ══ TUMAN CARD — premium ══ */
 function DistrictCard({ item, onEdit, onDelete }) {
+  const { t } = useTranslation();
   return (
     <div className="group relative rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/20 transition-all duration-300 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -118,16 +121,16 @@ function DistrictCard({ item, onEdit, onDelete }) {
             <Ring percent={0} size={72} stroke={5} />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-base font-bold text-white">0%</span>
-              <span className="text-[7px] text-slate-600 uppercase tracking-wider">davomat</span>
+              <span className="text-[7px] text-slate-600 uppercase tracking-wider">{t('stats.attendance')}</span>
             </div>
           </div>
           <div className="flex-1 space-y-2">
             <div className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-cyan-500/[0.05]">
-              <span className="text-[10px] text-slate-500">Maktablar</span>
+              <span className="text-[10px] text-slate-500">{t('districts.table.schools')}</span>
               <span className="text-sm font-bold text-cyan-400">{item.schoolCount || 0}</span>
             </div>
             <div className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-amber-500/[0.05]">
-              <span className="text-[10px] text-slate-500">O'quvchilar</span>
+              <span className="text-[10px] text-slate-500">{t('districts.table.students')}</span>
               <span className="text-sm font-bold text-amber-400">{item.studentCount || 0}</span>
             </div>
           </div>
@@ -137,7 +140,7 @@ function DistrictCard({ item, onEdit, onDelete }) {
         <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/[0.03]">
           <div className="flex items-center gap-1.5">
             <span className="relative flex h-1.5 w-1.5"><span className="live-dot absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" /></span>
-            <span className="text-[10px] text-emerald-400/60 font-medium">Faol</span>
+            <span className="text-[10px] text-emerald-400/60 font-medium">{t('common.active')}</span>
           </div>
           <span className="text-[9px] text-slate-700 font-mono">ID: {item.id}</span>
         </div>
@@ -162,6 +165,7 @@ function ViewToggle({ view, setView }) {
 
 /* ═══ MAIN ═══ */
 export default function Districts({ user }) {
+  const { t } = useTranslation();
   const [provinces, setProvinces] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState(null);
   const [districts, setDistricts] = useState([]);
@@ -194,6 +198,7 @@ export default function Districts({ user }) {
   const openAdd = () => { setEditing(null); setForm({ provinceId: selectedProvince?.id }); setModal(true); };
   const openEdit = (item) => { setEditing(item); setForm({ ...item }); setModal(true); };
   const save = async () => {
+    if (!form.name?.trim()) { alert(t('districts.validation.nameRequired')); return; }
     try {
       if (editing) await api.put(`/api/districts/${editing.id}`, form);
       else await api.post('/api/districts', form);
@@ -217,8 +222,8 @@ export default function Districts({ user }) {
       <div className="animate-fade-in">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-white">Tumanlar</h1>
-            <p className="text-sm text-slate-500 mt-0.5">{provinces.length} viloyat · {totalD} tuman · {totalS} maktab</p>
+            <h1 className="text-xl font-bold text-white">{t('districts.title')}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">{t('districts.summary', { provinces: provinces.length, districts: totalD, schools: totalS })}</p>
           </div>
         </div>
         {loading ? <Loader /> : (
@@ -242,34 +247,34 @@ export default function Districts({ user }) {
           )}
           <div>
             <h1 className="text-xl font-bold text-white">{selectedProvince.name}</h1>
-            <p className="text-sm text-slate-500 mt-0.5">{districts.length} ta tuman</p>
+            <p className="text-sm text-slate-500 mt-0.5">{t('common.entriesCount', { count: districts.length })}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle view={view} setView={setView} />
           <button onClick={openAdd} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            Qo'shish
+            {t('common.add')}
           </button>
         </div>
       </div>
 
       <div className="mb-5">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tuman nomi bo'yicha qidirish..."
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('districts.searchPlaceholder')}
           className="w-full max-w-xs h-10 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.08] text-white text-sm placeholder-slate-600 outline-none focus:border-emerald-500/30 transition-colors" />
       </div>
 
       {loading ? <Loader /> : view === 'card' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-4">
           {filtered.map(item => <DistrictCard key={item.id} item={item} onEdit={openEdit} onDelete={setDeleteId} />)}
-          {filtered.length === 0 && <p className="col-span-full text-center text-slate-600 py-12">Tuman topilmadi</p>}
+          {filtered.length === 0 && <p className="col-span-full text-center text-slate-600 py-12">{t('districts.notFound')}</p>}
         </div>
       ) : (
         <div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] overflow-hidden">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-emerald-500/[0.06]">
-              {['№','Nomi','Maktablar',"O'quvchilar",'Amallar'].map(h => (
-                <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider ${h==='Amallar'?'text-right':'text-left'}`}>{h}</th>
+              {[t('common.number'), t('common.name'), t('districts.table.schools'), t('districts.table.students'), t('common.actions')].map((h, idx) => (
+                <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider ${idx===4?'text-right':'text-left'}`}>{h}</th>
               ))}
             </tr></thead>
             <tbody>{filtered.map((item, i) => (
@@ -288,11 +293,11 @@ export default function Districts({ user }) {
         </div>
       )}
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Tahrirlash' : `Yangi tuman — ${selectedProvince.name}`}>
-        <Input label="Tuman nomi" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Masalan: Chilonzor" />
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? t('common.edit') : t('districts.modal.newTitlePrefix', { province: selectedProvince.name })}>
+        <Input label={t('districts.modal.nameLabel')} value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('districts.modal.namePlaceholder')} />
         <div className="flex gap-3 mt-6">
-          <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor</button>
-          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
+          <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">{t('common.cancel')}</button>
+          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">{t('common.save')}</button>
         </div>
       </Modal>
       <ConfirmModal open={!!deleteId} onCancel={() => setDeleteId(null)} onConfirm={() => remove(deleteId)} />

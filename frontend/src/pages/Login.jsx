@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 
 export default function Login({ onLogin }) {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,7 +24,7 @@ export default function Login({ onLogin }) {
       onLogin(data.user);
       navigate('/');
     } catch (err) {
-      setError(err.message || 'Login yoki parol noto\'g\'ri');
+      setError(err.message || t('login.errorDefault'));
     } finally {
       setLoading(false);
     }
@@ -48,13 +50,13 @@ export default function Login({ onLogin }) {
             </svg>
           </div>
           <h2 className="text-4xl font-bold text-white tracking-tight">
-            Maktab <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Platform</span>
+            {t('app.name')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">{t('app.tagline')}</span>
           </h2>
           <p className="text-slate-500 mt-4 text-base leading-relaxed max-w-sm mx-auto">
-            Face ID orqali real vaqtda davomat nazorati va boshqaruv tizimi
+            {t('login.subtitle')}
           </p>
           <div className="flex flex-wrap justify-center gap-2 mt-8">
-            {['Face ID', 'Real-time', '14 viloyat', 'Hisobot'].map((f) => (
+            {[t('login.badges.faceId'), t('login.badges.realtime'), t('login.badges.provinces'), t('login.badges.report')].map((f) => (
               <span key={f} className="px-3 py-1.5 rounded-full bg-emerald-500/[0.08] border border-emerald-500/[0.12] text-xs text-emerald-300/80 font-medium">
                 {f}
               </span>
@@ -72,12 +74,12 @@ export default function Login({ onLogin }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
-            <h1 className="text-xl font-bold text-white">Maktab Platform</h1>
+            <h1 className="text-xl font-bold text-white">{t('app.name')} {t('app.tagline')}</h1>
           </div>
 
           <div>
-            <h2 className="text-xl font-bold text-white">Tizimga kirish</h2>
-            <p className="text-sm text-slate-500 mt-1">Hisobingiz bilan davom eting</p>
+            <h2 className="text-xl font-bold text-white">{t('login.signInTitle')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('login.signInSubtitle')}</p>
           </div>
 
           {error && (
@@ -91,13 +93,13 @@ export default function Login({ onLogin }) {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Login</label>
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('login.usernameLabel')}</label>
               <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
                 className="mt-2 w-full h-12 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.1] text-white text-sm placeholder-slate-600 outline-none transition-all duration-200 focus:border-emerald-500/40 focus:bg-white/[0.05] focus:shadow-lg focus:shadow-emerald-500/5"
-                placeholder="Foydalanuvchi nomi" autoFocus />
+                placeholder={t('login.usernamePlaceholder')} autoFocus />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Parol</label>
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('login.passwordLabel')}</label>
               <div className="relative mt-2">
                 <input type={showPass ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
                   className="w-full h-12 px-4 pr-12 rounded-xl bg-white/[0.03] border border-emerald-500/[0.1] text-white text-sm placeholder-slate-600 outline-none transition-all duration-200 focus:border-emerald-500/40 focus:bg-white/[0.05] focus:shadow-lg focus:shadow-emerald-500/5"
@@ -118,12 +120,12 @@ export default function Login({ onLogin }) {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Tekshirilmoqda...
+                  {t('login.submitting')}
                 </span>
-              ) : 'Kirish'}
+              ) : t('login.submit')}
             </button>
           </form>
-          <p className="text-center text-slate-700 text-[11px] mt-10">© 2026 Maktab Platform · v2.0</p>
+          <p className="text-center text-slate-700 text-[11px] mt-10">{t('login.footer')}</p>
         </div>
       </div>
     </div>

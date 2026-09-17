@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import { Input, Select } from '../components/CrudPage';
 import ConfirmModal from '../components/ConfirmModal';
@@ -30,6 +31,7 @@ function Modal({ open, onClose, title, children }) {
 
 /* ══ Viloyat Card ══ */
 function ProvinceBtn({ p, onClick }) {
+  const { t } = useTranslation();
   return (
     <button onClick={onClick} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -41,18 +43,18 @@ function ProvinceBtn({ p, onClick }) {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors truncate">{p.name}</h3>
-            <p className="text-[10px] text-slate-600 mt-0.5">{p.studentCount || 0} o'quvchi</p>
+            <p className="text-[10px] text-slate-600 mt-0.5">{t('schools.studentsSuffix', { count: p.studentCount || 0 })}</p>
           </div>
           <svg className="w-4 h-4 text-slate-700 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-emerald-500/[0.06]">
             <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
-            <div><p className="text-xs font-bold text-emerald-400">{p.districtCount}</p><p className="text-[7px] text-slate-600 leading-tight">Tuman</p></div>
+            <div><p className="text-xs font-bold text-emerald-400">{p.districtCount}</p><p className="text-[7px] text-slate-600 leading-tight">{t('stats.districts')}</p></div>
           </div>
           <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-cyan-500/[0.06]">
             <svg className="w-3.5 h-3.5 text-cyan-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21" /></svg>
-            <div><p className="text-xs font-bold text-cyan-400">{p.schoolCount || 0}</p><p className="text-[7px] text-slate-600 leading-tight">Maktab</p></div>
+            <div><p className="text-xs font-bold text-cyan-400">{p.schoolCount || 0}</p><p className="text-[7px] text-slate-600 leading-tight">{t('stats.schools')}</p></div>
           </div>
         </div>
       </div>
@@ -62,6 +64,7 @@ function ProvinceBtn({ p, onClick }) {
 
 /* ══ Tuman Card ══ */
 function DistrictBtn({ d, onClick }) {
+  const { t } = useTranslation();
   return (
     <button onClick={onClick} className="group text-left w-full rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/25 transition-all duration-300 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-teal-500/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -73,18 +76,18 @@ function DistrictBtn({ d, onClick }) {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-white group-hover:text-teal-300 transition-colors truncate">{d.name}</h3>
-            <p className="text-[10px] text-slate-600 mt-0.5">{d.studentCount || 0} o'quvchi</p>
+            <p className="text-[10px] text-slate-600 mt-0.5">{t('schools.studentsSuffix', { count: d.studentCount || 0 })}</p>
           </div>
           <svg className="w-4 h-4 text-slate-700 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-teal-500/[0.06]">
             <svg className="w-3.5 h-3.5 text-teal-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21" /></svg>
-            <div><p className="text-xs font-bold text-teal-400">{d.schoolCount || 0}</p><p className="text-[7px] text-slate-600 leading-tight">Maktab</p></div>
+            <div><p className="text-xs font-bold text-teal-400">{d.schoolCount || 0}</p><p className="text-[7px] text-slate-600 leading-tight">{t('stats.schools')}</p></div>
           </div>
           <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-amber-500/[0.06]">
             <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
-            <div><p className="text-xs font-bold text-amber-400">{d.studentCount || 0}</p><p className="text-[7px] text-slate-600 leading-tight">O'quvchi</p></div>
+            <div><p className="text-xs font-bold text-amber-400">{d.studentCount || 0}</p><p className="text-[7px] text-slate-600 leading-tight">{t('stats.students')}</p></div>
           </div>
         </div>
       </div>
@@ -94,6 +97,7 @@ function DistrictBtn({ d, onClick }) {
 
 /* ══ School Card ══ */
 function SchoolCard({ item, onEdit, onDelete }) {
+  const { t } = useTranslation();
   const pct = item.attendancePercent || 0;
   return (
     <div className="group relative rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/20 transition-all duration-300 overflow-hidden">
@@ -126,16 +130,16 @@ function SchoolCard({ item, onEdit, onDelete }) {
             <Ring percent={pct} size={68} stroke={5} />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-base font-bold text-white">{pct}%</span>
-              <span className="text-[7px] text-slate-600 uppercase tracking-wider">davomat</span>
+              <span className="text-[7px] text-slate-600 uppercase tracking-wider">{t('stats.attendance')}</span>
             </div>
           </div>
           <div className="flex-1 space-y-2">
             <div className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-amber-500/[0.05]">
-              <span className="text-[10px] text-slate-500">O'quvchilar</span>
+              <span className="text-[10px] text-slate-500">{t('schools.card.studentsLabel')}</span>
               <span className="text-sm font-bold text-amber-400">{item.studentCount || 0}</span>
             </div>
             <div className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-emerald-500/[0.05]">
-              <span className="text-[10px] text-slate-500">Bugun kelgan</span>
+              <span className="text-[10px] text-slate-500">{t('schools.card.todayPresent')}</span>
               <span className="text-sm font-bold text-emerald-400">0</span>
             </div>
           </div>
@@ -143,7 +147,7 @@ function SchoolCard({ item, onEdit, onDelete }) {
         <div className="mt-3 flex items-center justify-between pt-3 border-t border-white/[0.03]">
           <div className="flex items-center gap-1.5">
             <span className="relative flex h-1.5 w-1.5"><span className="live-dot absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" /></span>
-            <span className="text-[10px] text-emerald-400/60 font-medium">Faol</span>
+            <span className="text-[10px] text-emerald-400/60 font-medium">{t('common.active')}</span>
           </div>
           <span className="text-[9px] text-slate-700 font-mono">ID: {item.id}</span>
         </div>
@@ -193,6 +197,7 @@ const Loader = () => <div className="flex items-center justify-center py-20"><di
 
 /* ═══════════ MAIN ═══════════ */
 export default function Schools({ user }) {
+  const { t } = useTranslation();
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [allDistricts, setAllDistricts] = useState([]);
@@ -237,6 +242,7 @@ export default function Schools({ user }) {
   const openAdd = () => { setEditing(null); setForm({ districtId: selDist?.id }); setModal(true); };
   const openEdit = (item) => { setEditing(item); setForm({ ...item }); setModal(true); };
   const save = async () => {
+    if (!form.name?.trim()) { alert(t('schools.validation.nameRequired')); return; }
     try {
       if (editing) await api.put(`/api/schools/${editing.id}`, form);
       else await api.post('/api/schools', form);
@@ -255,8 +261,8 @@ export default function Schools({ user }) {
     return (
       <div className="animate-fade-in">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-white">Maktablar</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Viloyatni tanlang</p>
+          <h1 className="text-xl font-bold text-white">{t('schools.title')}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{t('schools.selectProvinceSubtitle')}</p>
         </div>
         {loading ? <Loader /> : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
@@ -276,14 +282,14 @@ export default function Schools({ user }) {
             {!isAdmin && <BackBtn onClick={goToProvinces} />}
             <div>
               <h1 className="text-xl font-bold text-white">{selProv.name}</h1>
-              <Breadcrumb items={['Maktablar', selProv.name]} />
+              <Breadcrumb items={[t('schools.title'), selProv.name]} />
             </div>
           </div>
         </div>
         {loading ? <Loader /> : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-3">
             {districts.map(d => <DistrictBtn key={d.id} d={d} onClick={() => pickDistrict(d)} />)}
-            {districts.length === 0 && <p className="col-span-full text-center text-slate-600 py-12">Tuman topilmadi</p>}
+            {districts.length === 0 && <p className="col-span-full text-center text-slate-600 py-12">{t('schools.districtNotFound')}</p>}
           </div>
         )}
       </div>
@@ -298,34 +304,34 @@ export default function Schools({ user }) {
           <BackBtn onClick={goToDistricts} />
           <div>
             <h1 className="text-xl font-bold text-white">{selDist.name}</h1>
-            <Breadcrumb items={['Maktablar', selProv.name, selDist.name]} />
+            <Breadcrumb items={[t('schools.title'), selProv.name, selDist.name]} />
           </div>
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle view={view} setView={setView} />
           <button onClick={openAdd} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            Qo'shish
+            {t('common.add')}
           </button>
         </div>
       </div>
 
       <div className="mb-5">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Maktab nomi bo'yicha qidirish..."
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('schools.searchPlaceholder')}
           className="w-full max-w-xs h-10 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.08] text-white text-sm placeholder-slate-600 outline-none focus:border-emerald-500/30 transition-colors" />
       </div>
 
       {loading ? <Loader /> : view === 'card' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-4">
           {filtered.map(item => <SchoolCard key={item.id} item={item} onEdit={openEdit} onDelete={setDeleteId} />)}
-          {filtered.length === 0 && <p className="col-span-full text-center text-slate-600 py-12">Maktab topilmadi</p>}
+          {filtered.length === 0 && <p className="col-span-full text-center text-slate-600 py-12">{t('schools.notFound')}</p>}
         </div>
       ) : (
         <div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] overflow-hidden">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-emerald-500/[0.06]">
-              {['№','Nomi',"O'quvchilar",'Davomat','Amallar'].map(h => (
-                <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider ${h==='Amallar'?'text-right':'text-left'}`}>{h}</th>
+              {[t('common.number'), t('common.name'), t('schools.table.students'), t('schools.table.attendance'), t('common.actions')].map((h, idx) => (
+                <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider ${idx===4?'text-right':'text-left'}`}>{h}</th>
               ))}
             </tr></thead>
             <tbody>{filtered.map((item, i) => (
@@ -344,11 +350,11 @@ export default function Schools({ user }) {
         </div>
       )}
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Tahrirlash' : `Yangi maktab — ${selDist.name}`}>
-        <Input label="Maktab nomi" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Masalan: 56-maktab" />
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? t('common.edit') : t('schools.modal.newTitlePrefix', { district: selDist.name })}>
+        <Input label={t('schools.modal.nameLabel')} value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('schools.modal.namePlaceholder')} />
         <div className="flex gap-3 mt-6">
-          <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor</button>
-          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
+          <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">{t('common.cancel')}</button>
+          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">{t('common.save')}</button>
         </div>
       </Modal>
       <ConfirmModal open={!!deleteId} onCancel={() => setDeleteId(null)} onConfirm={() => remove(deleteId)} />

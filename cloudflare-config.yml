@@ -1,5 +1,13 @@
-# Cloudflare Tunnel Configuration
-# ================================
+# Cloudflare Tunnel Configuration — HOZIRDA ISHLATILMAYDI (o'chirilgan holat)
+# ================================================================================
+# MUHIM: joriy docker-compose.yml'dagi "tunnel" xizmati token-based rejimda ishlaydi
+# (`cloudflared tunnel run --token ${TUNNEL_TOKEN}`), bu holda ingress marshrutlash
+# (qaysi subdomain qaysi service'ga borishi) Cloudflare Zero Trust panelida masofadan
+# boshqariladi — bu YAML fayl umuman O'QILMAYDI. Bu fayl faqat named-tunnel +
+# credentials-file (mahalliy config) usuliga misol/hujjat sifatida qoldirilgan.
+# Chalkashlikka yo'l qo'ymaslik uchun: haqiqiy marshrutlash sozlamalarini
+# Cloudflare Zero Trust dashboard > Networks > Tunnels'dan tekshiring, bu faylni emas.
+# ================================================================================
 # 1 ta tunnel – 4 ta subdomain
 #
 # O'rnatish:

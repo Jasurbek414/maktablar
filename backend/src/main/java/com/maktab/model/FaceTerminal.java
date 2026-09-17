@@ -7,7 +7,8 @@ import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * Face ID terminal — Mini-PC serverga ulangan yuz tanish qurilmasi.
+ * Face ID terminal — maktabning Mikrotik router VPN tunneli orqali to'g'ridan-to'g'ri
+ * markaziy platformaga ulangan yuz tanish qurilmasi (lokal mini-PC gateway yo'q).
  * Istalgan model va ishlab chiqaruvchi qo'llab-quvvatlanadi.
  * Serial Number — asosiy identifikator (IP o'zgarganda ham topiladi).
  */
@@ -21,9 +22,9 @@ public class FaceTerminal {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Qaysi Mini-PC ga ulangan */
+    /** Qaysi Mikrotik router orqali ulangan (ixtiyoriy — asosiy scoping schoolId orqali) */
     @Column(nullable = true)
-    private Long deviceId;
+    private Long routerId;
 
     /** Qaysi maktabga tegishli */
     @Column(nullable = true)
@@ -67,6 +68,21 @@ public class FaceTerminal {
     @Column
     private Integer port;
 
+    /** Ba'zi qurilmalar HTTP so'rovini majburan HTTPS'ga (o'z-o'zidan imzolangan sertifikat bilan)
+     * yo'naltiradi — shunday qurilmalarda true bo'lishi kerak (TerminalEndpointResolver). */
+    @Column
+    private Boolean useHttps;
+
+    /** Qurilmaning o'z HTTP API (masalan Hikvision ISAPI) autentifikatsiya foydalanuvchi nomi. */
+    @Column
+    private String deviceUsername;
+
+    /** Qurilmaning o'z HTTP API paroli — yuz ma'lumotlarini push qilishda Digest Auth uchun
+     * ochiq matn holida kerak (server-tomon parol emas, WireguardKeyUtil private key kabi
+     * qurilma-tomon sir — shu sabab bcrypt emas, oddiy ustunda saqlanadi). */
+    @Column
+    private String devicePassword;
+
     /** Firmware versiyasi */
     @Column
     private String firmwareVersion;
@@ -90,6 +106,20 @@ public class FaceTerminal {
     /** Qo'shimcha izoh */
     @Column
     private String notes;
+
+    /** Qurilmadan o'qilgan oxirgi voqea tartib raqami (AcsEvent serialNo) — keyingi so'rov shundan
+     * keyingisidan boshlanadi, backend yoki VPN uzilib qolsa ham voqealar yo'qolmaydi. null =
+     * hali boshlanmagan (birinchi ulanishda qurilmadagi eski voqealar import qilinmaydi). */
+    @Column(updatable = false) // faqat FaceTerminalRepository#updateLastEventSerial yozadi — admin tahriri eski qiymatni qaytarmasin
+    private Long lastEventSerial;
+
+    /** Oxirgi aloqa xatosi (panelda ko'rsatish uchun) — muvaffaqiyatli ulanishda tozalanadi. */
+    @Column(length = 500)
+    private String lastError;
+
+    /** Qurilmadagi foydalanuvchilar soni (registeredFaces — yuzi borlari). */
+    @Column
+    private Integer userCount;
 
     public enum Direction {
         ENTRANCE,   // Kirish eshigi

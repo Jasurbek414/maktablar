@@ -1,0 +1,1101 @@
+{
+  "app": {
+    "name": "Maktab",
+    "tagline": "Platform"
+  },
+  "language": {
+    "label": "Язык",
+    "uz": "O'zbek",
+    "ru": "Русский",
+    "en": "English"
+  },
+  "common": {
+    "save": "Сохранить",
+    "update": "Обновить",
+    "cancel": "Отмена",
+    "add": "Добавить",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "actions": "Действия",
+    "search": "Поиск",
+    "searchPlaceholder": "Поиск...",
+    "loading": "Загрузка...",
+    "saving": "Сохранение...",
+    "notFound": "Данные не найдены",
+    "close": "Закрыть",
+    "select": "Выберите",
+    "selectDots": "Выберите...",
+    "all": "Все",
+    "name": "Название",
+    "number": "№",
+    "entriesCount": "{{count}} записей",
+    "errorOccurred": "Произошла ошибка",
+    "active": "Активен",
+    "optional": "Необязательно",
+    "retry": "повторить",
+    "relTime": {
+      "justNow": "только что",
+      "minutesAgo": "{{count}} мин. назад",
+      "hoursAgo": "{{count}} ч. назад",
+      "daysAgo": "{{count}} дн. назад"
+    },
+    "timeAgo": {
+      "justNow": "только что",
+      "minutesAgo": "{{count}} минут назад",
+      "hoursAgo": "{{count}} часов назад",
+      "daysAgo": "{{count}} дней назад"
+    }
+  },
+  "stats": {
+    "districts": "Район",
+    "schools": "Школа",
+    "students": "Учащийся",
+    "attendance": "посещаемость"
+  },
+  "roles": {
+    "short": {
+      "SUPERADMIN": "Супер администратор",
+      "ADMIN": "Администратор",
+      "REGION_DIRECTOR": "Руководитель области",
+      "DISTRICT_DIRECTOR": "Руководитель района",
+      "DIRECTOR": "Директор",
+      "MUDIR": "Завуч",
+      "TEACHER": "Учитель"
+    }
+  },
+  "sidebar": {
+    "main": "Основное",
+    "dashboard": "Панель управления",
+    "provinces": "Области",
+    "districts": "Районы",
+    "schools": "Школы",
+    "students": "Учащиеся",
+    "classes": "Классы",
+    "attendance": "Посещаемость",
+    "users": "Пользователи",
+    "devices": "Устройства",
+    "cameras": "Камеры",
+    "cameraAnalysis": "Анализ камер",
+    "aiAnalysis": "AI-анализ",
+    "settings": "Настройки",
+    "teachers": "Учителя",
+    "aiChat": "AI Помощник"
+  },
+  "header": {
+    "roleLabel": {
+      "SUPERADMIN": "Панель супер администратора",
+      "ADMIN": "Управление областью",
+      "REGION_DIRECTOR": "Панель руководителя области",
+      "DISTRICT_DIRECTOR": "Панель руководителя района",
+      "DIRECTOR": "Управление школой",
+      "MUDIR": "По учебной части",
+      "TEACHER": "Панель учителя",
+      "fallback": "Панель"
+    },
+    "theme": {
+      "title": "Сменить тему"
+    },
+    "notifications": {
+      "title": "Уведомления",
+      "newCount": "{{count}} новых",
+      "markAllRead": "Отметить все как прочитанные",
+      "empty": "Уведомлений нет",
+      "emptySub": "Новые сообщения появятся здесь"
+    }
+  },
+  "login": {
+    "subtitle": "Система контроля посещаемости и управления в реальном времени через Face ID",
+    "badges": {
+      "faceId": "Face ID",
+      "realtime": "Реальное время",
+      "provinces": "14 областей",
+      "report": "Отчёт"
+    },
+    "signInTitle": "Вход в систему",
+    "signInSubtitle": "Продолжите с вашей учётной записью",
+    "usernameLabel": "Логин",
+    "usernamePlaceholder": "Имя пользователя",
+    "passwordLabel": "Пароль",
+    "submitting": "Проверка...",
+    "submit": "Войти",
+    "footer": "© 2026 Maktab Platform · v2.0",
+    "errorDefault": "Неверный логин или пароль"
+  },
+  "dashboard": {
+    "greeting": {
+      "morning": "Доброе утро",
+      "day": "Добрый день",
+      "evening": "Добрый вечер"
+    },
+    "systemActive": "Система активна",
+    "roleSubtitle": {
+      "SUPERADMIN": "Управление всеми областями",
+      "ADMIN": "Управление областью",
+      "REGION_DIRECTOR": "Управление посещаемостью области",
+      "DISTRICT_DIRECTOR": "Управление посещаемостью района",
+      "DIRECTOR": "Управление школой",
+      "MUDIR": "Учебная часть",
+      "TEACHER": "Учитель"
+    },
+    "stats": {
+      "students": {
+        "label": "ВСЕГО УЧАЩИХСЯ",
+        "sub": "{{count}} учреждений"
+      },
+      "presentToday": {
+        "label": "ПРИШЛИ СЕГОДНЯ",
+        "sub": "{{percent}}% посещаемость"
+      },
+      "absent": {
+        "label": "ОТСУТСТВУЮТ",
+        "sub": "Без причины/Болен"
+      },
+      "schools": {
+        "label": "ШКОЛЫ",
+        "sub": "Активны в системе"
+      }
+    },
+    "attendanceChart": {
+      "title": "Показатель посещаемости",
+      "today": "Сегодня",
+      "weekly": "За неделю",
+      "present": "Пришли",
+      "absent": "Отсутствуют",
+      "late": "Опоздали"
+    },
+    "events": {
+      "title": "Последние события",
+      "live": "LIVE",
+      "empty": "Событий нет",
+      "emptySub": "Появятся после подключения устройства Face ID"
+    },
+    "quickActions": {
+      "title": "Быстрые действия",
+      "student": "Учащийся",
+      "sync": "Синхронизация",
+      "report": "Отчёт",
+      "settings": "Настройка"
+    },
+    "devicesLabel": "Устройства"
+  },
+  "devices": {
+    "pageTitle": "Контроль устройств",
+    "pageSubtitle": "Область → Район → Школа → Mikrotik роутер → терминалы Face ID",
+    "createKeyBtn": "+ Создать ключ",
+    "stats": {
+      "miniPc": "Роутер",
+      "online": "Онлайн",
+      "offline": "Офлайн",
+      "totalTerminals": "Всего терминалов",
+      "entrance": "Вход ⬇",
+      "exit": "Выход ⬆",
+      "terminalsOnline": "Терминалов онлайн"
+    },
+    "filters": {
+      "allProvinces": "Все области",
+      "allDistricts": "Все районы",
+      "allSchools": "Все школы"
+    },
+    "empty": {
+      "title": "Устройства не найдены",
+      "sub": "Появятся здесь после регистрации роутера"
+    },
+    "group": {
+      "count": "{{count}} роутер(ов)",
+      "unassigned": "Не привязано",
+      "schoolFallback": "Школа №{{id}}"
+    },
+    "card": {
+      "entrance": "ВХОД",
+      "exit": "ВЫХОД",
+      "total": "ВСЕГО",
+      "heartbeat": "Heartbeat: {{time}}"
+    },
+    "timeAgo": {
+      "justNow": "только что",
+      "minutes": "{{count}} мин.",
+      "hours": "{{count}} ч.",
+      "days": "{{count}} дн."
+    },
+    "status": {
+      "ONLINE": "Онлайн",
+      "OFFLINE": "Офлайн",
+      "ERROR": "Ошибка",
+      "unknown": "?"
+    },
+    "detail": {
+      "notAssigned": "Не привязано к школе",
+      "terminalsStat": "Терминалы",
+      "entranceStat": "Вход",
+      "exitStat": "Выход",
+      "facesStat": "Лица",
+      "terminalsTitle": "Терминалы Face ID",
+      "addTerminalBtn": "+ Добавить терминал",
+      "vpnIpLabel": "VPN IP",
+      "manageBtn": "Управление"
+    },
+    "form": {
+      "newTerminalTitle": "Новое устройство Face ID",
+      "editTerminalTitle": "Редактировать терминал",
+      "name": "Название (1-й этаж, вход)",
+      "entranceOption": "⬇ Вход",
+      "exitOption": "⬆ Выход",
+      "brand": "Бренд (Hikvision, ZKTeco...)",
+      "model": "Модель",
+      "serial": "Серийный номер (основной ID)",
+      "mac": "MAC-адрес",
+      "ip": "IP-адрес (локальный, внутри VPN)",
+      "port": "Порт (80, 8000...)",
+      "useHttps": "Устройство требует HTTPS (самоподписанный сертификат)",
+      "deviceUsername": "Логин устройства (например admin)",
+      "devicePassword": "Пароль устройства",
+      "devicePasswordEditHint": "Оставьте пустым, чтобы не менять",
+      "notes": "Примечание (необязательно)",
+      "noTerminals": "Терминалов нет — добавьте через кнопку выше",
+      "ipDiscoverBtn": "Показать IP",
+      "ipDiscoverLoading": "Поиск...",
+      "ipDiscoverEmpty": "Роутер не видит ни одного устройства",
+      "ipDiscoverRegistered": "уже в списке"
+    },
+    "network": {
+      "title": "📡 Настройки подключения Mikrotik",
+      "vpnIp": "VPN IP:",
+      "publicKey": "Публичный ключ WireGuard:",
+      "note": "Этот роутер подключается к центральной платформе через WireGuard VPN-туннель. Терминалы Face ID работают через локальный IP внутри этой сети.",
+      "serverNotConfiguredTitle": "Центральный VPN-сервер ещё не настроен",
+      "serverNotConfiguredNote": "Ключи и настройки готовы, но центральный WireGuard-сервер (Endpoint/Public Key) ещё не развёрнут — конфигурация ниже заработает, когда сервер будет готов.",
+      "downloadConfBtn": "Скачать WireGuard (.conf)",
+      "showScriptBtn": "Показать скрипт RouterOS",
+      "hideScriptBtn": "Скрыть скрипт",
+      "copyBtn": "Копировать",
+      "copiedBtn": "Скопировано!",
+      "loadError": "Ошибка получения конфигурации",
+      "lanSubnet": "LAN школы → адрес на сервере",
+      "setupTitle": "Настройка Mikrotik (3 шага)",
+      "step1": "Подключитесь к Mikrotik через WinBox и откройте окно New Terminal",
+      "step2": "Нажмите «Показать скрипт настройки», скопируйте скрипт целиком и вставьте в терминал (повторная вставка безопасна)",
+      "step3": "В течение минуты роутер станет ONLINE — затем найдите устройства ниже"
+    },
+    "assign": {
+      "title": "Привязать к школе",
+      "deviceLabel": "Роутер:",
+      "selectSchool": "-- Выберите школу --"
+    },
+    "edit": {
+      "editRouterBtn": "Редактировать роутер",
+      "title": "Редактировать роутер",
+      "nameLabel": "Название",
+      "vpnIpLabel": "VPN IP",
+      "notesLabel": "Примечание",
+      "lanSubnetLabel": "LAN-подсеть школы",
+      "lanSubnetHint": "Локальная сеть Mikrotik (например 192.168.88.0/24). После изменения заново вставьте скрипт настройки в роутер.",
+      "routerAdminUsernameLabel": "Логин администратора роутера",
+      "routerAdminPasswordLabel": "Пароль администратора роутера",
+      "routerAdminPasswordEditHint": "Оставьте пустым, чтобы не менять",
+      "routerAdminNote": "Логин/пароль панели управления RouterOS (REST API) — нужен для автоматического определения IP в форме «Добавить терминал»."
+    },
+    "creds": {
+      "title": "Создать ключ для нового роутера",
+      "subtitle": "Выберите область, район и школу.",
+      "selectProvince": "-- Выберите область --",
+      "selectDistrict": "-- Выберите район --",
+      "selectSchool": "-- Выберите школу --",
+      "namePlaceholder": "Название роутера (необязательно)",
+      "vpnIpPlaceholder": "VPN IP (если оставить пустым, назначится автоматически)",
+      "createBtn": "Создать",
+      "createdTitle": "✅ Ключ создан!",
+      "createdSubtitle": "Ключи WireGuard сгенерированы автоматически. Полную конфигурацию подключения найдёте в карточке роутера.",
+      "school": "Школа",
+      "apiKey": "API-ключ",
+      "fillAll": "Выберите школу",
+      "lanSubnetPlaceholder": "LAN-подсеть (пусто = 192.168.88.0/24)"
+    },
+    "deleteConfirm": {
+      "title": "Удалить роутер",
+      "message": "Это действие нельзя отменить."
+    },
+    "manage": {
+      "tabStatus": "Состояние",
+      "tabUsers": "На устройстве",
+      "tabFaces": "Лица",
+      "tabEvents": "События",
+      "connecting": "Подключение к терминалу...",
+      "model": "Модель",
+      "serial": "Серийный номер",
+      "firmware": "Прошивка",
+      "users": "Пользователи",
+      "usersWithFace": "С лицом",
+      "reachableAt": "VPN-адрес",
+      "deviceTime": "Время устройства",
+      "timeDrift": "Расхождение",
+      "seconds": "{{count}} с",
+      "lastEvent": "Последнее событие",
+      "refresh": "Обновить",
+      "openDoor": "Открыть дверь",
+      "doorOpened": "Дверь открыта",
+      "syncTime": "Синхронизировать время",
+      "timeUpdated": "Время устройства обновлено (расхождение было {{count}} с)",
+      "timeUnchanged": "Время верное (расхождение {{count}} с) — не изменено",
+      "reboot": "Перезагрузить",
+      "rebooting": "Терминал перезагружается — 1-2 минуты не отвечает",
+      "rebootConfirmTitle": "Перезагрузка терминала",
+      "rebootConfirmMessage": "Терминал не будет работать 1-2 минуты, ученики не смогут пройти. Продолжить?",
+      "usersTotal": "На устройстве {{count}} пользователей",
+      "strangers": "{{count}} нет на платформе",
+      "noUsers": "На устройстве нет пользователей",
+      "hasFace": "Есть лицо",
+      "noFace": "Без лица",
+      "matched": "Ученик",
+      "stranger": "Посторонний",
+      "loadMore": "Загрузить ещё",
+      "deleteUserTitle": "Удалить с устройства",
+      "deleteUserMessage": "Пользователь {{id}} (вместе с лицом) будет удалён с терминала. Данные на платформе не затрагиваются.",
+      "facesHint": "На терминал загружаются ученики школы с фото и Face ID. Фото должно быть чётким, анфас, не меньше 120px — непригодные фото показываются в списке ошибок.",
+      "syncAll": "Загрузить всех учеников",
+      "syncRunning": "Загрузка...",
+      "readOnly": "У вас только право просмотра",
+      "progress": "{{done}} / {{total}}",
+      "succeeded": "{{count}} успешно",
+      "aborted": "Остановлено",
+      "finished": "Готово: {{ok}} успешно, {{failed}} с ошибкой",
+      "errorsTitle": "Ошибки",
+      "eventsHint": "Повторно читает с устройства события за период без мониторинга (например, день до подключения) и записывает посещаемость. Дубликаты пропускаются автоматически. Не более 7 дней.",
+      "from": "С",
+      "to": "По",
+      "backfill": "Восстановить события",
+      "backfillRunning": "Чтение...",
+      "backfillResult": "Прочитано событий: {{read}}, записано в посещаемость: {{recorded}}",
+      "lastError": "Последняя ошибка связи",
+      "unmatchedTitle": "Несопоставленные попытки распознавания",
+      "unmatchedHint": "Терминал посчитал, что \"узнал\" лицо, но этот идентификатор не совпал ни с одним текущим учеником (например, на устройстве могло остаться старое лицо удалённого ученика).",
+      "unmatchedEmpty": "Несопоставленных попыток нет",
+      "unmatchedReasonUnknown": "не совпало ни с кем",
+      "unmatchedReasonAmbiguous": "совпало с несколькими учениками",
+      "unsupported": "Этот бренд пока не поддерживает удалённое управление (только Hikvision)."
+    },
+    "discovery": {
+      "title": "Поиск устройств",
+      "hint": "Сеть за роутером сканируется через VPN. Найденное устройство можно добавить в один клик.",
+      "username": "Логин устройства (необязательно)",
+      "password": "Пароль устройства (необязательно)",
+      "scanBtn": "Найти",
+      "scanning": "Поиск (~1 мин)",
+      "loginHint": "Устройства Hikvision находятся и без логина. С логином к каждому устройству делается одна попытка, чтобы определить модель и тип.",
+      "found": "Найдено устройств: {{count}}",
+      "none": "Устройства не найдены",
+      "routerOffline": "роутер OFFLINE — результат может быть неполным",
+      "timedOut": "время вышло, список неполный",
+      "category": {
+        "faceTerminal": "Face ID терминал",
+        "camera": "Камера",
+        "recorder": "Регистратор",
+        "router": "Роутер",
+        "unknown": "Неизвестно"
+      },
+      "registered": "Добавлено",
+      "addTerminal": "Как терминал",
+      "addCamera": "Как камеру",
+      "cameraName": "Название камеры"
+    }
+  },
+  "provinces": {
+    "title": "Области",
+    "summary": "{{count}} областей · {{districts}} районов · {{schools}} школ",
+    "searchPlaceholder": "Поиск по названию области...",
+    "table": {
+      "districts": "Районы",
+      "schools": "Школы",
+      "students": "Учащиеся",
+      "attendance": "Посещаемость"
+    },
+    "modal": {
+      "newTitle": "Новая область",
+      "nameLabel": "Название области",
+      "namePlaceholder": "Например: Ташкент"
+    },
+    "validation": {
+      "nameRequired": "Введите название области"
+    }
+  },
+  "districts": {
+    "title": "Районы",
+    "summary": "{{provinces}} областей · {{districts}} районов · {{schools}} школ",
+    "provinceCard": {
+      "subtitle": "{{districts}} районов · {{schools}} школ"
+    },
+    "notFound": "Районы не найдены",
+    "searchPlaceholder": "Поиск по названию района...",
+    "table": {
+      "schools": "Школы",
+      "students": "Учащиеся"
+    },
+    "modal": {
+      "newTitlePrefix": "Новый район — {{province}}",
+      "nameLabel": "Название района",
+      "namePlaceholder": "Например: Чиланзар"
+    },
+    "validation": {
+      "nameRequired": "Введите название района"
+    }
+  },
+  "schools": {
+    "title": "Школы",
+    "selectProvinceSubtitle": "Выберите область",
+    "studentsSuffix": "{{count}} учащихся",
+    "districtNotFound": "Район не найден",
+    "notFound": "Школы не найдены",
+    "searchPlaceholder": "Поиск по названию школы...",
+    "card": {
+      "studentsLabel": "Учащиеся",
+      "todayPresent": "Пришли сегодня"
+    },
+    "table": {
+      "students": "Учащиеся",
+      "attendance": "Посещаемость"
+    },
+    "modal": {
+      "newTitlePrefix": "Новая школа — {{district}}",
+      "nameLabel": "Название школы",
+      "namePlaceholder": "Например: школа №56"
+    },
+    "validation": {
+      "nameRequired": "Введите название школы"
+    }
+  },
+  "classes": {
+    "title": "Классы",
+    "subtitle": "Управление классами школы",
+    "addBtn": "Добавить класс",
+    "filters": {
+      "province": "Область",
+      "district": "Район",
+      "school": "Школа"
+    },
+    "selectSchoolPrompt": "Выберите школу, чтобы увидеть классы",
+    "stats": {
+      "classes": "Классы",
+      "students": "Учащиеся",
+      "assigned": "Закреплено за классом"
+    },
+    "searchPlaceholder": "Поиск по названию класса...",
+    "card": {
+      "studentSuffix": "учащихся",
+      "gradeSuffix": "{{grade}}-й класс",
+      "teacherLabel": "Классный руководитель",
+      "noTeacher": "Не назначен"
+    },
+    "empty": {
+      "title": "В этой школе пока нет классов",
+      "addBtn": "+ Добавить класс"
+    },
+    "modal": {
+      "editTitle": "Редактировать класс",
+      "newTitle": "Новый класс",
+      "gradeLabel": "Номер класса",
+      "gradeOption": "{{grade}}-й класс",
+      "sectionLabel": "Литера",
+      "nameLabel": "Название класса",
+      "namePlaceholder": "Например: 5-А",
+      "teacherLabel": "Классный руководитель (Учитель)",
+      "teacherNotSelected": "Не выбрано",
+      "noTeachersHint": "В этой школе нет пользователя с ролью TEACHER"
+    },
+    "validation": {
+      "fieldsRequired": "Выберите номер класса и литеру"
+    },
+    "noSchoolAssigned": "Вам пока не назначена школа"
+  },
+  "users": {
+    "title": "Пользователи",
+    "countSuffix": "{{count}} пользователей",
+    "searchPlaceholder": "Поиск по имени или логину...",
+    "table": {
+      "fullName": "ФИО",
+      "login": "Логин",
+      "role": "Роль",
+      "assignment": "Привязка"
+    },
+    "assignment": {
+      "wholeSystem": "Вся система"
+    },
+    "modal": {
+      "editTitle": "Редактировать пользователя",
+      "newTitle": "Новый пользователь",
+      "fullNameLabel": "Полное имя",
+      "fullNamePlaceholder": "Например: Каримов Али",
+      "loginLabel": "Логин",
+      "loginPlaceholder": "karimov_ali",
+      "passwordLabelEdit": "Новый пароль (оставьте пустым, если не меняете)",
+      "passwordLabelNew": "Пароль",
+      "roleLabel": "Роль",
+      "provinceLabel": "📍 Область",
+      "provinceLabelRegion": "🗺️ Область",
+      "districtLabel": "🧭 Район",
+      "selectProvince": "Выберите область...",
+      "selectDistrict": "Выберите район...",
+      "assignSectionTitle": "🏫 Привязка к школе",
+      "provinceShort": "Область",
+      "districtShort": "Район",
+      "schoolShort": "Школа"
+    },
+    "validation": {
+      "fullNameRequired": "Введите полное имя",
+      "loginRequired": "Введите логин",
+      "passwordRequired": "Введите пароль"
+    }
+  },
+  "students": {
+    "title": "Учащиеся",
+    "selectProvinceSubtitle": "Выберите область",
+    "districtNotFound": "Район не найден",
+    "schoolNotFound": "Школа не найдена",
+    "card": {
+      "birthDatePlaceholder": "Дата не указана",
+      "age": "Возраст"
+    },
+    "school": {
+      "classLabel": "Класс",
+      "directorPrefix": "👤 {{name}}"
+    },
+    "class": {
+      "studentSuffix": "Учащийся",
+      "noTeacher": "Учитель не назначен",
+      "gradeSection": "{{grade}}-й класс, литера {{section}}"
+    },
+    "addClassBtn": "Добавить класс",
+    "noClasses": "В этой школе пока нет классов",
+    "unassignedClass": "Не закреплён за классом",
+    "unassignedClassHint": "🗂 Посмотреть учеников без класса",
+    "selectClassSubtitle": "Выберите класс",
+    "searchPlaceholder": "Поиск по имени...",
+    "count": "{{count}} шт.",
+    "notFound": "Учащиеся не найдены",
+    "table": {
+      "photo": "Фото",
+      "faceId": "Face ID",
+      "school": "Школа",
+      "age": "Возраст"
+    },
+    "profile": {
+      "fields": {
+        "birthDate": "Дата рождения",
+        "faceId": "Face ID",
+        "idNumber": "ID номер",
+        "school": "Школа",
+        "status": "Статус",
+        "statusActive": "Активен",
+        "class": "Класс"
+      },
+      "pushFaceBtn": "Отправить на терминал",
+      "pushingFace": "Отправка...",
+      "pushSuccess": "Лицо успешно отправлено на терминал(ы)",
+      "pushFailed": "Ошибка при отправке на терминал",
+      "pushNoPhoto": "Сначала загрузите фото",
+      "attendanceStatsTitle": "Статистика посещаемости",
+      "stats": {
+        "present": "Пришли",
+        "absent": "Отсутствуют",
+        "percent": "Процент",
+        "periodNote": "За последние {{days}} дней, на основе реальных записей посещаемости"
+      },
+      "weeklyTitle": "Посещаемость за неделю",
+      "weekDays": [
+        "Пн",
+        "Вт",
+        "Ср",
+        "Чт",
+        "Пт"
+      ],
+      "activityTitle": "Недавняя активность",
+      "activityAdded": "Добавлен в систему",
+      "today": "Сегодня",
+      "activityNoData": "Нет данных о посещаемости",
+      "deviceNotConnected": "Устройство Face ID не подключено",
+      "aiSummary": {
+        "noData": "Нет данных за последний период",
+        "noAttendance": "За последний период нет записей о посещаемости",
+        "excellent": "Посещаемость за последний период отличная — {{percent}}% ({{days}} дн. присутствовал)",
+        "good": "Посещаемость за последний период хорошая — {{percent}}% ({{days}} дн. присутствовал)",
+        "moderate": "Посещаемость за последний период средняя — {{percent}}% ({{days}} дн. присутствовал)",
+        "low": "Посещаемость за последний период низкая — {{percent}}% ({{days}} дн. присутствовал)"
+      },
+      "timelineTitle": "История посещаемости (последние события)",
+      "timelineEmpty": "Пока нет событий посещаемости",
+      "eventIn": "Пришёл",
+      "eventOut": "Ушёл"
+    },
+    "modal": {
+      "newTitle": "Новый учащийся",
+      "fullNameLabel": "Имя и фамилия",
+      "fullNamePlaceholder": "Например: Каримов Жасур",
+      "birthDateLabel": "Дата рождения",
+      "photoLabel": "Фото",
+      "photoDropzone": "Выберите фото или перетащите сюда",
+      "photoHint": "JPG, PNG, WEBP · до 10 МБ",
+      "photoUploading": "Загрузка...",
+      "photoUploadFailed": "Не удалось загрузить фото: {{message}}",
+      "faceIdAutoLabel": "Face ID (автоматически)",
+      "faceIdAutoNotice": "Face ID создаётся автоматически",
+      "faceIdAutoDesc": "Фото отправляется на мини-ПК сервер → загружается на устройство Face ID"
+    },
+    "classModal": {
+      "editTitle": "Редактировать класс",
+      "newTitle": "Новый класс",
+      "gradeLabel": "Номер класса",
+      "sectionLabel": "Литера",
+      "nameLabel": "Название класса",
+      "namePlaceholder": "Например: 5-А",
+      "teacherLabel": "Классный руководитель (Учитель)",
+      "teacherNotSelected": "Не выбрано",
+      "noTeachersHint": "В этой школе нет пользователей с ролью TEACHER"
+    },
+    "validation": {
+      "fullNameRequired": "Введите имя и фамилию",
+      "classFieldsRequired": "Выберите номер класса и литеру"
+    }
+  },
+  "attendance": {
+    "dataInsufficient": "Недостаточно данных",
+    "liveStats": "Live Stats",
+    "distributionChart": "График распределения",
+    "hubs": "Регионы",
+    "global": {
+      "title": "Анализ посещаемости по республике",
+      "subtitle": "Централизованный охват учащихся и школ по всем областям",
+      "donutLabel": "Школы",
+      "progress": {
+        "connectedSchools": "Школы, подключённые к системе",
+        "registeredStudents": "Зарегистрированные учащиеся"
+      }
+    },
+    "district": {
+      "titleSuffix": "Анализ по {{province}}",
+      "title": "В разрезе районов области {{province}}",
+      "subtitle": "Статистика охвата школ и учащихся по районам области",
+      "avgCapacity": "Средняя вместимость",
+      "schoolsSuffix": "{{count}} школ",
+      "progress": {
+        "schools": "Распределение школ",
+        "students": "Охват учащихся"
+      }
+    },
+    "school": {
+      "titleSuffix": "Школы района {{district}}",
+      "title": "Список района {{district}}",
+      "subtitle": "Все учебные заведения района и количество учащихся в них",
+      "institutions": "Учреждения",
+      "progress": {
+        "coverage": "Охват по району"
+      },
+      "studentsSuffix": "{{count}} учащихся",
+      "statusLabel": "Статус",
+      "statusActive": "Активна"
+    },
+    "detail": {
+      "attendanceRateTitle": "Показатель посещаемости",
+      "came": "Пришли",
+      "didNotCome": "Не пришли",
+      "flowTitle": "Анализ входов-выходов",
+      "flowSubtitle": "Статистика потока по часам дня",
+      "devicesMonitorTitle": "Монитор Мини-ПК и терминалов",
+      "noDevices": "Устройства Face ID не подключены",
+      "online": "Онлайн",
+      "offline": "Офлайн",
+      "liveFeedTitle": "Живая лента (входы-выходы)",
+      "recordsSuffix": "{{count}} записей",
+      "table": {
+        "time": "Время",
+        "student": "Учащийся",
+        "action": "Действие",
+        "temperature": "Температура"
+      },
+      "entered": "Вошёл",
+      "exited": "Вышел",
+      "studentsListTitle": "Список учащихся"
+    }
+  },
+  "cameras": {
+    "status": {
+      "ONLINE": "Онлайн",
+      "OFFLINE": "Офлайн",
+      "MAINTENANCE": "На обслуживании",
+      "unknown": "?"
+    },
+    "eventTypes": {
+      "MOTION": "Обнаружено движение",
+      "PERSON_DETECTED": "Незнакомое лицо",
+      "CROWD": "Толпа",
+      "UNAUTHORIZED_ACCESS": "Несанкционированный доступ",
+      "EQUIPMENT_ISSUE": "Неисправность оборудования",
+      "OTHER": "Другое"
+    },
+    "severity": {
+      "LOW": "Низкий",
+      "MEDIUM": "Средний",
+      "HIGH": "Высокий"
+    },
+    "loadError": "Не удалось загрузить список камер",
+    "title": "Камеры",
+    "subtitle": "Камеры видеонаблюдения в школах",
+    "addBtn": "+ Добавить камеру",
+    "stats": {
+      "total": "Всего камер",
+      "online": "Онлайн",
+      "maintenance": "На обслуживании",
+      "offline": "Офлайн"
+    },
+    "filters": {
+      "allStatuses": "Все статусы"
+    },
+    "empty": {
+      "noneAdded": "Камеры пока не добавлены",
+      "notFound": "Камеры не найдены",
+      "addHint": "Нажмите кнопку выше, чтобы добавить первую камеру",
+      "filterHint": "Попробуйте изменить фильтры"
+    },
+    "card": {
+      "ipNotEntered": "IP не указан",
+      "eventCount": "Зафиксировано {{count}} событий",
+      "noRoom": "Помещение не привязано"
+    },
+    "detail": {
+      "liveStreamNotConnected": "Платформа прямой трансляции не подключена",
+      "ip": "IP-адрес",
+      "resolution": "Разрешение",
+      "location": "Расположение",
+      "status": "Статус",
+      "notes": "Примечание",
+      "eventsTitle": "События",
+      "logEventBtn": "+ Зафиксировать событие",
+      "noEvents": "Для этой камеры пока не зафиксировано событий",
+      "viewAll": "Смотреть все события →",
+      "liveStreamHint": "Эта система не показывает живое видео — камера используется только для регистрации событий"
+    },
+    "modal": {
+      "editTitle": "Редактировать камеру",
+      "newTitle": "Новая камера",
+      "nameLabel": "Название камеры",
+      "namePlaceholder": "Например: Входная дверь",
+      "schoolLabel": "Школа",
+      "ownSchoolFallback": "Ваша школа",
+      "locationLabel": "Расположение",
+      "locationPlaceholder": "Например: 1-й этаж, входная дверь",
+      "ipLabel": "IP-адрес",
+      "ipPlaceholder": "192.168.1.21",
+      "resolutionLabel": "Разрешение (resolution)",
+      "resolutionPlaceholder": "1080p",
+      "statusLabel": "Статус",
+      "notesLabel": "Примечание",
+      "nameRequired": "Название камеры обязательно",
+      "schoolRequired": "Необходимо выбрать школу",
+      "saveError": "Ошибка при сохранении",
+      "deleteError": "Ошибка при удалении"
+    },
+    "eventModal": {
+      "title": "Регистрация события — {{camera}}",
+      "typeLabel": "Тип",
+      "severityLabel": "Уровень опасности",
+      "occurredAtLabel": "Время события",
+      "descriptionLabel": "Описание",
+      "descriptionPlaceholder": "Необязательные подробности",
+      "saveError": "Ошибка при регистрации события"
+    },
+    "deleteConfirm": {
+      "title": "Удалить камеру",
+      "message": "Эта камера и все связанные с ней события будут полностью удалены."
+    },
+    "rooms": {
+      "manageBtn": "Помещения",
+      "title": "Управление помещениями",
+      "addTitle": "Добавить новое помещение",
+      "editTitle": "Редактировать помещение",
+      "numberLabel": "Номер помещения",
+      "numberPlaceholder": "Например: 101",
+      "nameLabel": "Название помещения",
+      "namePlaceholder": "Например: Кабинет математики",
+      "addBtn": "Добавить",
+      "empty": "Помещения пока не добавлены",
+      "cameraCount": "{{count}} камер",
+      "roomLabel": "Помещение",
+      "noRoom": "Помещение не выбрано",
+      "noneForSchool": "В этой школе пока нет помещений — сначала добавьте через кнопку \"Помещения\"",
+      "numberRequired": "Номер помещения обязателен",
+      "nameRequired": "Название помещения обязательно",
+      "saveError": "Ошибка при сохранении помещения",
+      "deleteError": "Ошибка при удалении помещения",
+      "deleteConfirm": {
+        "title": "Удалить помещение",
+        "message": "Вы действительно хотите удалить это помещение? Привязанные камеры станут непривязанными."
+      }
+    },
+    "manageInSettings": "Настроить камеры",
+    "searchPlaceholder": "Поиск по камере или помещению...",
+    "device": {
+      "sectionTitle": "Удалённое управление (необязательно)",
+      "sectionHint": "Если указать бренд, IP и логин, состояние камеры отслеживается автоматически и виден текущий кадр (через VPN роутера школы).",
+      "brand": "Бренд",
+      "brandNone": "Не управляется",
+      "port": "HTTP-порт",
+      "rtspPort": "RTSP-порт",
+      "channel": "Канал",
+      "username": "Логин устройства",
+      "password": "Пароль устройства",
+      "passwordKeep": "Оставьте пустым, чтобы не менять",
+      "snapshotAt": "Кадр: {{time}}",
+      "refreshSnapshot": "Обновить",
+      "lastSeen": "Последняя связь",
+      "checkBtn": "Проверить",
+      "checkOk": "Камера ответила ({{model}})",
+      "rtspBtn": "RTSP-адрес",
+      "rtspHint": "Открывается в VLC или NVR изнутри сети школы (запросит логин/пароль). Для видео в браузере нужен медиа-шлюз.",
+      "notManagedHint": "Для текущего кадра укажите бренд, IP и логин в Настройки → Камеры"
+    }
+  },
+  "cameraAnalysis": {
+    "title": "Анализ камер",
+    "subtitle": "Журнал событий, зафиксированных камерами",
+    "addBtn": "+ Зафиксировать событие",
+    "loadError": "Не удалось загрузить события",
+    "stats": {
+      "total": "Всего событий",
+      "unresolved": "Не решено",
+      "resolved": "Решено",
+      "highRisk": "Высокий риск"
+    },
+    "filters": {
+      "allCameras": "Все камеры",
+      "allTypes": "Все типы",
+      "allLevels": "Все уровни",
+      "allStatuses": "Все статусы",
+      "unresolved": "Не решено",
+      "resolved": "Решено"
+    },
+    "empty": {
+      "title": "Событий пока не зафиксировано",
+      "hint": "Нажмите кнопку выше, чтобы добавить первое событие"
+    },
+    "reportedBySuffix": "от {{name}}",
+    "resolvedLabel": "Решено",
+    "unresolvedLabel": "Не решено",
+    "toggleError": "Ошибка при обновлении статуса",
+    "modal": {
+      "title": "Регистрация события",
+      "cameraLabel": "Камера",
+      "typeLabel": "Тип",
+      "severityLabel": "Уровень опасности",
+      "selectCameraRequired": "Выберите камеру",
+      "saveError": "Ошибка при регистрации события"
+    }
+  },
+  "aiAnalysis": {
+    "title": "AI-анализ",
+    "subtitle1": "Реальная статистика, рассчитанная на основе данных CameraEvent",
+    "subtitle2": "Реальная статистика на основе данных CameraEvent — не компьютерное зрение",
+    "loadError": "Не удалось загрузить данные анализа",
+    "emptyState": {
+      "title": "Пока нет событий для анализа",
+      "desc": "Все показатели на этой странице рассчитываются на основе реальных записей таблицы CameraEvent. Как только камеры начнут фиксировать события, здесь появится реальный анализ — фиктивные цифры не отображаются.",
+      "addCameraBtn": "Добавить камеру",
+      "logEventBtn": "Зафиксировать событие"
+    },
+    "periodOptions": {
+      "days7": "Последние 7 дней",
+      "days30": "Последние 30 дней",
+      "days90": "Последние 90 дней"
+    },
+    "summaryCard": {
+      "title": "Сводка анализа событий",
+      "desc": "События, зафиксированные вручную (или в будущем автоматически) по камерам, записываются в таблицу CameraEvent; эта страница вычисляет агрегацию этих реальных записей по типам, уровням и времени в реальном времени."
+    },
+    "stats": {
+      "total": "Всего событий",
+      "unresolved": "Не решено",
+      "topType": "Наиболее частый тип",
+      "resolvedRatio": "Доля решённых"
+    },
+    "severityDistTitle": "Распределение по уровню опасности",
+    "totalLabel": "всего",
+    "typeDistTitle": "Распределение по типам событий",
+    "dailyTrendTitle": "Ежедневный тренд (последние {{days}} дней)",
+    "topCamerasTitle": "Камеры с наибольшим числом событий",
+    "topCamerasEmpty": "Камеры с зафиксированными событиями не найдены",
+    "eventsSuffix": "{{count}} событий",
+    "trendTooltip": "{{date}}: {{count}} событий"
+  },
+  "settings": {
+    "title": "Настройки",
+    "subtitle": "Профиль, безопасность, данные школы и уведомления",
+    "tabs": {
+      "profile": "Профиль",
+      "password": "Пароль",
+      "school": "Данные школы",
+      "notifications": "Уведомления",
+      "cameras": "Камеры"
+    },
+    "roleLabels": {
+      "SUPERADMIN": "Супер администратор",
+      "ADMIN": "Администратор",
+      "REGION_DIRECTOR": "Руководитель области",
+      "DISTRICT_DIRECTOR": "Руководитель района",
+      "DIRECTOR": "Директор школы",
+      "MUDIR": "Завуч",
+      "TEACHER": "Учитель"
+    },
+    "profile": {
+      "title": "Личные данные",
+      "desc": "Ваше имя будет отображаться так во всей системе (включая уведомления)",
+      "fullNameLabel": "Полное имя",
+      "fullNamePlaceholder": "Имя Фамилия",
+      "usernameLabel": "Логин / телефон",
+      "savedMsg": "Сохранено!",
+      "errorMsg": "Ошибка",
+      "phoneLabel": "Номер телефона"
+    },
+    "password": {
+      "title": "Изменить пароль",
+      "desc": "Для безопасности вам нужно знать текущий пароль",
+      "oldLabel": "Текущий пароль",
+      "newLabel": "Новый пароль",
+      "newPlaceholder": "Минимум 6 символов",
+      "confirmLabel": "Подтвердите новый пароль",
+      "updateBtn": "Обновить пароль",
+      "fillAllFields": "Заполните все поля",
+      "mismatch": "Новые пароли не совпадают",
+      "tooShort": "Новый пароль должен содержать минимум 6 символов",
+      "changedMsg": "Пароль успешно изменён!",
+      "wrongOldMsg": "Возможно, текущий пароль указан неверно"
+    },
+    "school": {
+      "title": "Данные школы",
+      "notAssigned": "Ваша учётная запись не привязана к школе.",
+      "loadError": "Не удалось загрузить данные школы.",
+      "editDesc": "Эти данные относятся только к вашей школе — они не влияют на другие школы",
+      "contactSectionTitle": "Контактная и официальная информация",
+      "addressPlaceholder": "Город, улица, номер дома",
+      "savedMsg": "Сохранено!",
+      "fields": {
+        "name": "Название школы",
+        "province": "Область",
+        "district": "Район",
+        "director": "Директор",
+        "studentCount": "Количество учащихся",
+        "classCount": "Количество классов",
+        "address": "Адрес",
+        "phone": "Телефон",
+        "schoolNumber": "Номер школы",
+        "foundedYear": "Год основания"
+      }
+    },
+    "notifications": {
+      "title": "Типы уведомлений",
+      "desc": "Выберите, какие типы уведомлений показывать в панели уведомлений"
+    },
+    "notifTypes": {
+      "ATTENDANCE": {
+        "label": "Уведомления о посещаемости",
+        "desc": "О входе/выходе учащегося"
+      },
+      "DEVICE_STATUS": {
+        "label": "Статус устройства",
+        "desc": "Устройства Face ID онлайн/офлайн"
+      },
+      "SYSTEM": {
+        "label": "Системные уведомления",
+        "desc": "Общие системные уведомления"
+      },
+      "ALERT": {
+        "label": "Предупреждения",
+        "desc": "Важные ситуации, требующие внимания"
+      },
+      "USER_ACTION": {
+        "label": "Действия пользователей",
+        "desc": "Действия, выполненные другими сотрудниками"
+      }
+    },
+    "cameras": {
+      "desc": "Технические данные камер (IP, разрешение) редактируются только здесь — на странице «Камеры» они не отображаются."
+    }
+  },
+  "confirmModal": {
+    "defaultTitle": "Подтвердите удаление",
+    "defaultMessage": "Это действие нельзя отменить",
+    "cancel": "Отмена",
+    "delete": "Удалить"
+  },
+  "crudPage": {
+    "newTitle": "Добавить новое"
+  },
+  "notes": {
+    "title": "История заметок",
+    "placeholder": "Введите новую заметку (например: поведение, состояние здоровья, письмо/объяснение...)",
+    "add": "Добавить",
+    "empty": "Заметок пока нет",
+    "saveError": "Ошибка при сохранении заметки",
+    "unknownAuthor": "Неизвестный автор"
+  },
+  "teachers": {
+    "title": "Учителя",
+    "subtitle": "Список и профили учителей школы",
+    "addBtn": "Добавить учителя",
+    "searchPlaceholder": "Поиск учителя...",
+    "empty": "Учитель не найден",
+    "fields": {
+      "fullName": "Ф.И.О.",
+      "username": "Логин",
+      "password": "Пароль",
+      "phone": "Номер телефона",
+      "subject": "Предмет",
+      "role": "Роль"
+    },
+    "form": {
+      "addTitle": "Добавить нового учителя",
+      "editTitle": "Редактировать учителя",
+      "passwordHint": "Если оставить пустым, пароль не изменится",
+      "save": "Сохранить",
+      "cancel": "Отмена"
+    },
+    "deleteConfirm": {
+      "title": "Удалить учителя",
+      "message": "Вы действительно хотите удалить этого учителя? Это действие нельзя отменить."
+    },
+    "profile": {
+      "subjectLabel": "Предмет",
+      "phoneLabel": "Телефон",
+      "roleLabel": "Роль",
+      "noSubject": "Не указано",
+      "noPhone": "Не указано",
+      "classesTitle": "Классы под руководством",
+      "noClasses": "Пока не является классным руководителем ни одного класса",
+      "classesCountLabel": "Классы",
+      "studentsCountLabel": "Ученики"
+    }
+  },
+  "guardians": {
+    "title": "Родитель / опекун",
+    "addBtn": "+ Добавить",
+    "namePlaceholder": "Имя (необязательно)",
+    "linkBtn": "Привязать",
+    "empty": "Пока не привязан ни один родитель/опекун",
+    "unnamed": "Имя не указано",
+    "telegramLinked": "Telegram привязан",
+    "telegramNotLinked": "Telegram не привязан",
+    "saveError": "Ошибка при привязке"
+  },
+  "aiChat": {
+    "title": "AI Помощник",
+    "subtitle": "Ответы на основе реальных данных школы",
+    "emptyTitle": "Чем могу помочь?",
+    "emptyDesc": "Я отвечаю только на основе реальных данных системы — можете спросить об ученике, учителе, классе или посещаемости.",
+    "placeholder": "Напишите вопрос...",
+    "errorGeneric": "Ошибка при получении ответа",
+    "suggestions": [
+      "Какая сегодня общая посещаемость в школе?",
+      "Сколько учеников в классе 5-A?",
+      "Покажи список классов и классных руководителей"
+    ],
+    "dragHint": "AI Помощник (можно перетащить)",
+    "clearChat": "Очистить чат",
+    "copy": "Копировать",
+    "you": "Вы"
+  }
+}

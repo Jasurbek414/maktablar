@@ -7,6 +7,8 @@ import com.maktab.repository.SchoolRepository;
 import com.maktab.repository.StudentRepository;
 import com.maktab.repository.UserRepository;
 import com.maktab.model.User;
+import com.maktab.security.CurrentUserService;
+import com.maktab.service.I18nService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,27 +24,53 @@ public class SchoolClassController {
     @Autowired private SchoolRepository schoolRepo;
     @Autowired private StudentRepository studentRepo;
     @Autowired private UserRepository userRepo;
+    @Autowired private CurrentUserService currentUserService;
+    @Autowired private I18nService i18n;
 
+    /**
+     * MUHIM: schoolId endi client'dan ishonch bilan qabul qilinmaydi — SUPERADMIN/ADMIN'dan
+     * boshqa har bir rol uchun haqiqiy ko'lam Authorization headerdagi foydalanuvchidan
+     * CurrentUserService#resolveSchoolScope orqali olinadi.
+     */
     @GetMapping
-    public List<Map<String, Object>> getAll(@RequestParam(required = false) Long schoolId) {
-        List<SchoolClass> list = schoolId != null
-            ? classRepo.findBySchoolIdOrderByGradeAscSectionAsc(schoolId)
-            : classRepo.findAll();
+    public List<Map<String, Object>> getAll(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                              @RequestParam(required = false) Long schoolId) {
+        User user = currentUserService.requireUser(authHeader);
+        List<Long> scope = currentUserService.resolveSchoolScope(user, schoolId);
+        List<SchoolClass> list;
+        if (scope == null) {
+            list = classRepo.findAll();
+        } else if (scope.isEmpty()) {
+            list = Collections.emptyList();
+        } else if (scope.size() == 1) {
+            list = classRepo.findBySchoolIdOrderByGradeAscSectionAsc(scope.get(0));
+        } else {
+            list = classRepo.findBySchoolIdIn(scope);
+        }
         return list.stream().map(this::toMap).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getOne(@PathVariable Long id) {
-        return classRepo.findById(id)
-            .map(c -> ResponseEntity.ok(toMap(c)))
-            .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> getOne(@PathVariable Long id,
+                                     @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        User user = currentUserService.requireUser(authHeader);
+        SchoolClass sc = classRepo.findById(id).orElse(null);
+        if (sc == null) return ResponseEntity.notFound().build();
+        Long schoolId = sc.getSchool() != null ? sc.getSchool().getId() : null;
+        if (!currentUserService.canAccessSchool(user, schoolId)) {
+            return ResponseEntity.status(403).body(Map.of("error", i18n.msg("error.class.access_denied")));
+        }
+        return ResponseEntity.ok(toMap(sc));
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> create(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                     @RequestBody Map<String, Object> body) {
+        User caller = currentUserService.requireUser(authHeader);
         Long schoolId = Long.valueOf(body.get("schoolId").toString());
+        currentUserService.assertCanWriteClass(caller, schoolId);
         School school = schoolRepo.findById(schoolId).orElse(null);
-        if (school == null) return ResponseEntity.badRequest().body(Map.of("error", "School not found"));
+        if (school == null) return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.school.not_found")));
 
         SchoolClass sc = new SchoolClass();
         sc.setSchool(school);
@@ -55,16 +83,23 @@ public class SchoolClassController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> update(@PathVariable Long id,
+                                     @RequestHeader(value = "Authorization", required = false) String authHeader,
+                                     @RequestBody Map<String, Object> body) {
+        User caller = currentUserService.requireUser(authHeader);
         SchoolClass sc = classRepo.findById(id).orElse(null);
         if (sc == null) return ResponseEntity.notFound().build();
+        Long currentSchoolId = sc.getSchool() != null ? sc.getSchool().getId() : null;
+        currentUserService.assertCanWriteClass(caller, currentSchoolId);
 
         if (body.containsKey("name")) sc.setName(body.get("name").toString());
         if (body.containsKey("grade")) sc.setGrade(body.get("grade") != null ? Integer.valueOf(body.get("grade").toString()) : null);
         if (body.containsKey("section")) sc.setSection(body.get("section") != null ? body.get("section").toString() : null);
         if (body.containsKey("teacherId")) sc.setTeacherId(body.get("teacherId") != null ? Long.valueOf(body.get("teacherId").toString()) : null);
         if (body.containsKey("schoolId")) {
-            School school = schoolRepo.findById(Long.valueOf(body.get("schoolId").toString())).orElse(null);
+            Long newSchoolId = Long.valueOf(body.get("schoolId").toString());
+            currentUserService.assertCanWriteClass(caller, newSchoolId);
+            School school = schoolRepo.findById(newSchoolId).orElse(null);
             if (school != null) sc.setSchool(school);
         }
         classRepo.save(sc);
@@ -72,7 +107,12 @@ public class SchoolClassController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable Long id,
+                                     @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        User caller = currentUserService.requireUser(authHeader);
+        SchoolClass sc = classRepo.findById(id).orElse(null);
+        if (sc == null) return ResponseEntity.notFound().build();
+        currentUserService.assertCanWriteClass(caller, sc.getSchool() != null ? sc.getSchool().getId() : null);
         classRepo.deleteById(id);
         return ResponseEntity.ok(Map.of("success", true));
     }

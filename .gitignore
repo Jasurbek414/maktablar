@@ -1,0 +1,21 @@
+.env
+node_modules/
+dist/
+target/
+*.log
+.DS_Store
+
+# Maxfiy/haqiqiy ma'lumot bilan bog'liq fayllar — token/parol/hash o'z ichiga olishi mumkin
+db_backup.sql
+seed_andijon.sql
+
+# Mobil ilova APK'si — katta binary fayl, git repo public bo'lgani uchun bu yerga
+# commit qilinmaydi (nginx /downloads/ orqali volume sifatida serve qilinadi).
+downloads/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Uyning joriy ochiq IP keshi (DDNS skripti yozadi) — public repoga kerak emas
+wireguard-server/.last-known-ip

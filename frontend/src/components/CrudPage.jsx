@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import ConfirmModal from './ConfirmModal';
 
@@ -24,11 +25,12 @@ function Input({ label, ...props }) {
 }
 
 function Select({ label, options, ...props }) {
+  const { t } = useTranslation();
   return (
     <div className="mb-4">
       <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</label>
       <select {...props} className="mt-1.5 w-full h-11 px-4 rounded-xl bg-[#0a120e] border border-emerald-500/[0.1] text-white text-sm outline-none focus:border-emerald-500/40 transition-colors">
-        <option value="">Tanlang...</option>
+        <option value="">{t('common.selectDots')}</option>
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
@@ -36,6 +38,7 @@ function Select({ label, options, ...props }) {
 }
 
 export default function CrudPage({ title, apiPath, columns, formFields, loadDeps, filterFn }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
@@ -45,11 +48,20 @@ export default function CrudPage({ title, apiPath, columns, formFields, loadDeps
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState(null);
 
+  // loadDeps/filterFn maqsadi ota komponentdan inline arrow function sifatida
+  // uzatiladi, shuning uchun ularni dependency array'ga qo'shish har renderda
+  // effektni qayta ishga tushirib, cheksiz sikl (infinite loop) hosil qiladi.
+  // Buning o'rniga eng so'nggi funksiyalarni ref orqali saqlaymiz — stale-closure
+  // bo'lmaydi, lekin effekt faqat apiPath o'zgarganda qayta ishga tushadi.
+  const loadDepsRef = useRef(loadDeps);
+  const filterFnRef = useRef(filterFn);
+  useEffect(() => { loadDepsRef.current = loadDeps; filterFnRef.current = filterFn; });
+
   const load = async () => {
     setLoading(true);
     try {
       let data = await api.get(apiPath);
-      if (filterFn) data = filterFn(data);
+      if (filterFnRef.current) data = filterFnRef.current(data);
       setItems(data);
     } catch {}
     setLoading(false);
@@ -57,7 +69,7 @@ export default function CrudPage({ title, apiPath, columns, formFields, loadDeps
 
   useEffect(() => {
     load();
-    if (loadDeps) loadDeps().then(setDeps);
+    if (loadDepsRef.current) loadDepsRef.current().then(setDeps);
   }, [apiPath]);
 
   const openAdd = () => { setEditing(null); setForm({}); setModal(true); };
@@ -85,17 +97,17 @@ export default function CrudPage({ title, apiPath, columns, formFields, loadDeps
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-white">{title}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{items.length} ta yozuv</p>
+          <p className="text-sm text-slate-500 mt-0.5">{t('common.entriesCount', { count: items.length })}</p>
         </div>
         <button onClick={openAdd} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-          Qo'shish
+          {t('common.add')}
         </button>
       </div>
 
       {/* Search */}
       <div className="mb-4">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Qidirish..."
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('common.searchPlaceholder')}
           className="w-full max-w-xs h-10 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.08] text-white text-sm placeholder-slate-600 outline-none focus:border-emerald-500/30 transition-colors" />
       </div>
 
@@ -104,18 +116,18 @@ export default function CrudPage({ title, apiPath, columns, formFields, loadDeps
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-emerald-500/[0.06]">
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">№</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{t('common.number')}</th>
               {columns.map(c => (
                 <th key={c.key} className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{c.label}</th>
               ))}
-              <th className="px-5 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Amallar</th>
+              <th className="px-5 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={columns.length + 2} className="px-5 py-12 text-center text-slate-600">Yuklanmoqda...</td></tr>
+              <tr><td colSpan={columns.length + 2} className="px-5 py-12 text-center text-slate-600">{t('common.loading')}</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={columns.length + 2} className="px-5 py-12 text-center text-slate-600">Ma'lumot topilmadi</td></tr>
+              <tr><td colSpan={columns.length + 2} className="px-5 py-12 text-center text-slate-600">{t('common.notFound')}</td></tr>
             ) : filtered.map((item, i) => (
               <tr key={item.id} className="border-b border-emerald-500/[0.04] hover:bg-emerald-500/[0.03] transition-colors">
                 <td className="px-5 py-3 text-slate-600">{i + 1}</td>
@@ -137,11 +149,11 @@ export default function CrudPage({ title, apiPath, columns, formFields, loadDeps
       </div>
 
       {/* Modal */}
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Tahrirlash' : 'Yangi qo\'shish'}>
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? t('common.edit') : t('crudPage.newTitle')}>
         {formFields(form, (k, v) => setForm({ ...form, [k]: v }), deps)}
         <div className="flex gap-3 mt-6">
-          <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor</button>
-          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
+          <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">{t('common.cancel')}</button>
+          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">{t('common.save')}</button>
         </div>
       </Modal>
       <ConfirmModal open={!!deleteId} onCancel={() => setDeleteId(null)} onConfirm={() => remove(deleteId)} />

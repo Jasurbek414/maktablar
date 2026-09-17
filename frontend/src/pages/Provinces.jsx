@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import CrudPage, { Input } from '../components/CrudPage';
 import ConfirmModal from '../components/ConfirmModal';
@@ -20,6 +21,7 @@ function Ring({ percent, size = 80, stroke = 7, color = '#10b981' }) {
 
 /* ── Province Card ── */
 function ProvinceCard({ item, onEdit, onDelete }) {
+  const { t } = useTranslation();
   const pct = item.attendancePercent || 0;
   return (
     <div className="group relative rounded-2xl bg-[#0d1a14] border border-emerald-500/[0.08] hover:border-emerald-500/20 transition-all duration-300 overflow-hidden">
@@ -50,7 +52,7 @@ function ProvinceCard({ item, onEdit, onDelete }) {
             <Ring percent={pct} size={88} stroke={7} />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-lg font-bold text-white">{pct}%</span>
-              <span className="text-[9px] text-slate-600">davomat</span>
+              <span className="text-[9px] text-slate-600">{t('stats.attendance')}</span>
             </div>
           </div>
 
@@ -58,15 +60,15 @@ function ProvinceCard({ item, onEdit, onDelete }) {
           <div className="flex-1 grid grid-cols-3 gap-2">
             <div className="text-center py-2 rounded-xl bg-emerald-500/[0.06]">
               <p className="text-lg font-bold text-emerald-400">{item.districtCount || 0}</p>
-              <p className="text-[9px] text-slate-500 mt-0.5">Tuman</p>
+              <p className="text-[9px] text-slate-500 mt-0.5">{t('stats.districts')}</p>
             </div>
             <div className="text-center py-2 rounded-xl bg-cyan-500/[0.06]">
               <p className="text-lg font-bold text-cyan-400">{item.schoolCount || 0}</p>
-              <p className="text-[9px] text-slate-500 mt-0.5">Maktab</p>
+              <p className="text-[9px] text-slate-500 mt-0.5">{t('stats.schools')}</p>
             </div>
             <div className="text-center py-2 rounded-xl bg-amber-500/[0.06]">
               <p className="text-lg font-bold text-amber-400">{item.studentCount || 0}</p>
-              <p className="text-[9px] text-slate-500 mt-0.5">O'quvchi</p>
+              <p className="text-[9px] text-slate-500 mt-0.5">{t('stats.students')}</p>
             </div>
           </div>
         </div>
@@ -78,7 +80,7 @@ function ProvinceCard({ item, onEdit, onDelete }) {
               <span className="live-dot absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
             </span>
-            <span className="text-[10px] text-emerald-400/70 font-medium">Faol</span>
+            <span className="text-[10px] text-emerald-400/70 font-medium">{t('common.active')}</span>
           </div>
           <span className="text-[10px] text-slate-700">#{item.id}</span>
         </div>
@@ -102,6 +104,7 @@ function Modal({ open, onClose, title, children }) {
 
 /* ═══ MAIN ═══ */
 export default function Provinces() {
+  const { t } = useTranslation();
   const [view, setView] = useState('card'); // 'card' | 'table'
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,6 +124,7 @@ export default function Provinces() {
   const openAdd = () => { setEditing(null); setForm({}); setModal(true); };
   const openEdit = (item) => { setEditing(item); setForm({ ...item }); setModal(true); };
   const save = async () => {
+    if (!form.name?.trim()) { alert(t('provinces.validation.nameRequired')); return; }
     try {
       if (editing) await api.put(`/api/provinces/${editing.id}`, form);
       else await api.post('/api/provinces', form);
@@ -143,8 +147,8 @@ export default function Provinces() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white">Viloyatlar</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{items.length} ta viloyat · {totalDistricts} tuman · {totalSchools} maktab</p>
+          <h1 className="text-xl font-bold text-white">{t('provinces.title')}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{t('provinces.summary', { count: items.length, districts: totalDistricts, schools: totalSchools })}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* View Toggle */}
@@ -160,14 +164,14 @@ export default function Provinces() {
           </div>
           <button onClick={openAdd} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            Qo'shish
+            {t('common.add')}
           </button>
         </div>
       </div>
 
       {/* Search */}
       <div className="mb-5">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Viloyat nomi bo'yicha qidirish..."
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('provinces.searchPlaceholder')}
           className="w-full max-w-xs h-10 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.08] text-white text-sm placeholder-slate-600 outline-none focus:border-emerald-500/30 transition-colors" />
       </div>
 
@@ -188,13 +192,13 @@ export default function Provinces() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-emerald-500/[0.06]">
-                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">№</th>
-                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Nomi</th>
-                <th className="px-5 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Tumanlar</th>
-                <th className="px-5 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Maktablar</th>
-                <th className="px-5 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">O'quvchilar</th>
-                <th className="px-5 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Davomat</th>
-                <th className="px-5 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Amallar</th>
+                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{t('common.number')}</th>
+                <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{t('common.name')}</th>
+                <th className="px-5 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{t('provinces.table.districts')}</th>
+                <th className="px-5 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{t('provinces.table.schools')}</th>
+                <th className="px-5 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{t('provinces.table.students')}</th>
+                <th className="px-5 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{t('provinces.table.attendance')}</th>
+                <th className="px-5 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -222,11 +226,11 @@ export default function Provinces() {
       )}
 
       {/* Modal */}
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Tahrirlash' : 'Yangi viloyat'}>
-        <Input label="Viloyat nomi" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Masalan: Toshkent" />
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? t('common.edit') : t('provinces.modal.newTitle')}>
+        <Input label={t('provinces.modal.nameLabel')} value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={t('provinces.modal.namePlaceholder')} />
         <div className="flex gap-3 mt-6">
-          <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor</button>
-          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
+          <button onClick={() => setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">{t('common.cancel')}</button>
+          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">{t('common.save')}</button>
         </div>
       </Modal>
       <ConfirmModal open={!!deleteId} onCancel={() => setDeleteId(null)} onConfirm={() => remove(deleteId)} />

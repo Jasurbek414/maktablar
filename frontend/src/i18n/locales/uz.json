@@ -1,0 +1,1101 @@
+{
+  "app": {
+    "name": "Maktab",
+    "tagline": "Platform"
+  },
+  "language": {
+    "label": "Til",
+    "uz": "O'zbek",
+    "ru": "Русский",
+    "en": "English"
+  },
+  "common": {
+    "save": "Saqlash",
+    "update": "Yangilash",
+    "cancel": "Bekor",
+    "add": "Qo'shish",
+    "edit": "Tahrirlash",
+    "delete": "O'chirish",
+    "actions": "Amallar",
+    "search": "Qidirish",
+    "searchPlaceholder": "Qidirish...",
+    "loading": "Yuklanmoqda...",
+    "saving": "Saqlanmoqda...",
+    "notFound": "Ma'lumot topilmadi",
+    "close": "Yopish",
+    "select": "Tanlang",
+    "selectDots": "Tanlang...",
+    "all": "Barchasi",
+    "name": "Nomi",
+    "number": "№",
+    "entriesCount": "{{count}} ta yozuv",
+    "errorOccurred": "Xatolik yuz berdi",
+    "active": "Faol",
+    "optional": "Ixtiyoriy",
+    "retry": "qayta urinish",
+    "relTime": {
+      "justNow": "hozirgina",
+      "minutesAgo": "{{count}} daq oldin",
+      "hoursAgo": "{{count}} soat oldin",
+      "daysAgo": "{{count}} kun oldin"
+    },
+    "timeAgo": {
+      "justNow": "hozirgina",
+      "minutesAgo": "{{count}} daqiqa oldin",
+      "hoursAgo": "{{count}} soat oldin",
+      "daysAgo": "{{count}} kun oldin"
+    }
+  },
+  "stats": {
+    "districts": "Tuman",
+    "schools": "Maktab",
+    "students": "O'quvchi",
+    "attendance": "davomat"
+  },
+  "roles": {
+    "short": {
+      "SUPERADMIN": "Super Admin",
+      "ADMIN": "Admin",
+      "REGION_DIRECTOR": "Viloyat mudiri",
+      "DISTRICT_DIRECTOR": "Tuman mudiri",
+      "DIRECTOR": "Direktor",
+      "MUDIR": "O'quv mudir",
+      "TEACHER": "O'qituvchi"
+    }
+  },
+  "sidebar": {
+    "main": "Asosiy",
+    "dashboard": "Dashboard",
+    "provinces": "Viloyatlar",
+    "districts": "Tumanlar",
+    "schools": "Maktablar",
+    "students": "O'quvchilar",
+    "classes": "Sinflar",
+    "attendance": "Davomat",
+    "users": "Foydalanuvchilar",
+    "devices": "Qurilmalar",
+    "cameras": "Kameralar",
+    "cameraAnalysis": "Kamera tahlili",
+    "aiAnalysis": "AI tahlili",
+    "settings": "Sozlamalar",
+    "teachers": "O'qituvchilar",
+    "aiChat": "AI Yordamchi"
+  },
+  "header": {
+    "roleLabel": {
+      "SUPERADMIN": "Super Admin Panel",
+      "ADMIN": "Viloyat Boshqaruvi",
+      "REGION_DIRECTOR": "Viloyat mudiri paneli",
+      "DISTRICT_DIRECTOR": "Tuman mudiri paneli",
+      "DIRECTOR": "Maktab Boshqaruvi",
+      "MUDIR": "O'quv ishlari bo'yicha",
+      "TEACHER": "O'qituvchi paneli",
+      "fallback": "Panel"
+    },
+    "theme": {
+      "title": "Mavzuni o'zgartirish"
+    },
+    "notifications": {
+      "title": "Bildirishnomalar",
+      "newCount": "{{count}} yangi",
+      "markAllRead": "Barchasini o'qish",
+      "empty": "Bildirishnomalar yo'q",
+      "emptySub": "Yangi xabarlar bu yerda ko'rinadi"
+    }
+  },
+  "login": {
+    "subtitle": "Face ID orqali real vaqtda davomat nazorati va boshqaruv tizimi",
+    "badges": {
+      "faceId": "Face ID",
+      "realtime": "Real-time",
+      "provinces": "14 viloyat",
+      "report": "Hisobot"
+    },
+    "signInTitle": "Tizimga kirish",
+    "signInSubtitle": "Hisobingiz bilan davom eting",
+    "usernameLabel": "Login",
+    "usernamePlaceholder": "Foydalanuvchi nomi",
+    "passwordLabel": "Parol",
+    "submitting": "Tekshirilmoqda...",
+    "submit": "Kirish",
+    "footer": "© 2026 Maktab Platform · v2.0",
+    "errorDefault": "Login yoki parol noto'g'ri"
+  },
+  "dashboard": {
+    "greeting": {
+      "morning": "Xayrli tong",
+      "day": "Xayrli kun",
+      "evening": "Xayrli kech"
+    },
+    "systemActive": "Tizim faol",
+    "roleSubtitle": {
+      "SUPERADMIN": "Barcha viloyatlar boshqaruvi",
+      "ADMIN": "Viloyat boshqaruvi",
+      "REGION_DIRECTOR": "Viloyat davomad boshqaruvi",
+      "DISTRICT_DIRECTOR": "Tuman davomad boshqaruvi",
+      "DIRECTOR": "Maktab boshqaruvi",
+      "MUDIR": "O'quv ishlari",
+      "TEACHER": "O'qituvchi"
+    },
+    "stats": {
+      "students": {
+        "label": "JAMI O'QUVCHILAR",
+        "sub": "{{count}} muassasa"
+      },
+      "presentToday": {
+        "label": "BUGUN KELGAN",
+        "sub": "{{percent}}% davomat"
+      },
+      "absent": {
+        "label": "KELMAGAN",
+        "sub": "Sababsiz/Kasal"
+      },
+      "schools": {
+        "label": "MAKTABLAR",
+        "sub": "Faol tizimda"
+      }
+    },
+    "attendanceChart": {
+      "title": "Davomat ko'rsatkichi",
+      "today": "Bugun",
+      "weekly": "Haftalik",
+      "present": "Kelgan",
+      "absent": "Kelmagan",
+      "late": "Kechikkan"
+    },
+    "events": {
+      "title": "Oxirgi voqealar",
+      "live": "LIVE",
+      "empty": "Voqealar yo'q",
+      "emptySub": "Face ID qurilma ulangach ko'rinadi"
+    },
+    "quickActions": {
+      "title": "Tezkor amallar",
+      "student": "O'quvchi",
+      "sync": "Sinxron",
+      "report": "Hisobot",
+      "settings": "Sozlama"
+    },
+    "devicesLabel": "Qurilmalar"
+  },
+  "devices": {
+    "pageTitle": "Qurilmalar nazorati",
+    "pageSubtitle": "Viloyat → Tuman → Maktab → Mikrotik Router → Face ID terminallar",
+    "createKeyBtn": "+ Kalit yaratish",
+    "stats": {
+      "miniPc": "Router",
+      "online": "Onlayn",
+      "offline": "Oflayn",
+      "totalTerminals": "Jami terminal",
+      "entrance": "Kirish ⬇",
+      "exit": "Chiqish ⬆",
+      "terminalsOnline": "Terminal onlayn"
+    },
+    "filters": {
+      "allProvinces": "Barcha viloyatlar",
+      "allDistricts": "Barcha tumanlar",
+      "allSchools": "Barcha maktablar"
+    },
+    "empty": {
+      "title": "Qurilmalar topilmadi",
+      "sub": "Router ro'yxatdan o'tganda bu yerda ko'rinadi"
+    },
+    "group": {
+      "count": "{{count}} ta Router",
+      "unassigned": "Biriktirilmagan",
+      "schoolFallback": "Maktab #{{id}}"
+    },
+    "card": {
+      "entrance": "KIRISH",
+      "exit": "CHIQISH",
+      "total": "JAMI",
+      "heartbeat": "Heartbeat: {{time}}"
+    },
+    "timeAgo": {
+      "justNow": "hozirgina",
+      "minutes": "{{count}} daq.",
+      "hours": "{{count}} soat",
+      "days": "{{count}} kun"
+    },
+    "status": {
+      "ONLINE": "Onlayn",
+      "OFFLINE": "Oflayn",
+      "ERROR": "Xato",
+      "unknown": "?"
+    },
+    "detail": {
+      "notAssigned": "Maktabga biriktirilmagan",
+      "terminalsStat": "Terminallar",
+      "entranceStat": "Kirish",
+      "exitStat": "Chiqish",
+      "facesStat": "Yuzlar",
+      "terminalsTitle": "Face ID terminallar",
+      "addTerminalBtn": "+ Terminal qo'shish",
+      "vpnIpLabel": "VPN IP",
+      "manageBtn": "Boshqarish"
+    },
+    "form": {
+      "newTerminalTitle": "Yangi Face ID qurilma",
+      "editTerminalTitle": "Terminalni tahrirlash",
+      "name": "Nomi (1-qavat kirish)",
+      "entranceOption": "⬇ Kirish",
+      "exitOption": "⬆ Chiqish",
+      "brand": "Brend (Hikvision, ZKTeco...)",
+      "model": "Model",
+      "serial": "Serial raqam (asosiy ID)",
+      "mac": "MAC manzil",
+      "ip": "IP manzil (VPN ichidagi lokal IP)",
+      "port": "Port (80, 8000...)",
+      "useHttps": "Qurilma HTTPS talab qiladi (o'z-o'zidan imzolangan sertifikat)",
+      "deviceUsername": "Qurilma login (masalan admin)",
+      "devicePassword": "Qurilma paroli",
+      "devicePasswordEditHint": "O'zgartirmaslik uchun bo'sh qoldiring",
+      "notes": "Izoh (ixtiyoriy)",
+      "noTerminals": "Terminal yo'q — yuqoridagi tugma orqali qo'shing",
+      "ipDiscoverBtn": "IP'larni ko'rish",
+      "ipDiscoverLoading": "Qidirilmoqda...",
+      "ipDiscoverEmpty": "Router hech qanday qurilma ko'rmayapti",
+      "ipDiscoverRegistered": "ro'yxatda bor"
+    },
+    "network": {
+      "title": "📡 Mikrotikka ulanish sozlamalari",
+      "vpnIp": "VPN IP:",
+      "publicKey": "WireGuard ochiq kaliti:",
+      "note": "Bu router WireGuard VPN tunnel orqali markaziy platformaga ulanadi. Face ID terminallar shu tarmoq ichidagi lokal IP orqali ishlaydi.",
+      "serverNotConfiguredTitle": "Markaziy VPN server hali sozlanmagan",
+      "serverNotConfiguredNote": "Kalitlar va sozlamalar tayyor, lekin markaziy WireGuard server (Endpoint/Public Key) hali o'rnatilmagan — quyidagi konfiguratsiya server tayyor bo'lgach ishlaydi.",
+      "downloadConfBtn": "WireGuard (.conf) yuklab olish",
+      "showScriptBtn": "RouterOS skriptini ko'rish",
+      "hideScriptBtn": "Skriptni yashirish",
+      "copyBtn": "Nusxalash",
+      "copiedBtn": "Nusxalandi!",
+      "loadError": "Konfiguratsiyani olishda xatolik",
+      "lanSubnet": "Maktab LAN → server manzili",
+      "setupTitle": "Mikrotik'ni sozlash (3 qadam)",
+      "step1": "WinBox bilan Mikrotik'ka kiring va New Terminal oynasini oching",
+      "step2": "\"Sozlash skriptini ko'rsatish\" tugmasini bosing, skriptni to'liq nusxalab terminalga qo'ying (qayta qo'yish xavfsiz)",
+      "step3": "1 daqiqa ichida router shu yerda ONLINE bo'ladi — keyin quyida qurilmalarni qidiring"
+    },
+    "assign": {
+      "title": "Maktabga biriktirish",
+      "deviceLabel": "Router:",
+      "selectSchool": "-- Maktabni tanlang --"
+    },
+    "edit": {
+      "editRouterBtn": "Routerni tahrirlash",
+      "title": "Routerni tahrirlash",
+      "nameLabel": "Nomi",
+      "vpnIpLabel": "VPN IP",
+      "notesLabel": "Izoh",
+      "lanSubnetLabel": "Maktab LAN subneti",
+      "lanSubnetHint": "Mikrotik lokal tarmog'i (masalan 192.168.88.0/24). O'zgartirilsa, sozlash skriptini routerga qayta qo'ying.",
+      "routerAdminUsernameLabel": "Router admin login",
+      "routerAdminPasswordLabel": "Router admin paroli",
+      "routerAdminPasswordEditHint": "O'zgartirmaslik uchun bo'sh qoldiring",
+      "routerAdminNote": "RouterOS boshqaruv panelining (REST API) login/paroli — \"Terminal qo'shish\" formasida IP'larni avtomatik aniqlash uchun ixtiyoriy."
+    },
+    "creds": {
+      "title": "Yangi router uchun kalit yaratish",
+      "subtitle": "Viloyat, tuman va maktabni tanlang.",
+      "selectProvince": "-- Viloyatni tanlang --",
+      "selectDistrict": "-- Tumanni tanlang --",
+      "selectSchool": "-- Maktabni tanlang --",
+      "namePlaceholder": "Router nomi (ixtiyoriy)",
+      "vpnIpPlaceholder": "VPN IP (bo'sh qoldirsangiz avtomatik tayinlanadi)",
+      "createBtn": "Yaratish",
+      "createdTitle": "✅ Kalit yaratildi!",
+      "createdSubtitle": "WireGuard kalitlari avtomatik generatsiya qilindi. To'liq ulanish konfiguratsiyasini (VPN sozlamalari) router kartochkasini ochib topasiz.",
+      "school": "Maktab",
+      "apiKey": "API Kalit",
+      "fillAll": "Maktabni tanlang",
+      "lanSubnetPlaceholder": "LAN subnet (bo'sh = 192.168.88.0/24)"
+    },
+    "deleteConfirm": {
+      "title": "Routerni o'chirish",
+      "message": "Bu amalni bekor qilib bo'lmaydi."
+    },
+    "manage": {
+      "tabStatus": "Holat",
+      "tabUsers": "Qurilmadagilar",
+      "tabFaces": "Yuzlar",
+      "tabEvents": "Voqealar",
+      "connecting": "Terminalga ulanmoqda...",
+      "model": "Model",
+      "serial": "Seriya raqami",
+      "firmware": "Firmware",
+      "users": "Foydalanuvchilar",
+      "usersWithFace": "Yuzi bor",
+      "reachableAt": "VPN manzil",
+      "deviceTime": "Qurilma vaqti",
+      "timeDrift": "Vaqt farqi",
+      "seconds": "{{count}} s",
+      "lastEvent": "Oxirgi voqea",
+      "refresh": "Yangilash",
+      "openDoor": "Eshikni ochish",
+      "doorOpened": "Eshik ochildi",
+      "syncTime": "Vaqtni moslash",
+      "timeUpdated": "Qurilma vaqti yangilandi (farq {{count}} s edi)",
+      "timeUnchanged": "Vaqt to'g'ri (farq {{count}} s) — o'zgartirilmadi",
+      "reboot": "Qayta yuklash",
+      "rebooting": "Terminal qayta yuklanmoqda — 1-2 daqiqa javob bermaydi",
+      "rebootConfirmTitle": "Terminalni qayta yuklash",
+      "rebootConfirmMessage": "Terminal 1-2 daqiqa ishlamaydi, bu vaqtda o'quvchilar o'ta olmaydi. Davom etasizmi?",
+      "usersTotal": "Qurilmada {{count}} ta foydalanuvchi",
+      "strangers": "{{count}} tasi platformada yo'q",
+      "noUsers": "Qurilmada foydalanuvchi yo'q",
+      "hasFace": "Yuz bor",
+      "noFace": "Yuzsiz",
+      "matched": "O'quvchi",
+      "stranger": "Begona",
+      "loadMore": "Yana yuklash",
+      "deleteUserTitle": "Qurilmadan o'chirish",
+      "deleteUserMessage": "{{id}} foydalanuvchisi (yuzi bilan) terminaldan o'chiriladi. Platformadagi ma'lumotga tegilmaydi.",
+      "facesHint": "Maktabdagi rasmi va Face ID'si bor o'quvchilar terminalga yuklanadi. Rasm aniq, old tomondan va kamida 120px bo'lishi kerak — yaroqsiz rasmlar xato ro'yxatida ko'rsatiladi.",
+      "syncAll": "Barcha o'quvchilarni yuklash",
+      "syncRunning": "Yuklanmoqda...",
+      "readOnly": "Sizda faqat ko'rish huquqi bor",
+      "progress": "{{done}} / {{total}}",
+      "succeeded": "{{count}} ta muvaffaqiyatli",
+      "aborted": "To'xtatildi",
+      "finished": "Tugadi: {{ok}} muvaffaqiyatli, {{failed}} xato",
+      "errorsTitle": "Xatolar",
+      "eventsHint": "Terminal kuzatuvi yo'q paytdagi voqealarni (masalan qo'shilishidan oldingi kun) qurilmadan qayta o'qib davomatga yozadi. Takroriy yozuvlar avtomatik o'tkazib yuboriladi. Ko'pi bilan 7 kun.",
+      "from": "Dan",
+      "to": "Gacha",
+      "backfill": "Voqealarni tiklash",
+      "backfillRunning": "O'qilmoqda...",
+      "backfillResult": "O'qildi: {{read}} ta voqea, davomatga yozildi: {{recorded}}",
+      "lastError": "Oxirgi aloqa xatosi",
+      "unmatchedTitle": "Moslanmagan tanish urinishlari",
+      "unmatchedHint": "Terminal yuzni \"tanidi\" deb hisobladi, lekin bu identifikator joriy o'quvchilardan hech biriga mos kelmadi (masalan o'chirilgan o'quvchining eski yuzi qurilmada qolib ketgan bo'lishi mumkin).",
+      "unmatchedEmpty": "So'nggi moslanmagan urinishlar yo'q",
+      "unmatchedReasonUnknown": "hech kimga mos kelmadi",
+      "unmatchedReasonAmbiguous": "bir nechta o'quvchiga mos keldi",
+      "unsupported": "Bu brend hozircha masofadan boshqarilmaydi (faqat Hikvision)."
+    },
+    "discovery": {
+      "title": "Qurilmalarni qidirish",
+      "hint": "Router ortidagi tarmoq VPN orqali skanerlanadi. Topilgan qurilmani bir bosishda qo'shish mumkin.",
+      "username": "Qurilma logini (ixtiyoriy)",
+      "password": "Qurilma paroli (ixtiyoriy)",
+      "scanBtn": "Qidirish",
+      "scanning": "Qidirilmoqda (~1 daq)",
+      "loginHint": "Login berilmasa ham Hikvision qurilmalari topiladi. Login berilsa har bir qurilmaga bir marta urinib, model va turi aniqlanadi.",
+      "found": "{{count}} ta qurilma topildi",
+      "none": "Qurilma topilmadi",
+      "routerOffline": "router OFFLINE — natija to'liq bo'lmasligi mumkin",
+      "timedOut": "vaqt tugadi, ro'yxat to'liq emas",
+      "category": {
+        "faceTerminal": "Face ID terminal",
+        "camera": "Kamera",
+        "recorder": "Registrator",
+        "router": "Router",
+        "unknown": "Noma'lum"
+      },
+      "registered": "Qo'shilgan",
+      "addTerminal": "Terminal qilish",
+      "addCamera": "Kamera qilish",
+      "cameraName": "Kamera nomi"
+    }
+  },
+  "provinces": {
+    "title": "Viloyatlar",
+    "summary": "{{count}} ta viloyat · {{districts}} tuman · {{schools}} maktab",
+    "searchPlaceholder": "Viloyat nomi bo'yicha qidirish...",
+    "table": {
+      "districts": "Tumanlar",
+      "schools": "Maktablar",
+      "students": "O'quvchilar",
+      "attendance": "Davomat"
+    },
+    "modal": {
+      "newTitle": "Yangi viloyat",
+      "nameLabel": "Viloyat nomi",
+      "namePlaceholder": "Masalan: Toshkent"
+    },
+    "validation": {
+      "nameRequired": "Viloyat nomini kiriting"
+    }
+  },
+  "districts": {
+    "title": "Tumanlar",
+    "summary": "{{provinces}} viloyat · {{districts}} tuman · {{schools}} maktab",
+    "provinceCard": {
+      "subtitle": "{{districts}} ta tuman · {{schools}} maktab"
+    },
+    "notFound": "Tuman topilmadi",
+    "searchPlaceholder": "Tuman nomi bo'yicha qidirish...",
+    "table": {
+      "schools": "Maktablar",
+      "students": "O'quvchilar"
+    },
+    "modal": {
+      "newTitlePrefix": "Yangi tuman — {{province}}",
+      "nameLabel": "Tuman nomi",
+      "namePlaceholder": "Masalan: Chilonzor"
+    },
+    "validation": {
+      "nameRequired": "Tuman nomini kiriting"
+    }
+  },
+  "schools": {
+    "title": "Maktablar",
+    "selectProvinceSubtitle": "Viloyatni tanlang",
+    "studentsSuffix": "{{count}} o'quvchi",
+    "districtNotFound": "Tuman topilmadi",
+    "notFound": "Maktab topilmadi",
+    "searchPlaceholder": "Maktab nomi bo'yicha qidirish...",
+    "card": {
+      "studentsLabel": "O'quvchilar",
+      "todayPresent": "Bugun kelgan"
+    },
+    "table": {
+      "students": "O'quvchilar",
+      "attendance": "Davomat"
+    },
+    "modal": {
+      "newTitlePrefix": "Yangi maktab — {{district}}",
+      "nameLabel": "Maktab nomi",
+      "namePlaceholder": "Masalan: 56-maktab"
+    },
+    "validation": {
+      "nameRequired": "Maktab nomini kiriting"
+    }
+  },
+  "classes": {
+    "title": "Sinflar",
+    "subtitle": "Maktab sinflarini boshqarish",
+    "addBtn": "Sinf qo'shish",
+    "filters": {
+      "province": "Viloyat",
+      "district": "Tuman",
+      "school": "Maktab"
+    },
+    "selectSchoolPrompt": "Sinflarni ko'rish uchun maktabni tanlang",
+    "stats": {
+      "classes": "Sinflar",
+      "students": "O'quvchilar",
+      "assigned": "Sinfga biriktirilgan"
+    },
+    "searchPlaceholder": "Sinf nomi bo'yicha qidirish...",
+    "card": {
+      "studentSuffix": "o'quvchi",
+      "gradeSuffix": "{{grade}}-sinf",
+      "teacherLabel": "Sinf rahbari",
+      "noTeacher": "Biriktirilmagan"
+    },
+    "empty": {
+      "title": "Bu maktabda hali sinf yo'q",
+      "addBtn": "+ Sinf qo'shish"
+    },
+    "modal": {
+      "editTitle": "Sinfni tahrirlash",
+      "newTitle": "Yangi sinf",
+      "gradeLabel": "Sinf raqami",
+      "gradeOption": "{{grade}}-sinf",
+      "sectionLabel": "Bo'lim",
+      "nameLabel": "Sinf nomi",
+      "namePlaceholder": "Masalan: 5-A",
+      "teacherLabel": "Sinf rahbari (O'qituvchi)",
+      "teacherNotSelected": "Tanlanmagan",
+      "noTeachersHint": "Bu maktabda TEACHER roli bilan foydalanuvchi yo'q"
+    },
+    "validation": {
+      "fieldsRequired": "Sinf raqami va bo'limni tanlang"
+    },
+    "noSchoolAssigned": "Sizga hali maktab biriktirilmagan"
+  },
+  "users": {
+    "title": "Foydalanuvchilar",
+    "countSuffix": "{{count}} ta foydalanuvchi",
+    "searchPlaceholder": "Ism yoki login bo'yicha qidirish...",
+    "table": {
+      "fullName": "F.I.O",
+      "login": "Login",
+      "role": "Rol",
+      "assignment": "Biriktirma"
+    },
+    "assignment": {
+      "wholeSystem": "Butun tizim"
+    },
+    "modal": {
+      "editTitle": "Foydalanuvchini tahrirlash",
+      "newTitle": "Yangi foydalanuvchi",
+      "fullNameLabel": "To'liq ism",
+      "fullNamePlaceholder": "Masalan: Karimov Ali",
+      "loginLabel": "Login",
+      "loginPlaceholder": "karimov_ali",
+      "passwordLabelEdit": "Yangi parol (bo'sh qoldiring agar o'zgartirmasangiz)",
+      "passwordLabelNew": "Parol",
+      "roleLabel": "Rol",
+      "provinceLabel": "📍 Viloyat",
+      "provinceLabelRegion": "🗺️ Viloyat",
+      "districtLabel": "🧭 Tuman",
+      "selectProvince": "Viloyatni tanlang...",
+      "selectDistrict": "Tumanni tanlang...",
+      "assignSectionTitle": "🏫 Maktabga biriktirish",
+      "provinceShort": "Viloyat",
+      "districtShort": "Tuman",
+      "schoolShort": "Maktab"
+    },
+    "validation": {
+      "fullNameRequired": "To'liq ismni kiriting",
+      "loginRequired": "Loginni kiriting",
+      "passwordRequired": "Parolni kiriting"
+    }
+  },
+  "students": {
+    "title": "O'quvchilar",
+    "selectProvinceSubtitle": "Viloyatni tanlang",
+    "districtNotFound": "Tuman topilmadi",
+    "schoolNotFound": "Maktab topilmadi",
+    "card": {
+      "birthDatePlaceholder": "Sana kiritilmagan",
+      "age": "Yosh"
+    },
+    "school": {
+      "classLabel": "Sinf",
+      "directorPrefix": "👤 {{name}}"
+    },
+    "class": {
+      "studentSuffix": "O'quvchi",
+      "noTeacher": "O'qituvchi biriktirilmagan",
+      "gradeSection": "{{grade}}-sinf, {{section}}-bo'lim"
+    },
+    "addClassBtn": "Sinf qo'shish",
+    "noClasses": "Bu maktabda hali sinf yo'q",
+    "unassignedClass": "Sinfga biriktirilmagan",
+    "unassignedClassHint": "🗂 Sinfga biriktirilmagan o'quvchilarni ko'rish",
+    "selectClassSubtitle": "Sinfni tanlang",
+    "searchPlaceholder": "Ism bo'yicha qidirish...",
+    "count": "{{count}} ta",
+    "notFound": "O'quvchi topilmadi",
+    "table": {
+      "photo": "Rasm",
+      "faceId": "Face ID",
+      "school": "Maktab",
+      "age": "Yosh"
+    },
+    "profile": {
+      "fields": {
+        "birthDate": "Tug'ilgan sana",
+        "faceId": "Face ID",
+        "idNumber": "ID raqam",
+        "school": "Maktab",
+        "status": "Holat",
+        "statusActive": "Faol",
+        "class": "Sinf"
+      },
+      "pushFaceBtn": "Terminalga yuborish",
+      "pushingFace": "Yuborilmoqda...",
+      "pushSuccess": "Yuz terminal(lar)ga muvaffaqiyatli yuborildi",
+      "pushFailed": "Terminalga yuborishda xatolik",
+      "pushNoPhoto": "Avval rasm yuklang",
+      "attendanceStatsTitle": "Davomat statistikasi",
+      "stats": {
+        "present": "Kelgan",
+        "absent": "Kelmagan",
+        "percent": "Foiz",
+        "periodNote": "So'nggi {{days}} kunlik davr bo'yicha, haqiqiy davomat qaydlariga asoslangan"
+      },
+      "weeklyTitle": "Haftalik davomat",
+      "weekDays": [
+        "Du",
+        "Se",
+        "Cho",
+        "Pa",
+        "Ju"
+      ],
+      "activityTitle": "So'nggi faoliyat",
+      "activityAdded": "Tizimga qo'shildi",
+      "today": "Bugun",
+      "activityNoData": "Davomat ma'lumotlari yo'q",
+      "deviceNotConnected": "Face ID qurilma ulanmagan",
+      "aiSummary": {
+        "noData": "So'nggi davr uchun ma'lumot yo'q",
+        "noAttendance": "So'nggi davrda hech qanday davomat qaydi yo'q",
+        "excellent": "So'nggi davrda davomat ajoyib — {{percent}}% ({{days}} kun kelgan)",
+        "good": "So'nggi davrda davomat yaxshi — {{percent}}% ({{days}} kun kelgan)",
+        "moderate": "So'nggi davrda davomat o'rtacha — {{percent}}% ({{days}} kun kelgan)",
+        "low": "So'nggi davrda davomat past — {{percent}}% ({{days}} kun kelgan)"
+      },
+      "timelineTitle": "Davomat tarixi (so'nggi hodisalar)",
+      "timelineEmpty": "Hozircha davomat hodisalari yo'q",
+      "eventIn": "Keldi",
+      "eventOut": "Ketdi"
+    },
+    "modal": {
+      "newTitle": "Yangi o'quvchi",
+      "fullNameLabel": "Ism va familiya",
+      "fullNamePlaceholder": "Masalan: Karimov Jasur",
+      "birthDateLabel": "Tug'ilgan sana",
+      "photoLabel": "Rasm",
+      "photoDropzone": "Rasmni tanlang yoki bu yerga tashlang",
+      "photoHint": "JPG, PNG, WEBP · 10MB gacha",
+      "photoUploading": "Yuklanmoqda...",
+      "photoUploadFailed": "Rasm yuklanmadi: {{message}}",
+      "faceIdAutoLabel": "Face ID (avtomatik)",
+      "faceIdAutoNotice": "Face ID avtomatik yaratiladi",
+      "faceIdAutoDesc": "Rasm mini-PC serverga yuboriladi → Face ID qurilmaga yuklanadi"
+    },
+    "classModal": {
+      "editTitle": "Sinfni tahrirlash",
+      "newTitle": "Yangi sinf",
+      "gradeLabel": "Sinf raqami",
+      "sectionLabel": "Bo'lim",
+      "nameLabel": "Sinf nomi",
+      "namePlaceholder": "Masalan: 5-A",
+      "teacherLabel": "Sinf rahbari (O'qituvchi)",
+      "teacherNotSelected": "Tanlanmagan",
+      "noTeachersHint": "Bu maktabda TEACHER roli bilan foydalanuvchi yo'q"
+    },
+    "validation": {
+      "fullNameRequired": "Ism va familiyani kiriting",
+      "classFieldsRequired": "Sinf raqami va bo'limni tanlang"
+    }
+  },
+  "attendance": {
+    "dataInsufficient": "Ma'lumot yetarli emas",
+    "liveStats": "Live Stats",
+    "distributionChart": "Taqsimot grafigi",
+    "hubs": "Hududlar",
+    "global": {
+      "title": "Respublika Davomat Tahlili",
+      "subtitle": "Barcha viloyatlar bo'yicha markazlashtirilgan o'quvchilar va maktablar qamrovi",
+      "donutLabel": "Maktab",
+      "progress": {
+        "connectedSchools": "Tizimga ulangan maktablar",
+        "registeredStudents": "Ro'yxatdagi o'quvchilar"
+      }
+    },
+    "district": {
+      "titleSuffix": "{{province}} tahlili",
+      "title": "{{province}} bo'yicha tumanlar kesimida",
+      "subtitle": "Viloyatga qarashli tumanlardagi maktab va o'quvchilar qamrovi statistikasi",
+      "avgCapacity": "O'rtacha quvvat",
+      "schoolsSuffix": "{{count}} maktab",
+      "progress": {
+        "schools": "Maktablar taqsimoti",
+        "students": "O'quvchilar qamrovi"
+      }
+    },
+    "school": {
+      "titleSuffix": "{{district}} maktablari",
+      "title": "{{district}} ro'yxati",
+      "subtitle": "Tuman miqyosidagi barcha ta'lim muassasalari va ulardagi o'quvchilar soni",
+      "institutions": "Muassasalar",
+      "progress": {
+        "coverage": "Tuman bo'yicha qamrov"
+      },
+      "studentsSuffix": "{{count}} nafar o'quvchi",
+      "statusLabel": "Holati",
+      "statusActive": "Faol"
+    },
+    "detail": {
+      "attendanceRateTitle": "Davomat Ko'rsatkichi",
+      "came": "Keldi",
+      "didNotCome": "Kelmadi",
+      "flowTitle": "Kirdi-chiqdi Tahlili",
+      "flowSubtitle": "Kunning soatlari bo'yicha oqim statistikasi",
+      "devicesMonitorTitle": "Mini-PC va Terminallar Monitori",
+      "noDevices": "Face ID uskunalar ulanmagan",
+      "online": "Online",
+      "offline": "Offline",
+      "liveFeedTitle": "Jonli Lenta (Kirdi-chiqdi)",
+      "recordsSuffix": "{{count}} qayd",
+      "table": {
+        "time": "Vaqt",
+        "student": "O'quvchi",
+        "action": "Harakat",
+        "temperature": "Harorat"
+      },
+      "entered": "Kirdi",
+      "exited": "Chiqdi",
+      "studentsListTitle": "O'quvchilar ro'yxati"
+    }
+  },
+  "cameras": {
+    "status": {
+      "ONLINE": "Onlayn",
+      "OFFLINE": "Oflayn",
+      "MAINTENANCE": "Texnik xizmatda",
+      "unknown": "?"
+    },
+    "eventTypes": {
+      "MOTION": "Harakat aniqlandi",
+      "PERSON_DETECTED": "Notanish shaxs",
+      "CROWD": "Olomon",
+      "UNAUTHORIZED_ACCESS": "Ruxsatsiz kirish",
+      "EQUIPMENT_ISSUE": "Uskuna nosozligi",
+      "OTHER": "Boshqa"
+    },
+    "severity": {
+      "LOW": "Past",
+      "MEDIUM": "O'rta",
+      "HIGH": "Yuqori"
+    },
+    "loadError": "Kameralar ro'yxatini yuklab bo'lmadi",
+    "title": "Kameralar",
+    "subtitle": "Maktablardagi video kuzatuv kameralari",
+    "addBtn": "+ Kamera qo'shish",
+    "stats": {
+      "total": "Jami kameralar",
+      "online": "Onlayn",
+      "maintenance": "Texnik xizmatda",
+      "offline": "Oflayn"
+    },
+    "filters": {
+      "allStatuses": "Barcha holatlar"
+    },
+    "empty": {
+      "noneAdded": "Hali kamera qo'shilmagan",
+      "notFound": "Kameralar topilmadi",
+      "addHint": "Birinchi kamerani qo'shish uchun yuqoridagi tugmani bosing",
+      "filterHint": "Filtrlarni o'zgartirib ko'ring"
+    },
+    "card": {
+      "ipNotEntered": "IP kiritilmagan",
+      "eventCount": "{{count}} ta hodisa qayd etilgan",
+      "noRoom": "Xona biriktirilmagan"
+    },
+    "detail": {
+      "liveStreamNotConnected": "Jonli tasvir stream platformasiga ulanmagan",
+      "ip": "IP manzil",
+      "resolution": "Ruxsat",
+      "location": "Joylashuv",
+      "status": "Holat",
+      "notes": "Izoh",
+      "eventsTitle": "Hodisalar",
+      "logEventBtn": "+ Hodisa qayd etish",
+      "noEvents": "Bu kamera uchun hali hodisa qayd etilmagan",
+      "viewAll": "Barcha hodisalarni ko'rish →",
+      "liveStreamHint": "Bu tizimda jonli video oqim ko'rsatilmaydi — kamera faqat hodisalarni qayd etish uchun ishlatiladi"
+    },
+    "modal": {
+      "editTitle": "Kamerani tahrirlash",
+      "newTitle": "Yangi kamera",
+      "nameLabel": "Kamera nomi",
+      "namePlaceholder": "Masalan: Kirish eshigi",
+      "schoolLabel": "Maktab",
+      "ownSchoolFallback": "O'z maktabingiz",
+      "locationLabel": "Joylashuv",
+      "locationPlaceholder": "Masalan: 1-qavat, kirish eshigi",
+      "ipLabel": "IP manzil",
+      "ipPlaceholder": "192.168.1.21",
+      "resolutionLabel": "Ruxsat (resolution)",
+      "resolutionPlaceholder": "1080p",
+      "statusLabel": "Holat",
+      "notesLabel": "Izoh",
+      "nameRequired": "Kamera nomi majburiy",
+      "schoolRequired": "Maktab tanlanishi shart",
+      "saveError": "Saqlashda xatolik",
+      "deleteError": "O'chirishda xatolik"
+    },
+    "eventModal": {
+      "title": "Hodisa qayd etish — {{camera}}",
+      "typeLabel": "Turi",
+      "severityLabel": "Xavflilik darajasi",
+      "occurredAtLabel": "Sodir bo'lgan vaqt",
+      "descriptionLabel": "Tavsif",
+      "descriptionPlaceholder": "Ixtiyoriy tafsilotlar",
+      "saveError": "Hodisa qayd etishda xatolik"
+    },
+    "deleteConfirm": {
+      "title": "Kamerani o'chirish",
+      "message": "Bu kamera va unga tegishli barcha hodisalar butunlay o'chiriladi."
+    },
+    "rooms": {
+      "manageBtn": "Xonalar",
+      "title": "Xonalarni boshqarish",
+      "addTitle": "Yangi xona qo'shish",
+      "editTitle": "Xonani tahrirlash",
+      "numberLabel": "Xona raqami",
+      "numberPlaceholder": "Masalan: 101",
+      "nameLabel": "Xona nomi",
+      "namePlaceholder": "Masalan: Matematika kabineti",
+      "addBtn": "Qo'shish",
+      "empty": "Hozircha xonalar qo'shilmagan",
+      "cameraCount": "{{count}} kamera",
+      "roomLabel": "Xona",
+      "noRoom": "Xona tanlanmagan",
+      "noneForSchool": "Bu maktabda hali xona yo'q — avval \"Xonalar\" tugmasi orqali qo'shing",
+      "numberRequired": "Xona raqami majburiy",
+      "nameRequired": "Xona nomi majburiy",
+      "saveError": "Xonani saqlashda xatolik yuz berdi",
+      "deleteError": "Xonani o'chirishda xatolik yuz berdi",
+      "deleteConfirm": {
+        "title": "Xonani o'chirish",
+        "message": "Haqiqatan ham bu xonani o'chirmoqchimisiz? Unga biriktirilgan kameralar \"biriktirilmagan\" holatga o'tadi."
+      }
+    },
+    "manageInSettings": "Kameralarni sozlash",
+    "searchPlaceholder": "Kamera yoki xona bo'yicha qidirish...",
+    "device": {
+      "sectionTitle": "Masofadan boshqarish (ixtiyoriy)",
+      "sectionHint": "Brend, IP va login kiritilsa kamera holati avtomatik kuzatiladi va jonli kadr ko'rinadi (maktab routeri VPN orqali).",
+      "brand": "Brend",
+      "brandNone": "Boshqarilmaydi",
+      "port": "HTTP port",
+      "rtspPort": "RTSP port",
+      "channel": "Kanal",
+      "username": "Qurilma logini",
+      "password": "Qurilma paroli",
+      "passwordKeep": "O'zgartirmaslik uchun bo'sh qoldiring",
+      "snapshotAt": "Kadr: {{time}}",
+      "refreshSnapshot": "Yangilash",
+      "lastSeen": "Oxirgi aloqa",
+      "checkBtn": "Tekshirish",
+      "checkOk": "Kamera javob berdi ({{model}})",
+      "rtspBtn": "RTSP manzil",
+      "rtspHint": "VLC yoki NVR dasturida maktab tarmog'i ichidan ochiladi (login/parol so'raladi). Brauzerda jonli video uchun media-gateway kerak.",
+      "notManagedHint": "Jonli kadr uchun Sozlamalar → Kameralar bo'limida brend, IP va loginni kiriting"
+    }
+  },
+  "cameraAnalysis": {
+    "title": "Kamera tahlili",
+    "subtitle": "Kameralar bo'yicha qayd etilgan hodisalar jurnali",
+    "addBtn": "+ Hodisa qayd etish",
+    "loadError": "Hodisalarni yuklab bo'lmadi",
+    "stats": {
+      "total": "Jami hodisalar",
+      "unresolved": "Hal qilinmagan",
+      "resolved": "Hal qilingan",
+      "highRisk": "Yuqori xavfli"
+    },
+    "filters": {
+      "allCameras": "Barcha kameralar",
+      "allTypes": "Barcha turlar",
+      "allLevels": "Barcha darajalar",
+      "allStatuses": "Barcha holatlar",
+      "unresolved": "Hal qilinmagan",
+      "resolved": "Hal qilingan"
+    },
+    "empty": {
+      "title": "Hozircha hodisa qayd etilmagan",
+      "hint": "Birinchi hodisani qo'shish uchun yuqoridagi tugmani bosing"
+    },
+    "reportedBySuffix": "{{name}} tomonidan",
+    "resolvedLabel": "Hal qilingan",
+    "unresolvedLabel": "Hal qilinmagan",
+    "toggleError": "Holatni yangilashda xatolik",
+    "modal": {
+      "title": "Hodisa qayd etish",
+      "cameraLabel": "Kamera",
+      "typeLabel": "Turi",
+      "severityLabel": "Xavflilik darajasi",
+      "selectCameraRequired": "Kamerani tanlang",
+      "saveError": "Hodisa qayd etishda xatolik"
+    }
+  },
+  "aiAnalysis": {
+    "title": "AI tahlili",
+    "subtitle1": "CameraEvent ma'lumotlaridan hisoblangan haqiqiy statistika",
+    "subtitle2": "CameraEvent ma'lumotlaridan hisoblangan haqiqiy statistika — computer vision emas",
+    "loadError": "Tahlil ma'lumotlarini yuklab bo'lmadi",
+    "emptyState": {
+      "title": "Hali tahlil qilinadigan hodisa yo'q",
+      "desc": "Bu sahifadagi barcha ko'rsatkichlar CameraEvent jadvalidagi haqiqiy yozuvlardan hisoblanadi. Kameralar hodisa qayd eta boshlashi bilan bu yerda haqiqiy tahlil paydo bo'ladi — soxta raqamlar ko'rsatilmaydi.",
+      "addCameraBtn": "Kamera qo'shish",
+      "logEventBtn": "Hodisa qayd etish"
+    },
+    "periodOptions": {
+      "days7": "Oxirgi 7 kun",
+      "days30": "Oxirgi 30 kun",
+      "days90": "Oxirgi 90 kun"
+    },
+    "summaryCard": {
+      "title": "Hodisa tahlili jamlanmasi",
+      "desc": "Kameralar bo'yicha qo'lda (yoki kelajakda avtomatlashtirilgan manba orqali) qayd etilgan hodisalar CameraEvent jadvaliga yoziladi; bu sahifa shu haqiqiy yozuvlardan turlar, darajalar va vaqt bo'yicha real vaqtda agregatsiya hisoblaydi."
+    },
+    "stats": {
+      "total": "Jami hodisalar",
+      "unresolved": "Hal qilinmagan",
+      "topType": "Eng ko'p uchraydigan tur",
+      "resolvedRatio": "Hal qilingan nisbati"
+    },
+    "severityDistTitle": "Xavflilik darajasi bo'yicha taqsimot",
+    "totalLabel": "jami",
+    "typeDistTitle": "Hodisa turlari bo'yicha taqsimot",
+    "dailyTrendTitle": "Kunlik trend (oxirgi {{days}} kun)",
+    "topCamerasTitle": "Eng ko'p hodisali kameralar",
+    "topCamerasEmpty": "Hodisa qayd etilgan kamera topilmadi",
+    "eventsSuffix": "{{count}} ta hodisa",
+    "trendTooltip": "{{date}}: {{count}} ta hodisa"
+  },
+  "settings": {
+    "title": "Sozlamalar",
+    "subtitle": "Profil, xavfsizlik, maktab ma'lumotlari va bildirishnomalar",
+    "tabs": {
+      "profile": "Profil",
+      "password": "Parol",
+      "school": "Maktab ma'lumotlari",
+      "notifications": "Bildirishnomalar",
+      "cameras": "Kameralar"
+    },
+    "roleLabels": {
+      "SUPERADMIN": "Super Admin",
+      "ADMIN": "Admin",
+      "REGION_DIRECTOR": "Viloyat mudiri",
+      "DISTRICT_DIRECTOR": "Tuman mudiri",
+      "DIRECTOR": "Maktab direktori",
+      "MUDIR": "O'quv mudiri",
+      "TEACHER": "O'qituvchi"
+    },
+    "profile": {
+      "title": "Shaxsiy ma'lumotlar",
+      "desc": "Ismingiz butun tizimda (jumladan bildirishnomalarda) shu tarzda ko'rinadi",
+      "fullNameLabel": "To'liq ism",
+      "fullNamePlaceholder": "Ism Familiya",
+      "usernameLabel": "Login / telefon",
+      "savedMsg": "Saqlandi!",
+      "errorMsg": "Xatolik",
+      "phoneLabel": "Telefon raqami"
+    },
+    "password": {
+      "title": "Parolni o'zgartirish",
+      "desc": "Xavfsizlik uchun joriy parolingizni bilishingiz shart",
+      "oldLabel": "Joriy parol",
+      "newLabel": "Yangi parol",
+      "newPlaceholder": "Kamida 6 belgi",
+      "confirmLabel": "Yangi parolni tasdiqlang",
+      "updateBtn": "Parolni yangilash",
+      "fillAllFields": "Barcha maydonlarni to'ldiring",
+      "mismatch": "Yangi parollar mos kelmadi",
+      "tooShort": "Yangi parol kamida 6 belgidan iborat bo'lishi kerak",
+      "changedMsg": "Parol muvaffaqiyatli o'zgartirildi!",
+      "wrongOldMsg": "Joriy parol noto'g'ri bo'lishi mumkin"
+    },
+    "school": {
+      "title": "Maktab ma'lumotlari",
+      "notAssigned": "Sizning hisobingiz biror maktabga biriktirilmagan.",
+      "loadError": "Maktab ma'lumotlarini yuklab bo'lmadi.",
+      "editDesc": "Bu ma'lumotlar faqat sizning maktabingizga tegishli — boshqa maktablarga ta'sir qilmaydi",
+      "contactSectionTitle": "Aloqa va rasmiy ma'lumotlar",
+      "addressPlaceholder": "Shahar, ko'cha, uy raqami",
+      "savedMsg": "Saqlandi!",
+      "fields": {
+        "name": "Maktab nomi",
+        "province": "Viloyat",
+        "district": "Tuman",
+        "director": "Direktor",
+        "studentCount": "O'quvchilar soni",
+        "classCount": "Sinflar soni",
+        "address": "Manzil",
+        "phone": "Telefon",
+        "schoolNumber": "Maktab raqami",
+        "foundedYear": "Ta'sis yili"
+      }
+    },
+    "notifications": {
+      "title": "Bildirishnoma turlari",
+      "desc": "Qaysi turdagi bildirishnomalarni bildirishnoma panelida ko'rsatishni tanlang"
+    },
+    "notifTypes": {
+      "ATTENDANCE": {
+        "label": "Davomad xabarlari",
+        "desc": "O'quvchi kirish/chiqishi haqida"
+      },
+      "DEVICE_STATUS": {
+        "label": "Qurilma holati",
+        "desc": "Face ID qurilmalar onlayn/oflayn"
+      },
+      "SYSTEM": {
+        "label": "Tizim xabarlari",
+        "desc": "Umumiy tizim bildirishnomalari"
+      },
+      "ALERT": {
+        "label": "Ogohlantirishlar",
+        "desc": "Muhim, diqqat talab qiladigan holatlar"
+      },
+      "USER_ACTION": {
+        "label": "Foydalanuvchi harakatlari",
+        "desc": "Boshqa xodimlar bajargan amallar"
+      }
+    },
+    "cameras": {
+      "desc": "Kamera texnik ma'lumotlari (IP, o'lchamlar) faqat shu yerda tahrirlanadi — Kameralar sahifasida ko'rsatilmaydi."
+    }
+  },
+  "confirmModal": {
+    "defaultTitle": "O'chirishni tasdiqlang",
+    "defaultMessage": "Bu amalni qaytarib bo'lmaydi",
+    "cancel": "Bekor qilish",
+    "delete": "O'chirish"
+  },
+  "crudPage": {
+    "newTitle": "Yangi qo'shish"
+  },
+  "notes": {
+    "title": "Izohlar tarixi",
+    "placeholder": "Yangi izoh kiriting (masalan: xulq-atvor, sog'liq holati, xat/tushuntirish...)",
+    "add": "Qo'shish",
+    "empty": "Hozircha izohlar yo'q",
+    "saveError": "Izohni saqlashda xatolik yuz berdi",
+    "unknownAuthor": "Noma'lum muallif"
+  },
+  "teachers": {
+    "title": "O'qituvchilar",
+    "subtitle": "Maktab o'qituvchilari ro'yxati va profillari",
+    "addBtn": "O'qituvchi qo'shish",
+    "searchPlaceholder": "O'qituvchi qidirish...",
+    "empty": "O'qituvchi topilmadi",
+    "fields": {
+      "fullName": "F.I.Sh.",
+      "username": "Login",
+      "password": "Parol",
+      "phone": "Telefon raqami",
+      "subject": "Fan",
+      "role": "Rol"
+    },
+    "form": {
+      "addTitle": "Yangi o'qituvchi qo'shish",
+      "editTitle": "O'qituvchini tahrirlash",
+      "passwordHint": "Bo'sh qoldirilsa, parol o'zgarmaydi",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish"
+    },
+    "deleteConfirm": {
+      "title": "O'qituvchini o'chirish",
+      "message": "Haqiqatan ham bu o'qituvchini o'chirmoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi."
+    },
+    "profile": {
+      "subjectLabel": "Fan",
+      "phoneLabel": "Telefon",
+      "roleLabel": "Rol",
+      "noSubject": "Ko'rsatilmagan",
+      "noPhone": "Ko'rsatilmagan",
+      "classesTitle": "Rahbarlik qilayotgan sinflar",
+      "noClasses": "Hozircha hech qanday sinfga rahbarlik qilmaydi",
+      "classesCountLabel": "Sinflar",
+      "studentsCountLabel": "O'quvchilar"
+    }
+  },
+  "guardians": {
+    "title": "Ota-ona / vasiylar",
+    "addBtn": "+ Qo'shish",
+    "namePlaceholder": "Ism (ixtiyoriy)",
+    "linkBtn": "Biriktirish",
+    "empty": "Hozircha ota-ona/vasiy biriktirilmagan",
+    "unnamed": "Ism kiritilmagan",
+    "telegramLinked": "Telegram ulangan",
+    "telegramNotLinked": "Telegram ulanmagan",
+    "saveError": "Biriktirishda xatolik yuz berdi"
+  },
+  "aiChat": {
+    "title": "AI Yordamchi",
+    "subtitle": "Maktab ma'lumotlariga asoslangan javoblar",
+    "emptyTitle": "Nima bilan yordam beray?",
+    "emptyDesc": "Men faqat tizimdagi haqiqiy ma'lumotlar asosida javob beraman — o'quvchi, o'qituvchi, sinf va davomat haqida so'rashingiz mumkin.",
+    "placeholder": "Savolingizni yozing...",
+    "errorGeneric": "Javob olishda xatolik yuz berdi",
+    "suggestions": [
+      "Bugun maktabda umumiy davomat qanday?",
+      "5-A sinfida nechta o'quvchi bor?",
+      "Sinflar ro'yxatini va sinf rahbarlarini ko'rsat"
+    ],
+    "dragHint": "AI Yordamchi (surib ko'chirish mumkin)",
+    "clearChat": "Suhbatni tozalash",
+    "copy": "Nusxalash",
+    "you": "Siz"
+  }
+}

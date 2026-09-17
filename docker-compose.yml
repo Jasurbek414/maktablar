@@ -2,8 +2,6 @@
 # =================================
 # docker compose up -d --build
 
-version: '3.9'
-
 services:
   # ─── PostgreSQL Database ───
   db:
@@ -11,16 +9,16 @@ services:
     container_name: maktab-db
     restart: always
     environment:
-      POSTGRES_DB: maktabdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME:-maktabdb}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -35,16 +33,35 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8085:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/maktabdb
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-      JWT_SECRET: ChangeMeToSecureRandomString123!
+      # MUHIM (2026-09-15 audit): konteyner standart holatda UTC'da ishlardi, lekin kod
+      # ichida davomat kunining chegaralari qattiq ZoneOffset.ofHours(5) (Toshkent) bilan
+      # hisoblanadi va LocalDate.now() serverning UTC kunini qaytarardi. Natijada Toshkent
+      # vaqti bilan 00:00–05:00 oralig'ida "bugungi davomat" KECHAGI kunni ko'rsatardi
+      # (va kechki hodisalar noto'g'ri kunga yozilardi). TZ o'rnatilgach LocalDate.now()
+      # Toshkent kunini qaytaradi va koddagi +5 offsetlar bilan mos tushadi.
+      TZ: Asia/Tashkent
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME:-maktabdb}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET}
+      BOT_SHARED_SECRET: ${BOT_SHARED_SECRET}
       SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
       SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
-      BOT_WEBHOOK_URL: http://bot:5000
       BACKEND_PUBLIC_URL: https://maktab.ecos.uz
+      BOT_WEBHOOK_URL: http://bot:5000
+      WG_SYNC_SECRET: ${WG_SYNC_SECRET}
+      WG_SERVER_PUBLIC_KEY: ${WG_SERVER_PUBLIC_KEY:-}
+      WG_SERVER_ENDPOINT: ${WG_SERVER_ENDPOINT:-}
+      WG_SERVER_PORT: ${WG_SERVER_PORT:-51820}
+      WG_GATEWAY_PUBLIC_KEY: ${WG_GATEWAY_PUBLIC_KEY:-}
+      # Maktab LAN'lariga (Face ID/kameralar) wg-gateway orqali chiqish — docker-entrypoint.sh
+      VPN_GATEWAY_HOST: wg-gateway
+      VPN_ROUTES: 10.20.0.0/24,10.30.0.0/16
+    # Faqat o'z network namespace'ida route qo'shish uchun (host tarmog'iga ta'sir qilmaydi)
+    cap_add:
+      - NET_ADMIN
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -53,32 +70,58 @@ services:
     networks:
       - maktab
 
-  # ─── Frontend (React + Vite) ───
+  # ─── VPN gateway: backend -> WireGuard hub -> maktab Mikrotik -> Face ID/kameralar ───
+  # Hub'ga (hozir shu mashinadagi wireguard-server/, keyin VPS) tashqariga qarab ulanadi,
+  # shuning uchun bu mashina CGNAT ortida bo'lsa ham ishlaydi.
+  wg-gateway:
+    container_name: maktab-wg-gateway
+    build:
+      context: ./wg-gateway
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
+    environment:
+      WG_GATEWAY_PRIVATE_KEY: ${WG_GATEWAY_PRIVATE_KEY:?WG_GATEWAY_PRIVATE_KEY .env faylida bo'lishi shart}
+      WG_HUB_PUBLIC_KEY: ${WG_SERVER_PUBLIC_KEY:?WG_SERVER_PUBLIC_KEY .env faylida bo'lishi shart}
+      WG_HUB_ENDPOINT: ${WG_HUB_ENDPOINT:?WG_HUB_ENDPOINT (host:port) .env faylida bo'lishi shart}
+    networks:
+      - maktab
+
+  # ─── Frontend (ikkalasi ham: "/" oddiy foydalanuvchilar, "/spd" superadmin) ───
   frontend:
     container_name: maktab-frontend
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.frontend
     restart: always
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
+    volumes:
+      # Mobil ilova APK'sini yuklab olish havolasi uchun (/downloads/...) — fayl shu
+      # papkaga qo'yiladi, nginx konteynerini qayta qurmasdan yangilanadi (volume orqali).
+      - ./downloads:/usr/share/nginx/downloads:ro
+    depends_on:
+      - backend
     networks:
       - maktab
 
 
-  # ─── Telegram Bot (Python) ───
+  # ─── Telegram bot (@maktab_davomad_bot) — ota-onalarga xabar yuborish ───
   bot:
     container_name: maktab-bot
     build:
       context: ./bot
       dockerfile: Dockerfile
     restart: always
-    ports:
-      - "5000:5000"
     environment:
-      BOT_TOKEN: "8768167572:AAHB_GHJFBqJI-RHzL9iliMxJJMrLTqJuEw"
+      BOT_TOKEN: ${BOT_TOKEN}
+      BOT_SHARED_SECRET: ${BOT_SHARED_SECRET}
       BACKEND_URL: http://backend:8080
-      WEBHOOK_URL: https://bot.maktab.ecos.uz/webhook
+      PORT: 5000
+    depends_on:
+      - backend
     networks:
       - maktab
 
@@ -87,7 +130,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: maktab-tunnel
     restart: always
-    command: tunnel --no-autoupdate run --token ***PURGED_TUNNEL_TOKEN***
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
     networks:
       - maktab
 

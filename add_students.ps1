@@ -1,4 +1,8 @@
-$token = "***PURGED_JWT***"
+# Token'ni kodga yozmang — avval quyidagicha login qilib oling:
+#   $login = Invoke-RestMethod -Uri "https://maktab.ecos.uz/api/auth/login" -Method POST -ContentType "application/json" -Body (@{username="..."; password="..."} | ConvertTo-Json)
+#   $env:MAKTAB_TOKEN = $login.token
+if (-not $env:MAKTAB_TOKEN) { Write-Error "MAKTAB_TOKEN environment o'zgaruvchisi topilmadi. Avval login qilib $env:MAKTAB_TOKEN ni o'rnating."; exit 1 }
+$token = $env:MAKTAB_TOKEN
 $headers = @{ "Authorization" = "Bearer $token"; "Content-Type" = "application/json" }
 
 $students135 = @(

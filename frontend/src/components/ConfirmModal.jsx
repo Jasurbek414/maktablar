@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function ConfirmModal({ open, onConfirm, onCancel, title, message }) {
+  const { t } = useTranslation();
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onCancel}>
@@ -12,13 +14,13 @@ export default function ConfirmModal({ open, onConfirm, onCancel, title, message
             </svg>
           </div>
           <div>
-            <h3 className="text-base font-semibold text-white">{title || "O'chirishni tasdiqlang"}</h3>
-            <p className="text-[12px] text-slate-500 mt-0.5">{message || "Bu amalni qaytarib bo'lmaydi"}</p>
+            <h3 className="text-base font-semibold text-white">{title || t('confirmModal.defaultTitle')}</h3>
+            <p className="text-[12px] text-slate-500 mt-0.5">{message || t('confirmModal.defaultMessage')}</p>
           </div>
         </div>
         <div className="flex gap-3 mt-5">
-          <button onClick={onCancel} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor qilish</button>
-          <button onClick={onConfirm} className="flex-1 h-10 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors">O'chirish</button>
+          <button onClick={onCancel} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">{t('confirmModal.cancel')}</button>
+          <button onClick={onConfirm} className="flex-1 h-10 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors">{t('confirmModal.delete')}</button>
         </div>
       </div>
     </div>

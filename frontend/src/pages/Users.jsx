@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 
 const ROLES = [
-  { value: 'ADMIN', label: 'Admin (Viloyat)', icon: '🛡️', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-  { value: 'DIRECTOR', label: 'Direktor', icon: '🏫', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-  { value: 'MUDIR', label: "O'quv mudir", icon: '📋', color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
-  { value: 'TEACHER', label: "O'qituvchi", icon: '👨‍🏫', color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
+  { value: 'ADMIN', icon: '🛡️', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+  { value: 'REGION_DIRECTOR', icon: '🗺️', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+  { value: 'DISTRICT_DIRECTOR', icon: '🧭', color: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
+  { value: 'DIRECTOR', icon: '🏫', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  { value: 'MUDIR', icon: '📋', color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
+  { value: 'TEACHER', icon: '👨‍🏫', color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
 ];
-const ROLE_COLORS = { SUPERADMIN:'bg-red-500/10 text-red-400', ADMIN:'bg-amber-500/10 text-amber-400', DIRECTOR:'bg-emerald-500/10 text-emerald-400', MUDIR:'bg-cyan-500/10 text-cyan-400', TEACHER:'bg-violet-500/10 text-violet-400' };
-const ROLE_LABELS = { SUPERADMIN:'Super Admin', ADMIN:'Viloyat Admin', DIRECTOR:'Direktor', MUDIR:"O'quv mudir", TEACHER:"O'qituvchi" };
+const ROLE_COLORS = { SUPERADMIN:'bg-red-500/10 text-red-400', ADMIN:'bg-amber-500/10 text-amber-400', REGION_DIRECTOR:'bg-blue-500/10 text-blue-400', DISTRICT_DIRECTOR:'bg-teal-500/10 text-teal-400', DIRECTOR:'bg-emerald-500/10 text-emerald-400', MUDIR:'bg-cyan-500/10 text-cyan-400', TEACHER:'bg-violet-500/10 text-violet-400' };
 
 function Modal({open, onClose, title, children}) {
   if (!open) return null;
@@ -21,6 +23,7 @@ function Field({label, children}) {
 }
 
 export default function Users() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
@@ -63,6 +66,9 @@ export default function Users() {
   const openAdd = () => { setEditing(null); setForm({}); setModal(true); };
   const openEdit = (item) => { setEditing(item); setForm({...item}); setModal(true); };
   const save = async () => {
+    if (!form.fullName?.trim()) { alert(t('users.validation.fullNameRequired')); return; }
+    if (!form.username?.trim()) { alert(t('users.validation.loginRequired')); return; }
+    if (!editing && !form.password?.trim()) { alert(t('users.validation.passwordRequired')); return; }
     try {
       if (editing) await api.put(`/api/users/${editing.id}`, form);
       else await api.post('/api/users', form);
@@ -93,6 +99,7 @@ export default function Users() {
 
   const getSchoolName = (u) => { const s = allSchools.find(x=>x.id==u.schoolId); return s?.name||''; };
   const getProvName = (u) => { const p = provinces.find(x=>x.id==u.provinceId); return p?.name||''; };
+  const getDistrictName = (u) => { const d = allDistricts.find(x=>x.id==u.districtId); return d?.name||''; };
 
   const inputCls = "w-full h-11 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.1] text-white text-sm placeholder-slate-600 outline-none focus:border-emerald-500/40 transition-colors";
   const selectCls = "w-full h-11 px-4 rounded-xl bg-[#0a120e] border border-emerald-500/[0.1] text-white text-sm outline-none focus:border-emerald-500/40 transition-colors";
@@ -101,21 +108,21 @@ export default function Users() {
     <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-xl font-bold text-white">Foydalanuvchilar</h1><p className="text-sm text-slate-500 mt-0.5">{users.length} ta foydalanuvchi</p></div>
+        <div><h1 className="text-xl font-bold text-white">{t('users.title')}</h1><p className="text-sm text-slate-500 mt-0.5">{t('users.countSuffix', { count: users.length })}</p></div>
         <button onClick={openAdd} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Qo'shish
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>{t('common.add')}
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
         <button onClick={()=>setRoleFilter('')} className={`rounded-xl p-3 border transition-colors ${!roleFilter ? 'bg-emerald-500/10 border-emerald-500/30':'bg-white/[0.02] border-white/[0.04] hover:border-emerald-500/20'}`}>
-          <span className="text-[9px] text-slate-600 uppercase">Barchasi</span>
+          <span className="text-[9px] text-slate-600 uppercase">{t('common.all')}</span>
           <p className="text-xl font-bold text-white mt-1">{users.length}</p>
         </button>
         {ROLES.map(r => (
           <button key={r.value} onClick={()=>setRoleFilter(rf=>rf===r.value?'':r.value)} className={`rounded-xl p-3 border transition-colors ${roleFilter===r.value ? 'bg-emerald-500/10 border-emerald-500/30':'bg-white/[0.02] border-white/[0.04] hover:border-emerald-500/20'}`}>
-            <span className="text-[9px] text-slate-600 uppercase">{r.icon} {r.label}</span>
+            <span className="text-[9px] text-slate-600 uppercase">{r.icon} {t(`roles.short.${r.value}`)}</span>
             <p className="text-xl font-bold text-white mt-1">{roleCounts[r.value]||0}</p>
           </button>
         ))}
@@ -123,7 +130,7 @@ export default function Users() {
 
       {/* Search */}
       <div className="mb-4">
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ism yoki login bo'yicha qidirish..."
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('users.searchPlaceholder')}
           className="w-full max-w-sm h-10 px-4 rounded-xl bg-white/[0.03] border border-emerald-500/[0.08] text-white text-sm placeholder-slate-600 outline-none focus:border-emerald-500/30 transition-colors" />
       </div>
 
@@ -131,16 +138,16 @@ export default function Users() {
       <div className="rounded-2xl border border-emerald-500/[0.08] bg-[#0d1a14] overflow-hidden">
         <table className="w-full text-sm">
           <thead><tr className="border-b border-emerald-500/[0.06]">
-            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase w-8">№</th>
-            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">F.I.O</th>
-            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">Login</th>
-            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">Rol</th>
-            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">Biriktirma</th>
-            <th className="px-5 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase w-24">Amallar</th>
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase w-8">{t('common.number')}</th>
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">{t('users.table.fullName')}</th>
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">{t('users.table.login')}</th>
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">{t('users.table.role')}</th>
+            <th className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">{t('users.table.assignment')}</th>
+            <th className="px-5 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase w-24">{t('common.actions')}</th>
           </tr></thead>
           <tbody>
-            {loading ? (<tr><td colSpan={6} className="px-5 py-12 text-center text-slate-600">Yuklanmoqda...</td></tr>)
-            : filtered.length === 0 ? (<tr><td colSpan={6} className="px-5 py-12 text-center text-slate-600">Ma'lumot topilmadi</td></tr>)
+            {loading ? (<tr><td colSpan={6} className="px-5 py-12 text-center text-slate-600">{t('common.loading')}</td></tr>)
+            : filtered.length === 0 ? (<tr><td colSpan={6} className="px-5 py-12 text-center text-slate-600">{t('common.notFound')}</td></tr>)
             : filtered.map((u,i) => (
               <tr key={u.id} className="border-b border-emerald-500/[0.04] hover:bg-emerald-500/[0.03] transition-colors">
                 <td className="px-5 py-3 text-slate-600 text-xs">{i+1}</td>
@@ -151,11 +158,12 @@ export default function Users() {
                   </div>
                 </td>
                 <td className="px-5 py-3 text-slate-400 text-xs font-mono">{u.username}</td>
-                <td className="px-5 py-3"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${ROLE_COLORS[u.role]||''}`}>{ROLE_LABELS[u.role]||u.role}</span></td>
+                <td className="px-5 py-3"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${ROLE_COLORS[u.role]||''}`}>{t(`roles.short.${u.role}`, { defaultValue: u.role })}</span></td>
                 <td className="px-5 py-3 text-xs text-slate-500">
-                  {u.role==='ADMIN' && getProvName(u) && <span className="px-2 py-0.5 rounded-md bg-amber-500/[0.06] text-amber-400/80 text-[10px]">📍 {getProvName(u)}</span>}
+                  {u.role==='REGION_DIRECTOR' && getProvName(u) && <span className="px-2 py-0.5 rounded-md bg-blue-500/[0.06] text-blue-400/80 text-[10px]">🗺️ {getProvName(u)}</span>}
+                  {u.role==='DISTRICT_DIRECTOR' && getDistrictName(u) && <span className="px-2 py-0.5 rounded-md bg-teal-500/[0.06] text-teal-400/80 text-[10px]">🧭 {getDistrictName(u)}</span>}
                   {['DIRECTOR','MUDIR','TEACHER'].includes(u.role) && getSchoolName(u) && <span className="px-2 py-0.5 rounded-md bg-cyan-500/[0.06] text-cyan-400/80 text-[10px]">🏫 {getSchoolName(u)}</span>}
-                  {u.role==='SUPERADMIN' && <span className="text-[10px] text-slate-600">Butun tizim</span>}
+                  {['SUPERADMIN','ADMIN'].includes(u.role) && <span className="text-[10px] text-slate-600">{t('users.assignment.wholeSystem')}</span>}
                 </td>
                 <td className="px-5 py-3 text-right">
                   {u.role !== 'SUPERADMIN' && <>
@@ -174,19 +182,19 @@ export default function Users() {
       </div>
 
       {/* Add/Edit Modal */}
-      <Modal open={modal} onClose={()=>setModal(false)} title={editing ? 'Foydalanuvchini tahrirlash' : 'Yangi foydalanuvchi'}>
-        <Field label="To'liq ism"><input className={inputCls} value={form.fullName||''} onChange={e=>set('fullName',e.target.value)} placeholder="Masalan: Karimov Ali" /></Field>
-        <Field label="Login"><input className={inputCls} value={form.username||''} onChange={e=>set('username',e.target.value)} placeholder="karimov_ali" /></Field>
-        <Field label={editing ? "Yangi parol (bo'sh qoldiring agar o'zgartirmasangiz)" : "Parol"}><input type="password" className={inputCls} value={form.password||''} onChange={e=>set('password',e.target.value)} placeholder="••••••" /></Field>
+      <Modal open={modal} onClose={()=>setModal(false)} title={editing ? t('users.modal.editTitle') : t('users.modal.newTitle')}>
+        <Field label={t('users.modal.fullNameLabel')}><input className={inputCls} value={form.fullName||''} onChange={e=>set('fullName',e.target.value)} placeholder={t('users.modal.fullNamePlaceholder')} /></Field>
+        <Field label={t('users.modal.loginLabel')}><input className={inputCls} value={form.username||''} onChange={e=>set('username',e.target.value)} placeholder={t('users.modal.loginPlaceholder')} /></Field>
+        <Field label={editing ? t('users.modal.passwordLabelEdit') : t('users.modal.passwordLabelNew')}><input type="password" className={inputCls} value={form.password||''} onChange={e=>set('password',e.target.value)} placeholder="••••••" /></Field>
 
         {/* Role selection as cards */}
-        <Field label="Rol">
+        <Field label={t('users.modal.roleLabel')}>
           <div className="grid grid-cols-2 gap-2">
             {ROLES.map(r => (
               <button key={r.value} type="button" onClick={()=>set('role',r.value)}
                 className={`p-3 rounded-xl border text-left transition-all ${form.role===r.value ? r.color+' border-current scale-[1.02]' : 'bg-white/[0.02] border-white/[0.05] hover:border-emerald-500/20 text-slate-400'}`}>
                 <span className="text-lg">{r.icon}</span>
-                <p className="text-xs font-semibold mt-1">{r.label}</p>
+                <p className="text-xs font-semibold mt-1">{t(`roles.short.${r.value}`)}</p>
               </button>
             ))}
           </div>
@@ -194,10 +202,30 @@ export default function Users() {
 
         {/* ADMIN → Province */}
         {form.role === 'ADMIN' && (
-          <Field label="📍 Viloyat">
+          <Field label={t('users.modal.provinceLabel')}>
             <select className={selectCls} value={form.provinceId||''} onChange={e=>set('provinceId',e.target.value)}>
-              <option value="">Viloyatni tanlang...</option>
+              <option value="">{t('users.modal.selectProvince')}</option>
               {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </Field>
+        )}
+
+        {/* REGION_DIRECTOR → Province only */}
+        {form.role === 'REGION_DIRECTOR' && (
+          <Field label={t('users.modal.provinceLabelRegion')}>
+            <select className={selectCls} value={form.provinceId||''} onChange={e=>set('provinceId',e.target.value)}>
+              <option value="">{t('users.modal.selectProvince')}</option>
+              {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </Field>
+        )}
+
+        {/* DISTRICT_DIRECTOR → District only */}
+        {form.role === 'DISTRICT_DIRECTOR' && (
+          <Field label={t('users.modal.districtLabel')}>
+            <select className={selectCls} value={form.districtId||''} onChange={e=>set('districtId',e.target.value)}>
+              <option value="">{t('users.modal.selectDistrict')}</option>
+              {allDistricts.map(d => <option key={d.id} value={d.id}>{d.name}{d.provinceName ? ` — ${d.provinceName}` : ''}</option>)}
             </select>
           </Field>
         )}
@@ -205,27 +233,27 @@ export default function Users() {
         {/* DIRECTOR / MUDIR / TEACHER → Province → District → School */}
         {['DIRECTOR','MUDIR','TEACHER'].includes(form.role) && (<>
           <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 mb-4 space-y-3">
-            <p className="text-[10px] text-slate-500 uppercase font-semibold mb-2">🏫 Maktabga biriktirish</p>
+            <p className="text-[10px] text-slate-500 uppercase font-semibold mb-2">{t('users.modal.assignSectionTitle')}</p>
             <div>
-              <label className="text-[10px] text-slate-600">Viloyat</label>
+              <label className="text-[10px] text-slate-600">{t('users.modal.provinceShort')}</label>
               <select className={selectCls + ' mt-1'} value={form.provinceId||''} onChange={e=>set('provinceId',e.target.value)}>
-                <option value="">Tanlang...</option>
+                <option value="">{t('common.selectDots')}</option>
                 {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             {form.provinceId && (
               <div>
-                <label className="text-[10px] text-slate-600">Tuman</label>
+                <label className="text-[10px] text-slate-600">{t('users.modal.districtShort')}</label>
                 <select className={selectCls + ' mt-1'} value={form.districtId||''} onChange={e=>set('districtId',e.target.value)}>
-                  <option value="">Tanlang...</option>
+                  <option value="">{t('common.selectDots')}</option>
                   {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
             )}
             <div>
-              <label className="text-[10px] text-slate-600">Maktab</label>
+              <label className="text-[10px] text-slate-600">{t('users.modal.schoolShort')}</label>
               <select className={selectCls + ' mt-1'} value={form.schoolId||''} onChange={e=>set('schoolId',e.target.value)}>
-                <option value="">Tanlang...</option>
+                <option value="">{t('common.selectDots')}</option>
                 {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
@@ -233,8 +261,8 @@ export default function Users() {
         </>)}
 
         <div className="flex gap-3 mt-6">
-          <button onClick={()=>setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">Bekor</button>
-          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">Saqlash</button>
+          <button onClick={()=>setModal(false)} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors">{t('common.cancel')}</button>
+          <button onClick={save} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">{t('common.save')}</button>
         </div>
       </Modal>
       <ConfirmModal open={!!deleteId} onCancel={()=>setDeleteId(null)} onConfirm={()=>remove(deleteId)} />
