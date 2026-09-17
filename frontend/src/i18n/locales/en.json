@@ -652,6 +652,25 @@
     "validation": {
       "fullNameRequired": "Enter first and last name",
       "classFieldsRequired": "Select the grade number and section"
+    },
+    "importBtn": "Add via Excel",
+    "import": {
+      "title": "Add students via Excel",
+      "desc": "Add many students at once in one file. Download the template first, fill it in, then upload it.",
+      "downloadTemplate": "Download template",
+      "fileLabel": "Excel file (.xlsx)",
+      "filePlaceholder": "Choose a file",
+      "targetClassNote": "Rows with an empty \"Class\" column will be assigned to the current class ({{className}})",
+      "submitBtn": "Import",
+      "importing": "Importing...",
+      "noFileSelected": "Please choose a file first",
+      "resultTitle": "Result",
+      "resultSummary": "Total {{total}} rows: {{created}} created, {{failed}} failed",
+      "errorsTitle": "Errors",
+      "warningsTitle": "Warnings",
+      "rowLabel": "row {{row}}",
+      "closeBtn": "Close",
+      "doneBtn": "Done"
     }
   },
   "attendance": {

@@ -652,6 +652,25 @@
     "validation": {
       "fullNameRequired": "Ism va familiyani kiriting",
       "classFieldsRequired": "Sinf raqami va bo'limni tanlang"
+    },
+    "importBtn": "Excel orqali qo'shish",
+    "import": {
+      "title": "Excel orqali o'quvchilar qo'shish",
+      "desc": "Ko'plab o'quvchini bitta faylda kiriting. Avval shablonni yuklab oling, to'ldiring va yuklang.",
+      "downloadTemplate": "Shablonni yuklab olish",
+      "fileLabel": "Excel fayl (.xlsx)",
+      "filePlaceholder": "Faylni tanlang",
+      "targetClassNote": "Faylda \"Sinf\" ustuni bo'sh qoldirilgan qatorlar joriy sinfga ({{className}}) biriktiriladi",
+      "submitBtn": "Import qilish",
+      "importing": "Import qilinmoqda...",
+      "noFileSelected": "Avval faylni tanlang",
+      "resultTitle": "Natija",
+      "resultSummary": "Jami {{total}} qator: {{created}} ta qo'shildi, {{failed}} ta xato",
+      "errorsTitle": "Xatolar",
+      "warningsTitle": "Ogohlantirishlar",
+      "rowLabel": "{{row}}-qator",
+      "closeBtn": "Yopish",
+      "doneBtn": "Tayyor"
     }
   },
   "attendance": {

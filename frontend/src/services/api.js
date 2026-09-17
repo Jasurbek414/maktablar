@@ -193,6 +193,27 @@ export const api = {
     return res.json();
   },
 
+  // Excel orqali ko'plab o'quvchi import qilish (StudentController#importExcel) — bitta
+  // fayl, hisobga olinadigan maktab/sinf FormData orqali yuboriladi (JSON emas, chunki
+  // fayl binary).
+  async importStudents(file, schoolId, classId) {
+    const token = localStorage.getItem('token');
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('schoolId', schoolId);
+    if (classId != null) fd.append('classId', classId);
+    const res = await fetch(`${API_BASE}/api/students/import`, {
+      method: 'POST',
+      headers: langHeaders({ Authorization: `Bearer ${token}` }),
+      body: fd,
+    });
+    if (!res.ok) {
+      if (await checkAuthFailure(res)) throw new Error('Sessiya muddati tugagan, qayta kiring');
+      throw new Error(await extractErrorMessage(res, 'Import xatosi'));
+    }
+    return res.json();
+  },
+
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

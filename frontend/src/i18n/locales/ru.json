@@ -652,6 +652,25 @@
     "validation": {
       "fullNameRequired": "Введите имя и фамилию",
       "classFieldsRequired": "Выберите номер класса и литеру"
+    },
+    "importBtn": "Добавить через Excel",
+    "import": {
+      "title": "Добавить учеников через Excel",
+      "desc": "Введите сразу много учеников в одном файле. Сначала скачайте шаблон, заполните и загрузите.",
+      "downloadTemplate": "Скачать шаблон",
+      "fileLabel": "Файл Excel (.xlsx)",
+      "filePlaceholder": "Выберите файл",
+      "targetClassNote": "Строки с пустой колонкой \"Класс\" будут привязаны к текущему классу ({{className}})",
+      "submitBtn": "Импортировать",
+      "importing": "Импортируется...",
+      "noFileSelected": "Сначала выберите файл",
+      "resultTitle": "Результат",
+      "resultSummary": "Всего {{total}} строк: добавлено {{created}}, ошибок {{failed}}",
+      "errorsTitle": "Ошибки",
+      "warningsTitle": "Предупреждения",
+      "rowLabel": "строка {{row}}",
+      "closeBtn": "Закрыть",
+      "doneBtn": "Готово"
     }
   },
   "attendance": {

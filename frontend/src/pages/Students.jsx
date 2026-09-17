@@ -158,6 +158,10 @@ export default function Students({ user }) {
   const [classModal, setClassModal] = useState(null); // 'add' | 'edit' | null
   const [classForm, setClassForm] = useState({});
   const [deleteClassId, setDeleteClassId] = useState(null);
+  const [importModal, setImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
   const isAdmin = user?.role === 'ADMIN';
   const isDirector = user?.role === 'DIRECTOR';
 
@@ -231,6 +235,30 @@ export default function Students({ user }) {
   };
   const remove = async (id) => {
     try { await api.del(`/api/students/${id}`); setDeleteId(null); if (selClass) await pickClass(selClass); else if (selSchool) await pickSchool(selSchool); } catch (e) { alert(e.message); }
+  };
+
+  /* ── Excel orqali ko'plab o'quvchi qo'shish ── */
+  const openImport = () => { setImportFile(null); setImportResult(null); setImportModal(true); };
+  const downloadTemplate = async () => {
+    try {
+      const blob = await api.getBlob('/api/students/import-template');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'oquvchilar_shablon.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) { alert(e.message); }
+  };
+  const doImport = async () => {
+    if (!importFile) { alert(t('students.import.noFileSelected')); return; }
+    setImporting(true); setImportResult(null);
+    try {
+      const schoolId = selSchool?.id || user?.schoolId;
+      const res = await api.importStudents(importFile, schoolId, selClass?.id ?? null);
+      setImportResult(res);
+      if (selClass) await pickClass(selClass); else if (selSchool) await pickSchool(selSchool);
+    } catch (e) { alert(e.message); }
+    setImporting(false);
   };
 
   // O'quvchining rasmini uning maktabidagi Face ID terminallariga yuboradi — /api/v1/students
@@ -441,7 +469,7 @@ export default function Students({ user }) {
   /* 5. O'quvchilar */
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <BackBtn onClick={goClasses} />
           <div>
@@ -449,7 +477,7 @@ export default function Students({ user }) {
             <Breadcrumb items={isDirector ? [t('students.title'), selSchool?.name, selClass?.name] : [t('students.title'), selProv?.name, selDist?.name, selSchool?.name, selClass?.name].filter(Boolean)} />
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex rounded-lg border border-emerald-500/[0.1] overflow-hidden">
             <button onClick={() => setView('card')} className={`px-3 py-1.5 text-xs transition-colors ${view==='card' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-white'}`}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zm0 9.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25z" /></svg>
@@ -459,6 +487,10 @@ export default function Students({ user }) {
             </button>
           </div>
           <span className="text-sm text-slate-500">{t('students.count', { count: filtered.length })}</span>
+          <button onClick={openImport} className="h-10 px-4 rounded-xl border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 text-sm font-medium transition-colors flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            {t('students.importBtn')}
+          </button>
           <button onClick={openAdd} className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
             {t('common.add')}
@@ -681,6 +713,57 @@ export default function Students({ user }) {
         </div>
       </Modal>
       <ConfirmModal open={!!deleteId} onCancel={() => setDeleteId(null)} onConfirm={() => remove(deleteId)} />
+
+      <Modal open={importModal} onClose={() => { if (!importing) setImportModal(false); }} title={t('students.import.title')}>
+        <p className="text-xs text-slate-500 mb-4">{t('students.import.desc')}</p>
+        <button onClick={downloadTemplate} className="w-full mb-4 h-10 rounded-xl border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/10 text-sm font-medium transition-colors flex items-center justify-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+          {t('students.import.downloadTemplate')}
+        </button>
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('students.import.fileLabel')}</label>
+          <label className={`mt-1.5 flex items-center justify-center w-full h-11 px-4 rounded-xl border-2 border-dashed bg-white/[0.02] transition-colors text-sm ${importing ? 'border-emerald-500/40 cursor-wait text-slate-500' : 'border-emerald-500/20 hover:border-emerald-500/40 cursor-pointer text-slate-400'}`}>
+            {importFile ? importFile.name : t('students.import.filePlaceholder')}
+            <input type="file" accept=".xlsx" className="hidden" disabled={importing}
+              onChange={e => setImportFile(e.target.files?.[0] || null)} />
+          </label>
+        </div>
+        {selClass?.id && (
+          <p className="text-[11px] text-amber-300/80 mb-4">{t('students.import.targetClassNote', { className: selClass.name })}</p>
+        )}
+        {importResult && (
+          <div className="mb-4 rounded-xl bg-white/[0.03] border border-emerald-500/10 p-3 max-h-56 overflow-y-auto">
+            <p className="text-xs font-semibold text-white mb-1">{t('students.import.resultTitle')}</p>
+            <p className="text-xs text-emerald-400 mb-2">{t('students.import.resultSummary', { total: importResult.total, created: importResult.created, failed: importResult.failed })}</p>
+            {importResult.errors?.length > 0 && (
+              <div className="mb-2">
+                <p className="text-[10px] text-red-400 uppercase mb-1">{t('students.import.errorsTitle')}</p>
+                {importResult.errors.map((e, i) => (
+                  <p key={i} className="text-[11px] text-red-300">{t('students.import.rowLabel', { row: e.row })}: {e.message}</p>
+                ))}
+              </div>
+            )}
+            {importResult.warnings?.length > 0 && (
+              <div>
+                <p className="text-[10px] text-amber-400 uppercase mb-1">{t('students.import.warningsTitle')}</p>
+                {importResult.warnings.map((w, i) => (
+                  <p key={i} className="text-[11px] text-amber-300">{t('students.import.rowLabel', { row: w.row })}: {w.message}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="flex gap-3 mt-6">
+          <button onClick={() => setImportModal(false)} disabled={importing} className="flex-1 h-10 rounded-xl border border-slate-700 text-slate-400 text-sm hover:bg-white/[0.03] transition-colors disabled:opacity-50">
+            {importResult ? t('students.import.doneBtn') : t('students.import.closeBtn')}
+          </button>
+          {!importResult && (
+            <button onClick={doImport} disabled={importing || !importFile} className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors">
+              {importing ? t('students.import.importing') : t('students.import.submitBtn')}
+            </button>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }
