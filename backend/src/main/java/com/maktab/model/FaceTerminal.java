@@ -30,6 +30,11 @@ public class FaceTerminal {
     @Column(nullable = true)
     private Long schoolId;
 
+    /** Qaysi xonaga o'rnatilgan (ixtiyoriy — real-vaqtli joylashuv tizimi uchun,
+     * PersonRecognitionEvent/PersonLastSeen shu qiymatni denormallashtirib oladi). */
+    @Column(nullable = true)
+    private Long roomId;
+
     /** Qurilma nomi (masalan: "1-qavat kirish") */
     @Column(nullable = false)
     private String name;
