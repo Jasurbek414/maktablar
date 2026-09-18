@@ -657,6 +657,8 @@
     "import": {
       "title": "Add students via Excel",
       "desc": "Add many students at once in one file. Download the template first, fill it in, then upload it.",
+      "photoHint": "Photos are optional: in Excel use Insert → Pictures and place the photo over the \"Photo\" cell of the student's row (not \"in cell\"). File up to 50 MB.",
+      "photoSummary": "{{count}} students added with a photo",
       "downloadTemplate": "Download template",
       "fileLabel": "Excel file (.xlsx)",
       "filePlaceholder": "Choose a file",

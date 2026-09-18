@@ -21,10 +21,10 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   servlet:
     multipart:
-      # Standart 1MB — o'quvchilar Excel fayli (StudentController#importExcel) undan katta
-      # bo'lishi mumkin (minglab qatorli jadval bir necha MB bo'lishi mumkin).
-      max-file-size: 8MB
-      max-request-size: 8MB
+      # Standart 1MB — o'quvchilar Excel fayli (StudentController#importExcel) rasmlar bilan
+      # o'nlab MB bo'lishi mumkin. Docker'da docker-compose.yml'dagi ENV qiymati ustun turadi.
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 app:
   jwt:

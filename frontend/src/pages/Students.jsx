@@ -715,7 +715,8 @@ export default function Students({ user }) {
       <ConfirmModal open={!!deleteId} onCancel={() => setDeleteId(null)} onConfirm={() => remove(deleteId)} />
 
       <Modal open={importModal} onClose={() => { if (!importing) setImportModal(false); }} title={t('students.import.title')}>
-        <p className="text-xs text-slate-500 mb-4">{t('students.import.desc')}</p>
+        <p className="text-xs text-slate-500 mb-2">{t('students.import.desc')}</p>
+        <p className="text-[11px] text-slate-500 mb-4">{t('students.import.photoHint')}</p>
         <button onClick={downloadTemplate} className="w-full mb-4 h-10 rounded-xl border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/10 text-sm font-medium transition-colors flex items-center justify-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
           {t('students.import.downloadTemplate')}
@@ -734,7 +735,13 @@ export default function Students({ user }) {
         {importResult && (
           <div className="mb-4 rounded-xl bg-white/[0.03] border border-emerald-500/10 p-3 max-h-56 overflow-y-auto">
             <p className="text-xs font-semibold text-white mb-1">{t('students.import.resultTitle')}</p>
-            <p className="text-xs text-emerald-400 mb-2">{t('students.import.resultSummary', { total: importResult.total, created: importResult.created, failed: importResult.failed })}</p>
+            <p className="text-xs text-emerald-400 mb-1">{t('students.import.resultSummary', { total: importResult.total, created: importResult.created, failed: importResult.failed })}</p>
+            {importResult.withPhoto > 0 && (
+              <p className="text-xs text-cyan-400 mb-2">{t('students.import.photoSummary', { count: importResult.withPhoto })}</p>
+            )}
+            {importResult.imageNotice && (
+              <p className="text-[11px] text-amber-300 mb-2 py-2 px-2.5 rounded-lg bg-amber-500/[0.06] border border-amber-500/15">{importResult.imageNotice}</p>
+            )}
             {importResult.errors?.length > 0 && (
               <div className="mb-2">
                 <p className="text-[10px] text-red-400 uppercase mb-1">{t('students.import.errorsTitle')}</p>

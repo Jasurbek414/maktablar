@@ -25,7 +25,13 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
+import org.apache.poi.xssf.usermodel.XSSFDrawing;
+import org.apache.poi.xssf.usermodel.XSSFPicture;
+import org.apache.poi.xssf.usermodel.XSSFShape;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import com.maktab.faceterminal.FaceImageNormalizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -33,8 +39,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.time.LocalDate;
 
@@ -341,6 +354,10 @@ public class StudentController {
     // generatsiya qilinadi, classId berilgan bo'lsa target maktabga tegishliligi tekshiriladi.
 
     private static final int MAX_IMPORT_ROWS = 2000;
+    private static final int MIN_PHOTO_SIDE = 120;
+
+    // FileController bilan bir xil papka — saqlangan rasm /api/files/{nom} orqali ko'rsatiladi.
+    private Path importUploadDir = Paths.get("uploads").toAbsolutePath().normalize();
 
     @GetMapping("/import-template")
     public ResponseEntity<?> importTemplate(@RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -351,7 +368,12 @@ public class StudentController {
             header.createCell(0).setCellValue("F.I.Sh (majburiy)");
             header.createCell(1).setCellValue("Tug'ilgan sana (DD.MM.YYYY, ixtiyoriy)");
             header.createCell(2).setCellValue("Sinf nomi (ixtiyoriy, masalan 1-A)");
+            header.createCell(3).setCellValue("Rasm (ixtiyoriy)");
             for (int c = 0; c < 3; c++) sheet.setColumnWidth(c, 9000);
+            sheet.setColumnWidth(3, 5500);
+            // Rasm qatorga sig'ishi uchun ma'lumot qatorlari baland (sarlavha o'z balandligida qoladi).
+            sheet.setDefaultRowHeightInPoints(80);
+            header.setHeightInPoints(20);
 
             // Namuna ATAYLAB alohida varaqda: ma'lumot varag'ida qolsa, o'chirilmagan namuna
             // qatori haqiqiy o'quvchi sifatida import qilinib ketardi (import faqat 1-varaqni o'qiydi).
@@ -364,6 +386,9 @@ public class StudentController {
                 {"Faqat birinchi varaq (O'quvchilar) import qilinadi, 1-qator sarlavha hisoblanadi.", "", ""},
                 {"Sinf nomi maktabda mavjud sinf nomiga mos bo'lishi kerak; bo'sh qolsa joriy sinfga biriktiriladi.", "", ""},
                 {"Ism va tug'ilgan sanasi bir xil o'quvchi qayta qo'shilmaydi.", "", ""},
+                {"Rasm (ixtiyoriy): Qo'shish -> Rasm orqali o'quvchi qatoridagi D katagi ustiga joylang.", "", ""},
+                {"Rasm \"katak ICHIGA joylash\" (Place in Cell) rejimida bo'lmasin — o'ng tugma -> \"Katak ustiga joylash\".", "", ""},
+                {"Rasmda yuz aniq ko'rinsin, kamida 120x120 px. JPEG yoki PNG.", "", ""},
             };
             for (int r = 0; r < lines.length; r++) {
                 Row row = help.createRow(r);
@@ -421,7 +446,9 @@ public class StudentController {
         List<Map<String, Object>> errors = new ArrayList<>();
         List<Map<String, Object>> warnings = new ArrayList<>();
         int created = 0;
+        int withPhoto = 0;
         int totalRows = 0;
+        String imageNotice = null;
 
         // Faqat faylni OCHISH xatosi "fayl buzilgan" deb qaytariladi. Qator darajasidagi xatolar
         // alohida ushlanadi — aks holda bir qismi saqlangan importga "fayl buzilgan" deyilib,
@@ -435,25 +462,49 @@ public class StudentController {
         try (wb) {
             Sheet sheet = wb.getSheetAt(0);
             int lastRow = sheet.getLastRowNum();
+            // Rasmlar katakka emas, varaq ustidagi "drawing"ga bog'lanadi — har bir rasm yuqori-chap
+            // burchagi turgan qatorga tegishli deb olinadi.
+            Map<Integer, byte[]> photoByRow = new HashMap<>();
+            Set<Integer> multiPhotoRows = new HashSet<>();
+            if (sheet instanceof XSSFSheet xs) {
+                XSSFDrawing drawing = xs.getDrawingPatriarch();
+                if (drawing != null) {
+                    for (XSSFShape shape : drawing.getShapes()) {
+                        if (!(shape instanceof XSSFPicture pic)) continue;
+                        XSSFClientAnchor anchor = pic.getClientAnchor();
+                        if (anchor == null || anchor.getRow1() < 1 || pic.getPictureData() == null) continue;
+                        if (photoByRow.putIfAbsent(anchor.getRow1(), pic.getPictureData().getData()) != null) {
+                            multiPhotoRows.add(anchor.getRow1());
+                        }
+                    }
+                }
+            }
+            if (hasInCellImages(wb)) {
+                imageNotice = i18n.msg("error.student.import.in_cell_images");
+            }
+            for (int pr : photoByRow.keySet()) lastRow = Math.max(lastRow, pr);
             if (lastRow > MAX_IMPORT_ROWS) {
                 return ResponseEntity.badRequest().body(Map.of("error",
                     i18n.msg("error.student.import.too_many_rows", String.valueOf(MAX_IMPORT_ROWS))));
             }
+
             for (int r = 1; r <= lastRow; r++) {
                 Row row = sheet.getRow(r);
-                if (row == null || isRowBlank(row)) continue;
+                byte[] photo = photoByRow.get(r);
+                if ((row == null || isRowBlank(row)) && photo == null) continue;
                 totalRows++;
                 int excelRowNum = r + 1; // Excel'dagi qator raqami (1-indeksli, sarlavha = 1)
+                Path writtenPhoto = null;
 
                 try {
-                    String fullName = cellToString(row.getCell(0)).trim().replaceAll("\\s+", " ");
+                    String fullName = cellToString(cellAt(row, 0)).trim().replaceAll("\\s+", " ");
                     if (fullName.isEmpty()) {
                         errors.add(Map.of("row", excelRowNum, "message", i18n.msg("error.student.import.name_required")));
                         continue;
                     }
 
                     LocalDate birthDate = null;
-                    Cell birthCell = row.getCell(1);
+                    Cell birthCell = cellAt(row, 1);
                     if (birthCell != null && birthCell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(birthCell)) {
                         birthDate = birthCell.getLocalDateTimeCellValue().toLocalDate();
                     } else {
@@ -468,7 +519,7 @@ public class StudentController {
                     }
 
                     Long resolvedClassId = classId;
-                    String className = cellToString(row.getCell(2)).trim();
+                    String className = cellToString(cellAt(row, 2)).trim();
                     if (!className.isEmpty()) {
                         Long found = classByName.get(normalizeClassName(className));
                         if (found == null) {
@@ -492,10 +543,46 @@ public class StudentController {
                     s.setBirthDate(birthDate);
                     s.setSchool(school);
                     s.setClassId(resolvedClassId);
+
+                    // Rasm ixtiyoriy: yaroqsiz bo'lsa o'quvchi baribir qo'shiladi, faqat ogohlantirish.
+                    // Terminal talabiga (JPEG, <=200 KB) import paytidayoq moslanadi — keyin "Terminalga
+                    // yuborish" katta/boshqa formatli rasm sabab yiqilmasin.
+                    if (photo != null) {
+                        if (multiPhotoRows.contains(r)) {
+                            warnings.add(Map.of("row", excelRowNum, "message", i18n.msg("error.student.import.photo_multiple")));
+                        }
+                        String photoProblem = null;
+                        byte[] jpeg = null;
+                        BufferedImage img = null;
+                        try { img = ImageIO.read(new ByteArrayInputStream(photo)); } catch (Exception ignored) { }
+                        if (img == null) {
+                            photoProblem = i18n.msg("error.student.import.photo_unreadable");
+                        } else if (Math.min(img.getWidth(), img.getHeight()) < MIN_PHOTO_SIDE) {
+                            photoProblem = i18n.msg("error.student.import.photo_too_small",
+                                String.valueOf(img.getWidth()), String.valueOf(img.getHeight()));
+                        } else {
+                            try { jpeg = FaceImageNormalizer.toDeviceJpeg(photo); }
+                            catch (Exception e) { photoProblem = i18n.msg("error.student.import.photo_unreadable"); }
+                        }
+                        if (jpeg != null) {
+                            Files.createDirectories(importUploadDir);
+                            String filename = UUID.randomUUID().toString().substring(0, 12) + ".jpg";
+                            writtenPhoto = importUploadDir.resolve(filename);
+                            Files.write(writtenPhoto, jpeg);
+                            s.setPhotoUrl("/api/files/" + filename);
+                        } else {
+                            warnings.add(Map.of("row", excelRowNum, "message", photoProblem));
+                        }
+                    }
+
                     studentRepository.save(s);
                     existingKeys.add(key);
                     created++;
+                    if (s.getPhotoUrl() != null) withPhoto++;
                 } catch (Exception rowError) {
+                    if (writtenPhoto != null) {
+                        try { Files.deleteIfExists(writtenPhoto); } catch (Exception ignored) { }
+                    }
                     errors.add(Map.of("row", excelRowNum, "message", i18n.msg("error.student.import.row_failed")));
                 }
             }
@@ -506,10 +593,28 @@ public class StudentController {
         Map<String, Object> result = new HashMap<>();
         result.put("total", totalRows);
         result.put("created", created);
+        result.put("withPhoto", withPhoto);
         result.put("failed", errors.size());
         result.put("errors", errors);
         result.put("warnings", warnings);
+        result.put("imageNotice", imageNotice);
         return ResponseEntity.ok(result);
+    }
+
+    private static Cell cellAt(Row row, int col) {
+        return row == null ? null : row.getCell(col);
+    }
+
+    // Excel 365 "Place in Cell" (xl/richData) va WPS (xl/cellimages.xml) rasmlari drawing'da
+    // bo'lmaydi va POI ularni o'qiy olmaydi — jimgina tashlab ketmaslik uchun aniqlanadi.
+    private static boolean hasInCellImages(Workbook wb) {
+        if (!(wb instanceof XSSFWorkbook xw)) return false;
+        try {
+            return !xw.getPackage().getPartsByName(Pattern.compile("/xl/richData/.*")).isEmpty()
+                || !xw.getPackage().getPartsByName(Pattern.compile("/xl/cellimages\\.xml")).isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean isRowBlank(Row row) {

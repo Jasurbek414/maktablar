@@ -197,6 +197,85 @@ class StudentImportTest {
         assertEquals("Qatorni saqlab bo'lmadi", i18n.msg("error.student.import.row_failed"));
     }
 
+    private static byte[] png(int w, int h) throws Exception {
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        for (int x = 0; x < w; x++) for (int y = 0; y < h; y++) img.setRGB(x, y, (x * 7 + y * 13) & 0xFFFFFF);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(img, "png", out);
+        return out.toByteArray();
+    }
+
+    private static void placePicture(Workbook wb, Sheet sh, byte[] data, int row, int col) {
+        int idx = wb.addPicture(data, Workbook.PICTURE_TYPE_PNG);
+        org.apache.poi.ss.usermodel.Drawing<?> drawing = sh.createDrawingPatriarch();
+        org.apache.poi.ss.usermodel.ClientAnchor anchor = wb.getCreationHelper().createClientAnchor();
+        anchor.setRow1(row); anchor.setCol1(col); anchor.setRow2(row + 1); anchor.setCol2(col + 1);
+        drawing.createPicture(anchor, idx);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void importsPhotosPlacedOverCells(@org.junit.jupiter.api.io.TempDir java.nio.file.Path uploads) throws Exception {
+        ReflectionTestUtils.setField(controller, "importUploadDir", uploads);
+        byte[] bytes;
+        try (Workbook wb = new XSSFWorkbook()) {
+            Sheet sh = wb.createSheet("O'quvchilar");
+            String[] names = {"F.I.Sh", "Rasmli Bola", "Kichik Rasm", "Rasmsiz Bola", null};
+            for (int r = 0; r < names.length; r++) {
+                Row row = sh.createRow(r);
+                if (names[r] != null) row.createCell(0).setCellValue(names[r]);
+            }
+            placePicture(wb, sh, png(640, 800), 1, 3);   // 2-qator: yaroqli rasm
+            placePicture(wb, sh, png(50, 50), 2, 3);     // 3-qator: juda kichik
+            placePicture(wb, sh, png(300, 300), 4, 3);   // 5-qator: ism yo'q, faqat rasm
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            wb.write(out);
+            bytes = out.toByteArray();
+        }
+        MockMultipartFile file = new MockMultipartFile("file", "r.xlsx", "application/octet-stream", bytes);
+
+        Map<String, Object> b = body(controller.importExcel("Bearer x", file, 1L, null));
+        List<Map<String, Object>> errors = (List<Map<String, Object>>) b.get("errors");
+        List<Map<String, Object>> warnings = (List<Map<String, Object>>) b.get("warnings");
+
+        assertEquals(4, b.get("total"));
+        assertEquals(3, b.get("created"));
+        assertEquals(1, b.get("withPhoto"));
+        assertNull(b.get("imageNotice"));
+        assertNotNull(messageForRow(errors, 5));
+
+        Student withPhoto = saved.get(0);
+        assertTrue(withPhoto.getPhotoUrl().startsWith("/api/files/") && withPhoto.getPhotoUrl().endsWith(".jpg"));
+        byte[] stored = java.nio.file.Files.readAllBytes(uploads.resolve(withPhoto.getPhotoUrl().substring("/api/files/".length())));
+        assertEquals((byte) 0xFF, stored[0]);
+        assertEquals((byte) 0xD8, stored[1]);
+        assertTrue(stored.length <= 200 * 1024, "terminal chegarasi: " + stored.length);
+
+        assertNull(saved.get(1).getPhotoUrl());
+        assertEquals("Rasm juda kichik (50x50 px, kamida 120 px kerak), o'quvchi rasmsiz qo'shildi", messageForRow(warnings, 3));
+        assertNull(saved.get(2).getPhotoUrl());
+        try (var files = java.nio.file.Files.list(uploads)) { assertEquals(1, files.count()); }
+    }
+
+    @Test
+    void warnsAboutPhotosPlacedInsideCells() throws Exception {
+        byte[] bytes;
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet sh = wb.createSheet("O'quvchilar");
+            sh.createRow(0).createCell(0).setCellValue("F.I.Sh");
+            sh.createRow(1).createCell(0).setCellValue("Ichki Rasm");
+            wb.getPackage().createPart(
+                org.apache.poi.openxml4j.opc.PackagingURIHelper.createPartName("/xl/cellimages.xml"), "application/xml");
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            wb.write(out);
+            bytes = out.toByteArray();
+        }
+        Map<String, Object> b = body(controller.importExcel("Bearer x",
+            new MockMultipartFile("file", "c.xlsx", "application/octet-stream", bytes), 1L, null));
+        assertEquals(1, b.get("created"));
+        assertTrue(((String) b.get("imageNotice")).contains("Katak ustiga joylash"));
+    }
+
     @Test
     void templateHasOnlyHeaderInDataSheet() throws Exception {
         ResponseEntity<?> res = controller.importTemplate("Bearer x");

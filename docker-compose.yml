@@ -47,8 +47,10 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET}
       BOT_SHARED_SECRET: ${BOT_SHARED_SECRET}
-      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
-      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
+      # 50MB: rasmli o'quvchilar Excel fayli (StudentController#importExcel) uchun. Oddiy rasm
+      # yuklash baribir FileController'ning o'z 10MB tekshiruvi bilan cheklangan.
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 50MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 50MB
       BACKEND_PUBLIC_URL: https://maktab.ecos.uz
       BOT_WEBHOOK_URL: http://bot:5000
       WG_SYNC_SECRET: ${WG_SYNC_SECRET}

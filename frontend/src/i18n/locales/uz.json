@@ -657,6 +657,8 @@
     "import": {
       "title": "Excel orqali o'quvchilar qo'shish",
       "desc": "Ko'plab o'quvchini bitta faylda kiriting. Avval shablonni yuklab oling, to'ldiring va yuklang.",
+      "photoHint": "Rasm ixtiyoriy: Excel'da Qo'shish → Rasm orqali o'quvchi qatoridagi \"Rasm\" katagi ustiga joylang (\"katak ichiga\" emas). Fayl 50 MB gacha.",
+      "photoSummary": "{{count}} ta o'quvchi rasm bilan qo'shildi",
       "downloadTemplate": "Shablonni yuklab olish",
       "fileLabel": "Excel fayl (.xlsx)",
       "filePlaceholder": "Faylni tanlang",
