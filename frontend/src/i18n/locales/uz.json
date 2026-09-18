@@ -247,6 +247,8 @@
       "ip": "IP manzil (VPN ichidagi lokal IP)",
       "port": "Port (80, 8000...)",
       "useHttps": "Qurilma HTTPS talab qiladi (o'z-o'zidan imzolangan sertifikat)",
+      "noRoom": "Xona tanlanmagan (ixtiyoriy)",
+      "roomHint": "Terminal o'rnatilgan xona — o'quvchi profilidagi \"oxirgi ko'ringan joy\" shu xonani ko'rsatadi",
       "deviceUsername": "Qurilma login (masalan admin)",
       "devicePassword": "Qurilma paroli",
       "devicePasswordEditHint": "O'zgartirmaslik uchun bo'sh qoldiring",
@@ -624,10 +626,10 @@
       "eventIn": "Keldi",
       "eventOut": "Ketdi",
       "location": {
-        "title": "Hozirgi joylashuv (kamera)",
-        "unknownRoom": "Xona belgilanmagan kamera",
+        "title": "Oxirgi ko'ringan joy",
+        "unknownRoom": "Xona belgilanmagan",
         "seenAt": "{{time}} · {{device}}",
-        "neverSeen": "Hali hech qaysi yuz tanish kamerasida ko'rinmagan"
+        "neverSeen": "Hali hech qaysi yuz tanish qurilmasida (terminal/kamera) ko'rinmagan"
       }
     },
     "modal": {
@@ -857,6 +859,29 @@
     },
     "manageInSettings": "Kameralarni sozlash",
     "searchPlaceholder": "Kamera yoki xona bo'yicha qidirish...",
+    "nvr": {
+      "addFromNvr": "NVR kameralarini qo'shish",
+      "hint": "Kameralar NVR (registrator)ga ulangan bo'lsa, ularni NVR orqali bir yo'la qo'shing.",
+      "title": "NVR kameralarini qo'shish",
+      "desc": "NVR manzili va loginini kiriting — platforma unga ulangan kameralar ro'yxatini oladi, keraklilarini belgilab qo'shasiz.",
+      "ipPlaceholder": "NVR IP manzili (masalan 192.168.88.10)",
+      "portPlaceholder": "Port (80)",
+      "useHttps": "NVR HTTPS talab qiladi",
+      "loadBtn": "Kameralarni ko'rish",
+      "loading": "NVR'dan so'ralmoqda...",
+      "found": "{{model}}: {{count}} ta kamera topildi",
+      "empty": "Bu NVR'ga hech qanday IP-kamera ulanmagan",
+      "selectAll": "Hammasini belgilash",
+      "channel": "{{n}}-kanal",
+      "registered": "Qo'shilgan",
+      "online": "Ishlayapti",
+      "offline": "Ulanmagan",
+      "noRoom": "Xona (ixtiyoriy, hammasiga bir xil)",
+      "importBtn": "{{count}} ta kamerani qo'shish",
+      "importing": "Qo'shilmoqda...",
+      "noneSelected": "Kamida bitta kamerani belgilang",
+      "done": "{{created}} ta kamera qo'shildi ({{skipped}} tasi avvaldan bor edi). Holati bir daqiqa ichida yangilanadi."
+    },
     "device": {
       "sectionTitle": "Masofadan boshqarish (ixtiyoriy)",
       "sectionHint": "Brend, IP va login kiritilsa kamera holati avtomatik kuzatiladi va jonli kadr ko'rinadi (maktab routeri VPN orqali).",
@@ -870,6 +895,8 @@
       "passwordKeep": "O'zgartirmaslik uchun bo'sh qoldiring",
       "supportsFaceRecognition": "Bu kamera yuz tanishni o'zida qo'llab-quvvatlaydi (DeepinView/AcuSense)",
       "supportsFaceRecognitionHint": "Faqat shu belgi yoqilgan kameralar \"odam qayerda\" real-vaqtli qidiruviga qo'shiladi. Oddiy kuzatuv kamerasi bo'lsa, belgilamang.",
+      "nvrChannel": "NVR kanali (ixtiyoriy)",
+      "nvrChannelPlaceholder": "Kamera NVR orqali ulangan bo'lsa: 1, 2, 3...",
       "snapshotAt": "Kadr: {{time}}",
       "refreshSnapshot": "Yangilash",
       "lastSeen": "Oxirgi aloqa",
@@ -1000,6 +1027,8 @@
       "loadError": "Maktab ma'lumotlarini yuklab bo'lmadi.",
       "editDesc": "Bu ma'lumotlar faqat sizning maktabingizga tegishli — boshqa maktablarga ta'sir qilmaydi",
       "contactSectionTitle": "Aloqa va rasmiy ma'lumotlar",
+      "attendanceSectionTitle": "Davomat sozlamalari",
+      "dedupHint": "Masalan o'quvchi kirish terminalidan o'tgach, shu vaqt o'tmaguncha YANA \"keldi\" deb yozilmaydi (chiqish uchun ham xuddi shunday). Faqat sizning maktabingizga ta'sir qiladi. Bo'sh qoldirilsa umumiy qiymat ({{global}} daqiqa) ishlaydi. Hozir amalda: {{effective}} daqiqa.",
       "addressPlaceholder": "Shahar, ko'cha, uy raqami",
       "savedMsg": "Saqlandi!",
       "fields": {
@@ -1012,7 +1041,8 @@
         "address": "Manzil",
         "phone": "Telefon",
         "schoolNumber": "Maktab raqami",
-        "foundedYear": "Ta'sis yili"
+        "foundedYear": "Ta'sis yili",
+        "dedupMinutes": "Qayta o'tishni bloklash vaqti (daqiqa)"
       }
     },
     "notifications": {

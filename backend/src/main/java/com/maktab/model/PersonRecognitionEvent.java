@@ -18,7 +18,11 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "person_recognition_events")
+// 150 kamerada jadval tez o'sadi: shaxs tarixi va saqlash-muddati tozalashi to'liq skanerga tushmasin.
+@Table(name = "person_recognition_events", indexes = {
+    @Index(name = "idx_pre_person_time", columnList = "person_type, person_id, occurred_at"),
+    @Index(name = "idx_pre_occurred_at", columnList = "occurred_at")
+})
 public class PersonRecognitionEvent {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

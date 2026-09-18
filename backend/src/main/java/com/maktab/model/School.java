@@ -32,6 +32,11 @@ public class School {
     @Column(name = "founded_year")
     private Integer foundedYear;
 
+    /** Shu maktab uchun bir xil turdagi qayta o'tishni bloklash oynasi (daqiqa) — direktor o'z
+     * profilida o'rnatadi. null = superadmin panelidagi umumiy qiymat (BotConfig) ishlatiladi. */
+    @Column(name = "attendance_dedup_minutes")
+    private Integer attendanceDedupMinutes;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "district_id", nullable = false)
     private District district;

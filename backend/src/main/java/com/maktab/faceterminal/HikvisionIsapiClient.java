@@ -116,6 +116,72 @@ public class HikvisionIsapiClient {
         return body;
     }
 
+    // ─── NVR (registrator) ───────────────────────────────────────────────────────
+    // NVR'ning IP-kamera kanallari: kanal N ning asosiy oqimi Streaming ID'si N*100+1 (1 -> "101").
+
+    public record NvrChannel(int id, String name, String ipAddress, Boolean online) {}
+
+    /** NVR'ga ulangan IP-kameralar ro'yxati (holati bilan, agar NVR holatni ham bersa). */
+    public List<NvrChannel> nvrChannels() {
+        HttpResponse<String> resp = send("GET", "/ISAPI/ContentMgmt/InputProxy/channels", null, null);
+        if (resp.statusCode() == 404) {
+            throw new TerminalException("Bu qurilma IP-kameralar ro'yxatini bermadi (HTTP 404) — u NVR emas yoki analog DVR");
+        }
+        List<NvrChannel> channels = parseNvrChannels(checkXml(resp, "NVR kanallarini olish"));
+        Map<Integer, Boolean> online;
+        try {
+            online = nvrChannelOnline();
+        } catch (TerminalException e) {
+            online = Map.of(); // holat ixtiyoriy — ro'yxatning o'zi yetarli
+        }
+        List<NvrChannel> result = new ArrayList<>(channels.size());
+        for (NvrChannel ch : channels) {
+            result.add(new NvrChannel(ch.id(), ch.name(), ch.ipAddress(), online.get(ch.id())));
+        }
+        return result;
+    }
+
+    /** Har bir NVR kanalining onlayn holati (kanal id -> kamera NVR'ga ulanganmi). */
+    public Map<Integer, Boolean> nvrChannelOnline() {
+        return parseNvrChannelStatus(checkXml(send("GET", "/ISAPI/ContentMgmt/InputProxy/channels/status", null, null),
+            "NVR kanal holatini olish"));
+    }
+
+    // "<InputProxyChannel>" — "(?:\s[^>]*)?>" sharti "<InputProxyChannelList>" ni o'tkazib yuboradi.
+    private static final Pattern NVR_CHANNEL_BLOCK = Pattern.compile("(?s)<InputProxyChannel(?:\\s[^>]*)?>(.*?)</InputProxyChannel>");
+    private static final Pattern NVR_STATUS_BLOCK = Pattern.compile("(?s)<InputProxyChannelStatus(?:\\s[^>]*)?>(.*?)</InputProxyChannelStatus>");
+
+    static List<NvrChannel> parseNvrChannels(String xml) {
+        List<NvrChannel> list = new ArrayList<>();
+        Matcher m = NVR_CHANNEL_BLOCK.matcher(xml == null ? "" : xml);
+        while (m.find()) {
+            String block = m.group(1);
+            Integer id = parseIntOrNull(xmlTag(block, "id"));
+            if (id == null) continue;
+            list.add(new NvrChannel(id, xmlTag(block, "name"), xmlTag(block, "ipAddress"), null));
+        }
+        return list;
+    }
+
+    static Map<Integer, Boolean> parseNvrChannelStatus(String xml) {
+        Map<Integer, Boolean> map = new LinkedHashMap<>();
+        Matcher m = NVR_STATUS_BLOCK.matcher(xml == null ? "" : xml);
+        while (m.find()) {
+            String block = m.group(1);
+            Integer id = parseIntOrNull(xmlTag(block, "id"));
+            if (id != null) map.put(id, "true".equalsIgnoreCase(xmlTag(block, "online")));
+        }
+        return map;
+    }
+
+    private static Integer parseIntOrNull(String s) {
+        try {
+            return s == null ? null : Integer.valueOf(s.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     // ─── Boshqaruv ───────────────────────────────────────────────────────────────
 
     /** cmd: open | close | alwaysOpen | alwaysClose */

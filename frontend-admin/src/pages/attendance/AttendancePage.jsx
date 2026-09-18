@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next'
 import {
   Search, Download, ChevronLeft, ChevronRight, Calendar,
   Users, CheckCircle, Clock, XCircle, BookOpen, Filter,
-  ClipboardList
+  ClipboardList, Trash2
 } from 'lucide-react'
+import AttendancePurgeModal from './AttendancePurgeModal'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/Badge'
 import { TableSkeleton, EmptyState } from '../../components/ui/LoadingSpinner'
@@ -56,6 +57,7 @@ export default function AttendancePage() {
   const [stats, setStats] = useState({})
   const [classes, setClasses] = useState([])
   const [exporting, setExporting] = useState(false)
+  const [purgeOpen, setPurgeOpen] = useState(false)
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 50
 
@@ -130,10 +132,18 @@ export default function AttendancePage() {
             {t('attendance.subtitle')}
           </p>
         </div>
-        <Button variant="success" size="md" icon={Download} loading={exporting} onClick={handleExport}>
-          {t('attendance.exportBtn')}
-        </Button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {isSuperAdmin && (
+            <Button variant="secondary" size="md" icon={Trash2} onClick={() => setPurgeOpen(true)}>
+              {t('attendance.purgeBtn')}
+            </Button>
+          )}
+          <Button variant="success" size="md" icon={Download} loading={exporting} onClick={handleExport}>
+            {t('attendance.exportBtn')}
+          </Button>
+        </div>
       </div>
+      {isSuperAdmin && <AttendancePurgeModal isOpen={purgeOpen} onClose={() => setPurgeOpen(false)} onDone={loadData} />}
 
       {/* ── Date nav + stats ── */}
       <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, flexWrap: 'wrap' }}>

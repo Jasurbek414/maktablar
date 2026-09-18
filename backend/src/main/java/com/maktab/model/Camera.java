@@ -81,6 +81,12 @@ public class Camera {
     @Column
     private String streamChannel;
 
+    /** Kamera NVR orqali ulangan bo'lsa — NVR ichidagi kanal raqami (1, 2, ...); ipAddress/login esa NVR'niki.
+     * null = mustaqil kamera. CameraMonitor shu bo'yicha kanalning o'z holatini tekshiradi (NVR ishlab turib,
+     * kamera uzilganini ham ko'rsatadi) va kameraga NVR'ning model/seriya raqamini yozmaydi. */
+    @Column
+    private Integer nvrChannel;
+
     /** Kamera modeli o'zida yuz tanishni qo'llab-quvvatladimi (masalan Hikvision DeepinView/
      * AcuSense) — barcha Hikvision kameralar ulanishi (masofadan boshqarish, snapshot, holat)
      * mumkin bo'lsa-da, faqat shu belgi TRUE bo'lgan kameralar PersonRecognitionMonitor orqali

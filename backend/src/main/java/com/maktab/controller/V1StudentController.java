@@ -43,6 +43,7 @@ public class V1StudentController {
     @Autowired private AttendanceRepository attendanceRepo;
     @Autowired private MessageRepository messageRepo;
     @Autowired private PersonNoteRepository personNoteRepo;
+    @Autowired private com.maktab.service.PersonLocationService personLocationService;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private CurrentUserService currentUserService;
     @Autowired private I18nService i18n;
@@ -177,6 +178,7 @@ public class V1StudentController {
         messageRepo.deleteAll(messageRepo.findByStudentIdOrderByCreatedAtAsc(id));
         personNoteRepo.deleteAll(
             personNoteRepo.findByPersonTypeAndPersonIdOrderByCreatedAtDesc(PersonNote.PersonType.STUDENT, id));
+        personLocationService.forgetPerson(PersonNote.PersonType.STUDENT, id);
         s.setGuardians(new ArrayList<>());
         studentRepo.saveAndFlush(s);
         studentRepo.deleteById(id);
@@ -457,6 +459,7 @@ public class V1StudentController {
         User u = userRepo.findById(id).orElse(null);
         if (u == null || u.getRole() != User.Role.TEACHER) return ResponseEntity.notFound().build();
         currentUserService.assertCanManageTeacher(caller, u.getSchoolId());
+        personLocationService.forgetPerson(PersonNote.PersonType.TEACHER, id);
         userRepo.deleteById(id);
         return ResponseEntity.ok(Map.of("message", i18n.msg("success.deleted")));
     }

@@ -56,6 +56,12 @@ public interface FaceTerminalRepository extends JpaRepository<FaceTerminal, Long
                   @org.springframework.data.repository.query.Param("status") FaceTerminal.TerminalStatus status,
                   @org.springframework.data.repository.query.Param("error") String error);
 
+    /** Xona o'chirilganda — terminallar "xonasiz" holatga o'tadi (monitor maydonlariga tegmasdan). */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Query("UPDATE FaceTerminal t SET t.roomId = NULL WHERE t.roomId = :roomId")
+    int clearRoom(@org.springframework.data.repository.query.Param("roomId") Long roomId);
+
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     @org.springframework.data.jpa.repository.Query("UPDATE FaceTerminal t SET t.lastEventAt = :at WHERE t.id = :id")

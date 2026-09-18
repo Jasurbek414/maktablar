@@ -31,6 +31,7 @@ public class SchoolController {
     @Autowired private UserRepository userRepository;
     @Autowired private CurrentUserService currentUserService;
     @Autowired private I18nService i18n;
+    @Autowired private com.maktab.service.BotConfigService botConfigService;
 
     /**
      * MUHIM: districtId endi client'dan ishonch bilan qabul qilinmaydi — SUPERADMIN/ADMIN'dan
@@ -104,6 +105,10 @@ public class SchoolController {
             m.put("phone", s.getPhone());
             m.put("schoolNumber", s.getSchoolNumber());
             m.put("foundedYear", s.getFoundedYear());
+            // Qayta o'tishni bloklash oynasi: maktabning o'zi (null bo'lishi mumkin) + amaldagi + umumiy standart
+            m.put("attendanceDedupMinutes", s.getAttendanceDedupMinutes());
+            m.put("effectiveDedupMinutes", botConfigService.effectiveDedupMinutes(s.getId()));
+            m.put("globalDedupMinutes", botConfigService.globalDedupMinutes());
             m.put("studentCount", studentRepository.countBySchoolId(s.getId()));
             m.put("classCount", classRepository.findBySchoolId(s.getId()).size());
             userRepository.findFirstByRoleAndSchoolId(User.Role.DIRECTOR, s.getId())
@@ -125,6 +130,21 @@ public class SchoolController {
                                             @RequestBody Map<String, Object> body) {
         User caller = currentUserService.requireUser(authHeader);
         currentUserService.assertCanEditSchoolProfile(caller, id);
+        // Qayta o'tishni bloklash oynasi (daqiqa): bo'sh = maktab o'z qiymatidan voz kechadi va
+        // superadmin panelidagi umumiy qiymat ishlaydi; aks holda 1..1440 (1 kun).
+        Integer dedupMinutes = null;
+        Object dedupVal = body.get("attendanceDedupMinutes");
+        if (dedupVal != null && !dedupVal.toString().isBlank()) {
+            try {
+                dedupMinutes = Integer.parseInt(dedupVal.toString().trim());
+            } catch (NumberFormatException e) {
+                dedupMinutes = -1;
+            }
+            if (dedupMinutes < 1 || dedupMinutes > 1440) {
+                return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.school.invalid_dedup_minutes")));
+            }
+        }
+        final Integer newDedupMinutes = dedupMinutes;
         return schoolRepository.findById(id).map(s -> {
             if (body.containsKey("address")) s.setAddress((String) body.get("address"));
             if (body.containsKey("phone")) s.setPhone((String) body.get("phone"));
@@ -133,6 +153,7 @@ public class SchoolController {
                 Object fy = body.get("foundedYear");
                 s.setFoundedYear(fy != null && !fy.toString().isBlank() ? Integer.valueOf(fy.toString()) : null);
             }
+            if (body.containsKey("attendanceDedupMinutes")) s.setAttendanceDedupMinutes(newDedupMinutes);
             schoolRepository.save(s);
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", s.getId());
@@ -140,6 +161,8 @@ public class SchoolController {
             m.put("phone", s.getPhone());
             m.put("schoolNumber", s.getSchoolNumber());
             m.put("foundedYear", s.getFoundedYear());
+            m.put("attendanceDedupMinutes", s.getAttendanceDedupMinutes());
+            m.put("effectiveDedupMinutes", botConfigService.effectiveDedupMinutes(s.getId()));
             return ResponseEntity.ok(m);
         }).orElse(ResponseEntity.notFound().build());
     }

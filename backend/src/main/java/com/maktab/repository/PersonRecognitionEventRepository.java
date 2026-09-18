@@ -21,4 +21,9 @@ public interface PersonRecognitionEventRepository extends JpaRepository<PersonRe
     @Transactional
     @Query("DELETE FROM PersonRecognitionEvent e WHERE e.occurredAt < :cutoff")
     int deleteByOccurredAtBefore(@Param("cutoff") OffsetDateTime cutoff);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM PersonRecognitionEvent e WHERE e.personType = :personType AND e.personId = :personId")
+    int deleteByPerson(@Param("personType") PersonNote.PersonType personType, @Param("personId") Long personId);
 }

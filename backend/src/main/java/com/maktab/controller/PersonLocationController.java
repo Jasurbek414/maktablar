@@ -30,10 +30,8 @@ import java.util.Map;
  * faqat DIRECTOR/MUDIR/SUPERADMIN/ADMIN va yuqori rahbariyat, "cheklangan kirish" siyosati
  * bo'yicha kelishilgan (2026-09-18).
  *
- * DIQQAT: bu yerda PersonRecognitionEvent'ni real vaqtda TO'LDIRADIGAN hech narsa yo'q —
- * qurilmadan hodisa hali kelmaydi (3-bosqich, aniq kamera modeli tanlangach yoziladi).
- * Shu sabab hozircha har doim "seen: false" qaytadi — API kontraktini oldindan tayyorlab,
- * frontend UI'ni haqiqiy ma'lumotsiz ham sinash uchun.
+ * Ma'lumot manbalari: Face ID terminallar (FaceAttendanceIngestService, jonli) va keyinroq
+ * yuz tanish kameralari (3-bosqich). Bu "hozirgi" emas, OXIRGI ko'ringan joy — seenAt bilan birga.
  */
 @RestController
 @RequestMapping("/api/persons")

@@ -30,6 +30,7 @@ public class RoomController {
     @Autowired private RoomRepository roomRepo;
     @Autowired private SchoolRepository schoolRepo;
     @Autowired private CameraRepository cameraRepo;
+    @Autowired private com.maktab.repository.FaceTerminalRepository terminalRepo;
     @Autowired private CurrentUserService currentUserService;
     @Autowired private I18nService i18n;
 
@@ -113,6 +114,7 @@ public class RoomController {
             c.setRoom(null);
             cameraRepo.save(c);
         }
+        terminalRepo.clearRoom(id);
         roomRepo.deleteById(id);
         return ResponseEntity.ok(Map.of("success", true));
     }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import { Input } from '../components/CrudPage';
 import ConfirmModal from '../components/ConfirmModal';
+import NvrImportModal from '../components/devices/NvrImportModal';
 
 export const NOTIF_PREF_KEY = 'notifPrefs';
 export const NOTIF_TYPES = [
@@ -74,7 +75,7 @@ export default function Settings({ user, onUserUpdate }) {
 
   const [school, setSchool] = useState(null);
   const [schoolLoading, setSchoolLoading] = useState(false);
-  const [schoolForm, setSchoolForm] = useState({ address: '', phone: '', schoolNumber: '', foundedYear: '' });
+  const [schoolForm, setSchoolForm] = useState({ address: '', phone: '', schoolNumber: '', foundedYear: '', attendanceDedupMinutes: '' });
   const [savingSchool, setSavingSchool] = useState(false);
   const [schoolMsg, setSchoolMsg] = useState('');
   const [schoolMsgOk, setSchoolMsgOk] = useState(false);
@@ -95,6 +96,7 @@ export default function Settings({ user, onUserUpdate }) {
   const [deleteRoomId, setDeleteRoomId] = useState(null);
 
   const [cams, setCams] = useState([]);
+  const [nvrOpen, setNvrOpen] = useState(false);
   const [camEditing, setCamEditing] = useState(null);
   const [camForm, setCamForm] = useState({});
   const [savingCam, setSavingCam] = useState(false);
@@ -158,6 +160,7 @@ export default function Settings({ user, onUserUpdate }) {
       setSchoolForm({
         address: s.address || '', phone: s.phone || '',
         schoolNumber: s.schoolNumber || '', foundedYear: s.foundedYear || '',
+        attendanceDedupMinutes: s.attendanceDedupMinutes ?? '',
       });
     }).catch(() => setSchool(null)).finally(() => setSchoolLoading(false));
   };
@@ -315,6 +318,13 @@ export default function Settings({ user, onUserUpdate }) {
                         <Input label={t('settings.school.fields.schoolNumber')} value={schoolForm.schoolNumber} onChange={e => setSchoolForm(f => ({ ...f, schoolNumber: e.target.value }))} placeholder="56" />
                         <Input label={t('settings.school.fields.foundedYear')} type="number" value={schoolForm.foundedYear} onChange={e => setSchoolForm(f => ({ ...f, foundedYear: e.target.value }))} placeholder="2005" />
                       </div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 mt-2">{t('settings.school.attendanceSectionTitle')}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5">
+                        <Input label={t('settings.school.fields.dedupMinutes')} type="number" min="1" max="1440" value={schoolForm.attendanceDedupMinutes}
+                          onChange={e => setSchoolForm(f => ({ ...f, attendanceDedupMinutes: e.target.value }))}
+                          placeholder={String(school.globalDedupMinutes ?? 180)} />
+                      </div>
+                      <p className="text-[11px] text-slate-500 -mt-2 mb-4">{t('settings.school.dedupHint', { global: school.globalDedupMinutes ?? 180, effective: school.effectiveDedupMinutes ?? school.globalDedupMinutes ?? 180 })}</p>
                       <div className="flex items-center gap-3 mt-2">
                         <button onClick={saveSchoolProfile} disabled={savingSchool}
                           className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">
@@ -330,6 +340,7 @@ export default function Settings({ user, onUserUpdate }) {
                         [t('settings.school.fields.phone'), school.phone || '—'],
                         [t('settings.school.fields.schoolNumber'), school.schoolNumber || '—'],
                         [t('settings.school.fields.foundedYear'), school.foundedYear || '—'],
+                        [t('settings.school.fields.dedupMinutes'), school.effectiveDedupMinutes ?? '—'],
                       ].map(([label, val]) => (
                         <div key={label} className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.02] border border-emerald-500/[0.05]">
                           <span className="text-sm text-slate-500">{label}</span>
@@ -420,6 +431,13 @@ export default function Settings({ user, onUserUpdate }) {
 
                   {/* Kameralar */}
                   <Card title={t('cameras.title')} desc={t('settings.cameras.desc')}>
+                    {camSchoolId && (
+                      <div className="flex items-center justify-between gap-3 flex-wrap mb-4 p-3 rounded-xl border border-blue-500/[0.15] bg-blue-500/[0.04]">
+                        <p className="text-xs text-slate-400 flex-1 min-w-[200px]">{t('cameras.nvr.hint')}</p>
+                        <button onClick={() => setNvrOpen(true)} className="h-9 px-4 rounded-lg bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-medium">{t('cameras.nvr.addFromNvr')}</button>
+                      </div>
+                    )}
+                    <NvrImportModal open={nvrOpen} onClose={() => setNvrOpen(false)} schoolId={camSchoolId} t={t} onImported={loadRoomsAndCams} />
                     <div className="p-4 rounded-xl bg-white/[0.02] border border-emerald-500/[0.1] mb-5">
                       <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-3">{camEditing ? t('cameras.modal.editTitle') : t('cameras.modal.newTitle')}</p>
                       <Input label={t('cameras.modal.nameLabel')} value={camForm.name || ''} onChange={e => setCamForm({ ...camForm, name: e.target.value })} placeholder={t('cameras.modal.namePlaceholder')} />
@@ -463,6 +481,8 @@ export default function Settings({ user, onUserUpdate }) {
                             <Input label={t('cameras.device.rtspPort')} value={camForm.rtspPort ?? ''} onChange={e => setCamForm({ ...camForm, rtspPort: e.target.value })} placeholder="554" inputMode="numeric" />
                             <Input label={t('cameras.device.channel')} value={camForm.streamChannel || ''} onChange={e => setCamForm({ ...camForm, streamChannel: e.target.value })} placeholder="101" inputMode="numeric" />
                           </div>
+                          {/* NVR orqali ulangan bo'lsa: IP/login NVR'niki, bu yerda NVR'dagi kanal raqami — holat kanal bo'yicha kuzatiladi */}
+                          <Input label={t('cameras.device.nvrChannel')} value={camForm.nvrChannel ?? ''} onChange={e => setCamForm({ ...camForm, nvrChannel: e.target.value })} placeholder={t('cameras.device.nvrChannelPlaceholder')} inputMode="numeric" />
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                             <Input label={t('cameras.device.username')} value={camForm.deviceUsername || ''} onChange={e => setCamForm({ ...camForm, deviceUsername: e.target.value })} autoComplete="off" />
                             <Input label={t('cameras.device.password')} type="password" value={camForm.devicePassword || ''} onChange={e => setCamForm({ ...camForm, devicePassword: e.target.value })} autoComplete="new-password"

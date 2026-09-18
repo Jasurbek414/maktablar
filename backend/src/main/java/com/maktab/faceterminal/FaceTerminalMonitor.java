@@ -9,12 +9,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PreDestroy;
+
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -45,11 +56,50 @@ public class FaceTerminalMonitor {
     static final int MAX_PAGES_PER_CYCLE = 20;
     static final long OFFLINE_AFTER_MINUTES = 3;
 
+    /**
+     * Terminallar PARALLEL so'raladi (2026-09-18): bitta voqea so'rovi VPN orqali ~2s oladi — avval
+     * hammasi bitta oqimda ketma-ket so'ralardi, maktabga 2-8 terminal qo'yilganda sikl daqiqalarga
+     * cho'zilib, davomat va ota-onaga xabar shuncha kechikardi (osilgan terminal yana 16s qo'shardi).
+     */
+    static final int IO_THREADS = 16;
+    static final long CYCLE_WAIT_SECONDS = 60;
+
     @Autowired private FaceTerminalRepository terminalRepo;
     @Autowired private TerminalEndpointResolver resolver;
     @Autowired private FaceAttendanceIngestService ingest;
 
     private final Map<Long, ReentrantLock> locks = new ConcurrentHashMap<>();
+    private final ExecutorService io = Executors.newFixedThreadPool(IO_THREADS, r -> {
+        Thread th = new Thread(r, "terminal-io");
+        th.setDaemon(true);
+        return th;
+    });
+
+    @PreDestroy
+    void shutdown() {
+        io.shutdownNow();
+    }
+
+    /** Har bir terminal uchun amalni parallel bajaradi va (ko'pi bilan CYCLE_WAIT_SECONDS) tugashini kutadi. */
+    private void runForAll(List<FaceTerminal> terminals, Consumer<FaceTerminal> action) {
+        List<Future<?>> futures = new ArrayList<>();
+        for (FaceTerminal t : terminals) futures.add(io.submit(() -> action.accept(t)));
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(CYCLE_WAIT_SECONDS);
+        for (Future<?> f : futures) {
+            long left = deadline - System.nanoTime();
+            if (left <= 0) return; // qolganlari fonda tugaydi; poll qulf orqali takrorlanmaydi
+            try {
+                f.get(left, TimeUnit.NANOSECONDS);
+            } catch (TimeoutException e) {
+                return;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            } catch (ExecutionException e) {
+                log.warn("Terminal vazifasida kutilmagan xato: {}", e.getCause() != null ? e.getCause().toString() : e.toString());
+            }
+        }
+    }
 
     /** Terminal bilan eksklyuziv ishlash (monitor va qo'lda amallar orasida). */
     public <T> T withTerminalLock(Long terminalId, Supplier<T> action) {
@@ -66,14 +116,14 @@ public class FaceTerminalMonitor {
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 15_000)
     public void refreshStatuses() {
-        for (FaceTerminal t : terminalRepo.findAll()) {
-            if (!TerminalEndpointResolver.isHikvision(t)) continue;
+        List<FaceTerminal> targets = terminalRepo.findAll().stream().filter(TerminalEndpointResolver::isHikvision).toList();
+        runForAll(targets, t -> {
             try {
                 refreshStatus(t);
             } catch (Exception e) {
                 log.warn("Terminal {} holatini tekshirishda kutilmagan xato: {}", t.getId(), e.toString());
             }
-        }
+        });
     }
 
     /** Bitta terminal holatini hozir tekshiradi. Muvaffaqiyatsiz bo'lsa TerminalException tashlaydi. */
@@ -116,17 +166,26 @@ public class FaceTerminalMonitor {
 
     @Scheduled(fixedDelay = 5_000, initialDelay = 20_000)
     public void pollEvents() {
-        for (FaceTerminal t : terminalRepo.findAll()) {
-            // Oflayn terminalga har 5 soniyada urinib, rejalashtiruvchini timeout bilan band qilmaymiz —
-            // refreshStatuses uni qayta ONLINE qilgach so'rov o'zi tiklanadi.
-            if (!TerminalEndpointResolver.isHikvision(t) || t.getStatus() != FaceTerminal.TerminalStatus.ONLINE) continue;
-            try {
-                withTerminalLock(t.getId(), () -> pollTerminal(t));
-            } catch (TerminalException e) {
-                recordFailure(t, e);
-            } catch (Exception e) {
-                log.warn("Terminal {} voqealarini olishda kutilmagan xato: {}", t.getId(), e.toString());
-            }
+        // Oflayn terminalga har 5 soniyada urinib, oqimlarni timeout bilan band qilmaymiz —
+        // refreshStatuses uni qayta ONLINE qilgach so'rov o'zi tiklanadi.
+        List<FaceTerminal> targets = terminalRepo.findAll().stream()
+            .filter(t -> TerminalEndpointResolver.isHikvision(t) && t.getStatus() == FaceTerminal.TerminalStatus.ONLINE)
+            .toList();
+        runForAll(targets, this::pollIfIdle);
+    }
+
+    /** Terminal hali oldingi sikl yoki qo'lda amal bilan band bo'lsa, bu sikl uni kutmasdan o'tkazib yuboradi. */
+    private void pollIfIdle(FaceTerminal t) {
+        ReentrantLock lock = locks.computeIfAbsent(t.getId(), id -> new ReentrantLock());
+        if (!lock.tryLock()) return;
+        try {
+            pollTerminal(t);
+        } catch (TerminalException e) {
+            recordFailure(t, e);
+        } catch (Exception e) {
+            log.warn("Terminal {} voqealarini olishda kutilmagan xato: {}", t.getId(), e.toString());
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -172,8 +231,8 @@ public class FaceTerminalMonitor {
                 read++;
                 if (isPass(e)) {
                     try {
-                        byte[] pic = c.downloadPicture(e.pictureUrl());
-                        FaceAttendanceIngestService.Result r = ingest.recordFaceEvent(t, e.employeeNo(), e.time(), e.serialNo(), pic);
+                        FaceAttendanceIngestService.Result r = ingest.recordFaceEvent(t, e.employeeNo(), e.time(), e.serialNo(),
+                            () -> c.downloadPicture(e.pictureUrl()));
                         if (r == FaceAttendanceIngestService.Result.RECORDED) {
                             recorded++;
                             terminalRepo.updateLastEventAt(t.getId(), LocalDateTime.now());
@@ -211,8 +270,7 @@ public class FaceTerminalMonitor {
                     read++;
                     maxSerial = Math.max(maxSerial, e.serialNo());
                     if (isPass(e)) {
-                        byte[] pic = c.downloadPicture(e.pictureUrl());
-                        if (ingest.recordFaceEvent(t, e.employeeNo(), e.time(), e.serialNo(), pic)
+                        if (ingest.recordFaceEvent(t, e.employeeNo(), e.time(), e.serialNo(), () -> c.downloadPicture(e.pictureUrl()))
                                 == FaceAttendanceIngestService.Result.RECORDED) {
                             recorded++;
                         }

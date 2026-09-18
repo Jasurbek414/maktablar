@@ -38,6 +38,11 @@ public class UnmatchedFaceEvent {
     @Column(nullable = false)
     private Reason reason;
 
+    /** Qurilma voqeasi kaliti (hik-{terminalId}-{serialNo}) — monitor har siklda oxirgi voqealarni
+     * qayta o'qiydi, shu kalitsiz bitta tanilmagan voqea har 5 soniyada yangi qator bo'lib yozilardi. */
+    @Column(name = "sync_key", unique = true)
+    private String syncKey;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 

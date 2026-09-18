@@ -166,6 +166,23 @@ public class CameraController {
             if (ch != null && !ch.matches("\\d{1,5}")) return Map.of("error", i18n.msg("error.camera.invalid_channel"));
             c.setStreamChannel(ch);
         }
+        if (body.containsKey("nvrChannel")) {
+            Object v = body.get("nvrChannel");
+            Integer ch = null;
+            if (v != null && !v.toString().isBlank()) {
+                try {
+                    ch = Integer.valueOf(v.toString().trim());
+                } catch (NumberFormatException e) {
+                    return Map.of("error", i18n.msg("error.camera.invalid_nvr_channel"));
+                }
+                if (ch < 1 || ch > 512) return Map.of("error", i18n.msg("error.camera.invalid_nvr_channel"));
+            }
+            c.setNvrChannel(ch);
+            // NVR'da kanal N ning asosiy oqimi "N01" — kanal kiritilib oqim bo'sh qolsa, avtomatik qo'yiladi
+            if (ch != null && (c.getStreamChannel() == null || c.getStreamChannel().isBlank())) {
+                c.setStreamChannel(ch + "01");
+            }
+        }
         if (body.containsKey("supportsFaceRecognition")) {
             c.setSupportsFaceRecognition(body.get("supportsFaceRecognition") != null
                 && Boolean.parseBoolean(body.get("supportsFaceRecognition").toString()));
@@ -233,8 +250,9 @@ public class CameraController {
         if (!com.maktab.faceterminal.TerminalEndpointResolver.isManaged(c)) {
             return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.camera.not_managed")));
         }
-        String base = resolver.baseUrl(c); // http://10.30.N.x:port
-        String host = base.substring("http://".length(), base.lastIndexOf(':'));
+        // URI orqali — avval "http://" uzunligi bo'yicha kesilardi, HTTPS qurilmada (https://...) host
+        // "/10.30.N.x" bo'lib chiqib, RTSP havolasi buzilardi.
+        String host = java.net.URI.create(resolver.baseUrl(c)).getHost();
         int rtspPort = c.getRtspPort() != null ? c.getRtspPort() : 554;
         String channel = c.getStreamChannel() != null ? c.getStreamChannel() : "101";
         Map<String, Object> m = new LinkedHashMap<>();
@@ -243,6 +261,142 @@ public class CameraController {
         m.put("channel", channel);
         m.put("authRequired", true);
         return ResponseEntity.ok(m);
+    }
+
+    // ── NVR (registrator): kanallarni ko'rish va bir yo'la import qilish ──
+
+    /** Saqlanmagan "vaqtinchalik" kamera — NVR manzilini maktab routeri VPN'i orqali aniqlash uchun. */
+    private Camera nvrProbe(Map<String, Object> body, School school) {
+        Camera c = new Camera();
+        c.setSchool(school);
+        c.setBrand("Hikvision");
+        c.setIpAddress(blankToNull(body.get("ipAddress")));
+        c.setDeviceUsername(blankToNull(body.get("deviceUsername")));
+        c.setDevicePassword(body.get("devicePassword") != null ? body.get("devicePassword").toString() : null);
+        c.setUseHttps(body.get("useHttps") != null && Boolean.parseBoolean(body.get("useHttps").toString()));
+        Object port = body.get("port");
+        if (port != null && !port.toString().isBlank()) {
+            try { c.setPort(Integer.valueOf(port.toString().trim())); } catch (NumberFormatException ignored) { }
+        }
+        return c;
+    }
+
+    private School nvrSchool(User caller, Map<String, Object> body) {
+        if (body.get("schoolId") == null) return null;
+        Long schoolId;
+        try {
+            schoolId = Long.valueOf(body.get("schoolId").toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        currentUserService.assertCanWriteSchoolData(caller, schoolId);
+        return schoolRepo.findById(schoolId).orElse(null);
+    }
+
+    /** NVR'ga ulangan kameralar ro'yxati (hali hech narsa saqlanmaydi). */
+    @PostMapping("/nvr/channels")
+    public ResponseEntity<?> nvrChannels(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                         @RequestBody Map<String, Object> body) {
+        User caller = currentUserService.requireUser(authHeader);
+        School school = nvrSchool(caller, body);
+        if (school == null) return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.school.not_found")));
+        Camera probe = nvrProbe(body, school);
+        if (!com.maktab.faceterminal.TerminalEndpointResolver.isManaged(probe)) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.camera.nvr_fields_required")));
+        }
+        var client = resolver.hikvision(probe);
+        var info = client.deviceInfo();
+        List<com.maktab.faceterminal.HikvisionIsapiClient.NvrChannel> channels = client.nvrChannels();
+
+        Set<Integer> registered = cameraRepo.findBySchoolId(school.getId()).stream()
+            .filter(c -> probe.getIpAddress().equals(c.getIpAddress()) && c.getNvrChannel() != null)
+            .map(Camera::getNvrChannel).collect(Collectors.toSet());
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (var ch : channels) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", ch.id());
+            m.put("name", ch.name());
+            m.put("ipAddress", ch.ipAddress());
+            m.put("online", ch.online());
+            m.put("registered", registered.contains(ch.id()));
+            list.add(m);
+        }
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("model", info.model());
+        res.put("serialNumber", info.serialNumber());
+        res.put("deviceType", info.deviceType());
+        res.put("channels", list);
+        return ResponseEntity.ok(res);
+    }
+
+    /** Tanlangan NVR kanallarini kamera sifatida qo'shadi (allaqachon qo'shilganlari o'tkazib yuboriladi). */
+    @PostMapping("/nvr/import")
+    public ResponseEntity<?> nvrImport(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                       @RequestBody Map<String, Object> body) {
+        User caller = currentUserService.requireUser(authHeader);
+        School school = nvrSchool(caller, body);
+        if (school == null) return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.school.not_found")));
+        Camera probe = nvrProbe(body, school);
+        if (!com.maktab.faceterminal.TerminalEndpointResolver.isManaged(probe)) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.camera.nvr_fields_required")));
+        }
+
+        Map<Integer, String> selected = new LinkedHashMap<>();
+        if (body.get("channels") instanceof List<?> raw) {
+            for (Object o : raw) {
+                if (!(o instanceof Map<?, ?> ch) || ch.get("id") == null) continue;
+                int id;
+                try {
+                    id = Integer.parseInt(ch.get("id").toString().trim());
+                } catch (NumberFormatException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.camera.invalid_nvr_channel")));
+                }
+                if (id < 1 || id > 512) return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.camera.invalid_nvr_channel")));
+                String name = ch.get("name") != null ? ch.get("name").toString().trim() : "";
+                selected.putIfAbsent(id, name.length() > 100 ? name.substring(0, 100) : name);
+            }
+        }
+        if (selected.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.camera.nvr_no_channels")));
+        // Xona hamma kanal uchun bitta — hech narsa saqlanmasdan OLDIN tekshiriladi
+        if (body.containsKey("roomId")) {
+            Object roomErr = applyRoom(probe, body.get("roomId"), school.getId());
+            if (roomErr != null) return ResponseEntity.badRequest().body(roomErr);
+        }
+
+        // NVR manzili/login to'g'riligini va hozirgi holatni bitta so'rov bilan tekshiramiz
+        Map<Integer, Boolean> online = resolver.hikvision(probe).nvrChannelOnline();
+
+        Set<Integer> existing = cameraRepo.findBySchoolId(school.getId()).stream()
+            .filter(c -> probe.getIpAddress().equals(c.getIpAddress()) && c.getNvrChannel() != null)
+            .map(Camera::getNvrChannel).collect(Collectors.toSet());
+        List<Map<String, Object>> created = new ArrayList<>();
+        int skipped = 0;
+        for (Map.Entry<Integer, String> e : selected.entrySet()) {
+            if (existing.contains(e.getKey())) { skipped++; continue; }
+            Camera c = new Camera();
+            c.setName(e.getValue().isBlank() ? "NVR " + e.getKey() + "-kanal" : e.getValue());
+            c.setSchool(school);
+            c.setBrand("Hikvision");
+            c.setIpAddress(probe.getIpAddress());
+            c.setPort(probe.getPort());
+            c.setUseHttps(probe.getUseHttps());
+            c.setDeviceUsername(probe.getDeviceUsername());
+            c.setDevicePassword(probe.getDevicePassword());
+            c.setNvrChannel(e.getKey());
+            c.setStreamChannel(e.getKey() + "01");
+            c.setRoom(probe.getRoom());
+            if (Boolean.TRUE.equals(online.get(e.getKey()))) {
+                c.setStatus(Camera.CameraStatus.ONLINE);
+                c.setLastSeen(java.time.LocalDateTime.now());
+            }
+            cameraRepo.save(c);
+            created.add(toCameraMap(c));
+        }
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("created", created.size());
+        res.put("skipped", skipped);
+        res.put("cameras", created);
+        return ResponseEntity.ok(res);
     }
 
     /** roomId'ni kameraga biriktiradi — xona berilgan maktabga tegishli ekanligini tekshiradi. Xato bo'lsa error map qaytaradi, aks holda null. */
@@ -420,6 +574,7 @@ public class CameraController {
         m.put("useHttps", Boolean.TRUE.equals(c.getUseHttps()));
         m.put("rtspPort", c.getRtspPort());
         m.put("streamChannel", c.getStreamChannel());
+        m.put("nvrChannel", c.getNvrChannel());
         m.put("supportsFaceRecognition", Boolean.TRUE.equals(c.getSupportsFaceRecognition()));
         m.put("deviceUsername", c.getDeviceUsername());
         m.put("hasDevicePassword", c.getDevicePassword() != null && !c.getDevicePassword().isBlank());

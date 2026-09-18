@@ -178,7 +178,8 @@ export default function Devices({ user }) {
   const [search, setSearch] = useState('');
   const [detail, setDetail] = useState(null);
   const [showTermForm, setShowTermForm] = useState(false);
-  const [termForm, setTermForm] = useState({ name: '', direction: 'ENTRANCE', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', useHttps: false, deviceUsername: '', devicePassword: '', notes: '' });
+  const [termForm, setTermForm] = useState({ name: '', direction: 'ENTRANCE', roomId: '', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', useHttps: false, deviceUsername: '', devicePassword: '', notes: '' });
+  const [schoolRooms, setSchoolRooms] = useState([]);
   const [delTarget, setDelTarget] = useState(null);
   const [assignForm, setAssignForm] = useState(null);
   const [assignSchoolId, setAssignSchoolId] = useState('');
@@ -235,22 +236,28 @@ export default function Devices({ user }) {
     return (a.schoolName || '').localeCompare(b.schoolName || '', 'uz');
   });
 
-  const resetTermForm = () => setTermForm({ name: '', direction: 'ENTRANCE', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', useHttps: false, deviceUsername: '', devicePassword: '', notes: '' });
+  const resetTermForm = () => setTermForm({ name: '', direction: 'ENTRANCE', roomId: '', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', useHttps: false, deviceUsername: '', devicePassword: '', notes: '' });
 
   const startAddTerminal = () => { setEditingTerminalId(null); resetTermForm(); setShowTermForm(true); setLanHosts(null); setLanHostsError(''); };
   // Qidiruvda topilgan qurilmadan: forma to'ldirilib ochiladi, foydalanuvchi nom/yo'nalishni tekshirib saqlaydi
   const startAddDiscovered = (prefill) => {
     setEditingTerminalId(null);
-    setTermForm({ name: '', direction: 'ENTRANCE', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', useHttps: false, deviceUsername: '', devicePassword: '', notes: '', ...prefill });
+    setTermForm({ name: '', direction: 'ENTRANCE', roomId: '', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', useHttps: false, deviceUsername: '', devicePassword: '', notes: '', ...prefill });
     setShowTermForm(true);
     setLanHosts(null); setLanHostsError('');
   };
+  // Terminal formasi ochilganda routerning maktabidagi xonalar yuklanadi ("oxirgi ko'ringan joy" uchun).
+  useEffect(() => {
+    if (!showTermForm || !detail?.schoolId) { setSchoolRooms([]); return; }
+    api.get(`/api/rooms?schoolId=${detail.schoolId}`).then(setSchoolRooms).catch(() => setSchoolRooms([]));
+  }, [showTermForm, detail?.schoolId]);
+
   const toggleTermForm = () => { if (showTermForm) { setShowTermForm(false); setEditingTerminalId(null); } else { startAddTerminal(); } };
   const startEditTerminal = (term) => {
     setEditingTerminalId(term.id);
     // devicePassword doim bo'sh boshlanadi — backend uni hech qachon qaytarmaydi (faqat
     // hasDevicePassword bayrog'i); bo'sh qoldirilsa eski parol saqlanadi (RouterController).
-    setTermForm({ name: term.name||'', direction: term.direction||'ENTRANCE', serialNumber: term.serialNumber||'', brand: term.brand||'', model: term.model||'', macAddress: term.macAddress||'', ipAddress: term.ipAddress||'', port: term.port||'', useHttps: !!term.useHttps, deviceUsername: term.deviceUsername||'', devicePassword: '', notes: term.notes||'' });
+    setTermForm({ name: term.name||'', direction: term.direction||'ENTRANCE', roomId: term.roomId ?? '', serialNumber: term.serialNumber||'', brand: term.brand||'', model: term.model||'', macAddress: term.macAddress||'', ipAddress: term.ipAddress||'', port: term.port||'', useHttps: !!term.useHttps, deviceUsername: term.deviceUsername||'', devicePassword: '', notes: term.notes||'' });
     setShowTermForm(true);
     setLanHosts(null); setLanHostsError('');
   };
@@ -483,6 +490,10 @@ export default function Devices({ user }) {
                 <input value={termForm.name} onChange={e=>setTermForm({...termForm,name:e.target.value})} placeholder={t('devices.form.name')} className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
                 <select value={termForm.direction} onChange={e=>setTermForm({...termForm,direction:e.target.value})} className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white focus:outline-none">
                   <option value="ENTRANCE">{t('devices.form.entranceOption')}</option><option value="EXIT">{t('devices.form.exitOption')}</option>
+                </select>
+                <select value={termForm.roomId ?? ''} onChange={e=>setTermForm({...termForm,roomId:e.target.value})} title={t('devices.form.roomHint')} className="col-span-2 px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white focus:outline-none">
+                  <option value="">{t('devices.form.noRoom')}</option>
+                  {schoolRooms.map(r => <option key={r.id} value={r.id}>{r.number} — {r.name}</option>)}
                 </select>
                 <input value={termForm.brand} onChange={e=>setTermForm({...termForm,brand:e.target.value})} placeholder={t('devices.form.brand')} className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
                 <input value={termForm.model} onChange={e=>setTermForm({...termForm,model:e.target.value})} placeholder={t('devices.form.model')} className="px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>

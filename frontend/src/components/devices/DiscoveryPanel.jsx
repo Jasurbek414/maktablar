@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../../services/api';
+import NvrImportModal from './NvrImportModal';
 
 const I = ({ d, c = 'w-5 h-5' }) => (<svg className={c} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={d} /></svg>);
 const SEARCH = 'M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z';
@@ -24,6 +25,7 @@ export default function DiscoveryPanel({ router, canWrite, t, onAddTerminal, onC
   const [error, setError] = useState('');
   const [camDraft, setCamDraft] = useState(null);
   const [savingCam, setSavingCam] = useState(false);
+  const [nvrDevice, setNvrDevice] = useState(null);
 
   if (!canWrite) return null;
 
@@ -112,7 +114,11 @@ export default function DiscoveryPanel({ router, canWrite, t, onAddTerminal, onC
                   {d.model && <span className="text-[11px] text-slate-500">{d.model}</span>}
                   <span className="text-[10px] text-slate-600 font-mono">{d.openPorts.join(', ')}</span>
                   <div className="ml-auto flex gap-1.5">
-                    {registered ? (
+                    {/* NVR: kameralari kanal-kanal import qilinadi — "qo'shilgan" belgisi tugmani yashirmaydi,
+                        chunki keyin ulangan yangi kameralarni ham qo'shish kerak bo'ladi */}
+                    {d.category === 'recorder' ? (
+                      <button onClick={() => setNvrDevice(d)} className="text-[11px] px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-300 hover:bg-blue-500/20">{t('cameras.nvr.addFromNvr')}</button>
+                    ) : registered ? (
                       <span className="text-[10px] px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400">{t('devices.discovery.registered')}</span>
                     ) : d.category !== 'router' && <>
                       <button onClick={() => addTerminal(d)} className="text-[11px] px-2.5 py-1 rounded-md bg-purple-500/10 text-purple-300 hover:bg-purple-500/20">{t('devices.discovery.addTerminal')}</button>
@@ -133,6 +139,20 @@ export default function DiscoveryPanel({ router, canWrite, t, onAddTerminal, onC
           })}
         </div>
       )}
+      <NvrImportModal
+        open={!!nvrDevice}
+        onClose={() => setNvrDevice(null)}
+        schoolId={router.schoolId}
+        initial={nvrDevice ? {
+          ipAddress: nvrDevice.lanIp,
+          port: nvrDevice.httpsOnly ? 443 : (nvrDevice.openPorts.includes(80) ? 80 : ''),
+          useHttps: !!nvrDevice.httpsOnly,
+          deviceUsername: creds.username,
+          devicePassword: creds.password,
+        } : {}}
+        t={t}
+        onImported={() => onCameraAdded && onCameraAdded()}
+      />
     </div>
   );
 }

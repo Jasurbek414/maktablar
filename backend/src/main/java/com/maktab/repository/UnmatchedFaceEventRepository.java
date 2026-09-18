@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface UnmatchedFaceEventRepository extends JpaRepository<UnmatchedFaceEvent, Long> {
     List<UnmatchedFaceEvent> findTop50ByTerminalIdOrderByTimestampDesc(Long terminalId);
+
+    boolean existsBySyncKey(String syncKey);
 }

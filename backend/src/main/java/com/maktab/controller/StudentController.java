@@ -88,6 +88,9 @@ public class StudentController {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private com.maktab.service.PersonLocationService personLocationService;
+
     /**
      * MUHIM: schoolId/classId endi client'dan ishonch bilan qabul qilinmaydi — SUPERADMIN/
      * ADMIN'dan boshqa har bir rol uchun haqiqiy ko'lam Authorization headerdagi
@@ -749,6 +752,7 @@ public class StudentController {
         messageRepository.deleteAll(messageRepository.findByStudentIdOrderByCreatedAtAsc(id));
         personNoteRepository.deleteAll(
             personNoteRepository.findByPersonTypeAndPersonIdOrderByCreatedAtDesc(com.maktab.model.PersonNote.PersonType.STUDENT, id));
+        personLocationService.forgetPerson(com.maktab.model.PersonNote.PersonType.STUDENT, id);
         s.setGuardians(new ArrayList<>());
         studentRepository.saveAndFlush(s);
         studentRepository.deleteById(id);

@@ -28,6 +28,9 @@ public class UserController {
     @Autowired
     private I18nService i18n;
 
+    @Autowired
+    private com.maktab.service.PersonLocationService personLocationService;
+
     /**
      * MUHIM: role/schoolId/provinceId endi client'dan ishonch bilan qabul qilinmaydi —
      * xodimlar ro'yxati (ism, rol, viloyat/maktab) haqiqiy Authorization headerdagi
@@ -214,6 +217,7 @@ public class UserController {
             currentUserService.assertCanManageTargetRole(caller, target.getRole());
             currentUserService.assertTargetInCallerScope(caller, target);
         }
+        personLocationService.forgetPerson(com.maktab.model.PersonNote.PersonType.TEACHER, id);
         userRepository.deleteById(id);
         return ResponseEntity.ok(Map.of("message", i18n.msg("success.deleted")));
     }

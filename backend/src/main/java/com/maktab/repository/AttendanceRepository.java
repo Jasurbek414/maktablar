@@ -54,4 +54,14 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     // (server-side scoping — CurrentUserService orqali aniqlangan ruxsat etilgan schoolId ro'yxati).
     @Query("SELECT a FROM Attendance a WHERE a.student.school.id IN :schoolIds AND a.timestamp >= :from AND a.timestamp < :to ORDER BY a.timestamp DESC")
     List<Attendance> findBySchoolsAndDateRange(@Param("schoolIds") List<Long> schoolIds, @Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to);
+
+    // ─── Superadmin: davomatni o'chirish (AdminAttendanceController) ───
+    // Faqat id va rasm yo'li olinadi — "butunlay" rejimida yuz minglab to'liq entity yuklanmasin.
+    @Query("SELECT a.id, a.photoPath FROM Attendance a WHERE a.student.school.id = :schoolId AND a.timestamp >= :from AND a.timestamp < :to")
+    List<Object[]> findIdAndPhotoBySchoolAndRange(@Param("schoolId") Long schoolId, @Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("DELETE FROM Attendance a WHERE a.id IN :ids")
+    int deleteByIdIn(@Param("ids") List<Long> ids);
 }

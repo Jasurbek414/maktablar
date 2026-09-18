@@ -1,28 +1,42 @@
 package com.maktab.service;
 
-import com.maktab.model.PersonLastSeen;
 import com.maktab.model.PersonNote;
 import com.maktab.model.PersonRecognitionEvent;
 import com.maktab.repository.PersonLastSeenRepository;
 import com.maktab.repository.PersonRecognitionEventRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.sql.Types;
 import java.time.OffsetDateTime;
 
 /**
  * Kamera/terminal yuz tanish qurilmasidan kelgan "odam#X ni ko'rdim" signalini qabul qiladi
- * (Kamera-Reja, 2026-09-18, 1-bosqich). Qurilma-xos parsing (Hikvision ISAPI va h.k.) bu yerda
- * YO'Q — u 3-bosqichdagi PersonRecognitionMonitor'da, aniq kamera modeli tanlangach yoziladi.
- * Bu servis faqat ikkita umumiy qoidani ta'minlaydi: dublikat qo'shilmasligi va "hozirgi
- * joylashuv" faqat YANGIROQ hodisa bilan yangilanishi (FaceTerminalMonitor'da 2026-09-17
- * tuzatilgan tartib-buzilish xatosining oldini olish uchun ataylab shu tarzda qurilgan).
+ * (Kamera-Reja, 2026-09-18). Qurilma-xos parsing bu yerda YO'Q — chaqiruvchi (FaceAttendanceIngestService,
+ * keyinroq kamera monitori) allaqachon aniqlangan odamni beradi. Bu servis ikkita umumiy qoidani
+ * ta'minlaydi: dublikat yozilmasligi va "oxirgi ko'ringan joy" faqat YANGIROQ hodisa bilan
+ * yangilanishi — ikkalasi ham parallel chaqiruvlarda to'g'ri ishlaydi.
  */
 @Service
 public class PersonLocationService {
 
+    // Bitta atomar SQL: qator bo'lmasa yaratadi, bo'lsa FAQAT yangiroq hodisa bilan yangilaydi.
+    // "O'qi-keyin-yoz" usuli parallel hodisalarda unique constraint xatosi berardi yoki
+    // yangiroq joylashuvni eskisi bilan bosib ketardi.
+    static final String UPSERT_SQL =
+        "INSERT INTO person_last_seen (person_type, person_id, school_id, room_id, device_id, device_type, seen_at, confidence, updated_at) "
+        + "VALUES (:personType, :personId, :schoolId, :roomId, :deviceId, :deviceType, :seenAt, :confidence, now()) "
+        + "ON CONFLICT (person_type, person_id) DO UPDATE SET "
+        + "school_id = EXCLUDED.school_id, room_id = EXCLUDED.room_id, device_id = EXCLUDED.device_id, "
+        + "device_type = EXCLUDED.device_type, seen_at = EXCLUDED.seen_at, confidence = EXCLUDED.confidence, updated_at = now() "
+        + "WHERE person_last_seen.seen_at < EXCLUDED.seen_at";
+
     @Autowired private PersonRecognitionEventRepository eventRepo;
     @Autowired private PersonLastSeenRepository lastSeenRepo;
+    @Autowired private NamedParameterJdbcTemplate jdbc;
 
     /**
      * @return saqlangan hodisa, yoki syncKey allaqachon mavjud bo'lsa null (dublikat, jim o'tkazib yuboriladi).
@@ -46,31 +60,36 @@ public class PersonLocationService {
         event.setConfidence(confidence);
         event.setOccurredAt(occurredAt);
         event.setSyncKey(syncKey);
-        PersonRecognitionEvent saved = eventRepo.save(event);
+        PersonRecognitionEvent saved;
+        try {
+            saved = eventRepo.save(event);
+        } catch (DataIntegrityViolationException e) {
+            return null; // parallel chaqiruv shu syncKey'ni bir lahza oldin yozib ulgurgan
+        }
 
-        updateLastSeenIfNewer(deviceId, deviceType, schoolId, roomId, personType, personId, confidence, occurredAt);
+        // Aniq SQL turlari: null roomId/confidence Hibernate native so'rovida bytea bo'lib bog'lanib,
+        // Postgres'da "bigint but expression is of type bytea" xatosini berardi.
+        MapSqlParameterSource p = new MapSqlParameterSource()
+            .addValue("personType", personType.name(), Types.VARCHAR)
+            .addValue("personId", personId, Types.BIGINT)
+            .addValue("schoolId", schoolId, Types.BIGINT)
+            .addValue("roomId", roomId, Types.BIGINT)
+            .addValue("deviceId", deviceId, Types.BIGINT)
+            .addValue("deviceType", deviceType.name(), Types.VARCHAR)
+            .addValue("seenAt", occurredAt, Types.TIMESTAMP_WITH_TIMEZONE)
+            .addValue("confidence", confidence, Types.INTEGER);
+        jdbc.update(UPSERT_SQL, p);
         return saved;
     }
 
-    private void updateLastSeenIfNewer(Long deviceId, PersonRecognitionEvent.DeviceType deviceType,
-                                        Long schoolId, Long roomId,
-                                        PersonNote.PersonType personType, Long personId,
-                                        Integer confidence, OffsetDateTime occurredAt) {
-        PersonLastSeen row = lastSeenRepo.findByPersonTypeAndPersonId(personType, personId).orElse(null);
-        if (row != null && row.getSeenAt() != null && !occurredAt.isAfter(row.getSeenAt())) {
-            return; // tartibsiz/eskiroq hodisa — "hozirgi holat"ni orqaga surmaydi
-        }
-        if (row == null) {
-            row = new PersonLastSeen();
-            row.setPersonType(personType);
-            row.setPersonId(personId);
-        }
-        row.setSchoolId(schoolId);
-        row.setRoomId(roomId);
-        row.setDeviceId(deviceId);
-        row.setDeviceType(deviceType);
-        row.setConfidence(confidence);
-        row.setSeenAt(occurredAt);
-        lastSeenRepo.save(row);
+    /** Shu qurilma voqeasi (syncKey) allaqachon qayta ishlanganmi — FaceAttendanceIngestService daftar sifatida ishlatadi. */
+    public boolean isProcessed(String syncKey) {
+        return eventRepo.existsBySyncKey(syncKey);
+    }
+
+    /** O'quvchi/xodim o'chirilganda uning barcha joylashuv ma'lumotini o'chiradi (biometrik ma'lumot qolib ketmasin). */
+    public void forgetPerson(PersonNote.PersonType personType, Long personId) {
+        eventRepo.deleteByPerson(personType, personId);
+        lastSeenRepo.deleteByPerson(personType, personId);
     }
 }

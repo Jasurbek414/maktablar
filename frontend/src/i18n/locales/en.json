@@ -247,6 +247,8 @@
       "ip": "IP address (local, inside the VPN)",
       "port": "Port (80, 8000...)",
       "useHttps": "Device requires HTTPS (self-signed certificate)",
+      "noRoom": "No room selected (optional)",
+      "roomHint": "The room where this terminal is installed — shown as \"last seen\" on the student profile",
       "deviceUsername": "Device username (e.g. admin)",
       "devicePassword": "Device password",
       "devicePasswordEditHint": "Leave blank to keep unchanged",
@@ -624,10 +626,10 @@
       "eventIn": "Arrived",
       "eventOut": "Left",
       "location": {
-        "title": "Current location (camera)",
-        "unknownRoom": "Camera with no room set",
+        "title": "Last seen",
+        "unknownRoom": "No room set",
         "seenAt": "{{time}} · {{device}}",
-        "neverSeen": "Not yet seen on any face-recognition camera"
+        "neverSeen": "Not yet seen by any face-recognition device (terminal/camera)"
       }
     },
     "modal": {
@@ -857,6 +859,29 @@
     },
     "manageInSettings": "Configure cameras",
     "searchPlaceholder": "Search by camera or room...",
+    "nvr": {
+      "addFromNvr": "Add NVR cameras",
+      "hint": "If cameras are connected to an NVR (recorder), add them all at once through the NVR.",
+      "title": "Add NVR cameras",
+      "desc": "Enter the NVR address and login — the platform fetches the list of connected cameras, then tick the ones to add.",
+      "ipPlaceholder": "NVR IP address (e.g. 192.168.88.10)",
+      "portPlaceholder": "Port (80)",
+      "useHttps": "NVR requires HTTPS",
+      "loadBtn": "Show cameras",
+      "loading": "Querying the NVR...",
+      "found": "{{model}}: {{count}} cameras found",
+      "empty": "No IP cameras are connected to this NVR",
+      "selectAll": "Select all",
+      "channel": "ch {{n}}",
+      "registered": "Added",
+      "online": "Online",
+      "offline": "Disconnected",
+      "noRoom": "Room (optional, same for all)",
+      "importBtn": "Add {{count}} cameras",
+      "importing": "Adding...",
+      "noneSelected": "Select at least one camera",
+      "done": "{{created}} cameras added ({{skipped}} already existed). Status updates within a minute."
+    },
     "device": {
       "sectionTitle": "Remote management (optional)",
       "sectionHint": "With brand, IP and login set, camera status is monitored automatically and a live frame is shown (over the school router VPN).",
@@ -870,6 +895,8 @@
       "passwordKeep": "Leave empty to keep",
       "supportsFaceRecognition": "This camera supports onboard face recognition (DeepinView/AcuSense)",
       "supportsFaceRecognitionHint": "Only cameras with this checked take part in the \"where is this person\" search. Leave unchecked for a plain surveillance camera.",
+      "nvrChannel": "NVR channel (optional)",
+      "nvrChannelPlaceholder": "If the camera is connected through an NVR: 1, 2, 3...",
       "snapshotAt": "Frame: {{time}}",
       "refreshSnapshot": "Refresh",
       "lastSeen": "Last seen",
@@ -1000,6 +1027,8 @@
       "loadError": "Could not load school information.",
       "editDesc": "This information belongs only to your school — it does not affect other schools",
       "contactSectionTitle": "Contact & official information",
+      "attendanceSectionTitle": "Attendance settings",
+      "dedupHint": "E.g. after passing the entrance terminal, another \"arrived\" is not recorded until this much time passes (same for exit). Affects only your school. Leave empty to use the global value ({{global}} min). Currently in effect: {{effective}} min.",
       "addressPlaceholder": "City, street, building number",
       "savedMsg": "Saved!",
       "fields": {
@@ -1012,7 +1041,8 @@
         "address": "Address",
         "phone": "Phone",
         "schoolNumber": "School number",
-        "foundedYear": "Founded year"
+        "foundedYear": "Founded year",
+        "dedupMinutes": "Re-pass blocking time (minutes)"
       }
     },
     "notifications": {

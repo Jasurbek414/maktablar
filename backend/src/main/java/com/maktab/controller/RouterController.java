@@ -47,6 +47,7 @@ public class RouterController {
     @Autowired private CurrentUserService currentUserService;
     @Autowired private I18nService i18n;
     @Autowired private VpnAddressing vpn;
+    @Autowired private com.maktab.repository.RoomRepository roomRepo;
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     //  WIREGUARD VPN SOZLAMALARI
@@ -599,6 +600,8 @@ public class RouterController {
         t.setRegisteredFaces(0);
         t.setNotes((String) body.get("notes"));
         t.setCreatedAt(LocalDateTime.now());
+        String roomErr = applyTerminalRoom(t, body.get("roomId"));
+        if (roomErr != null) return ResponseEntity.badRequest().body(Map.of("error", roomErr));
         terminalRepo.save(t);
 
         return ResponseEntity.ok(toTerminalMap(t));
@@ -627,6 +630,10 @@ public class RouterController {
             if (body.containsKey("status"))
                 t.setStatus(FaceTerminal.TerminalStatus.valueOf(body.get("status").toString()));
             if (body.containsKey("notes")) t.setNotes((String) body.get("notes"));
+            if (body.containsKey("roomId")) {
+                String roomErr = applyTerminalRoom(t, body.get("roomId"));
+                if (roomErr != null) return ResponseEntity.badRequest().body(Map.of("error", roomErr));
+            }
             terminalRepo.save(t);
             return ResponseEntity.ok(toTerminalMap(t));
         }).orElse(ResponseEntity.notFound().build());
@@ -641,6 +648,30 @@ public class RouterController {
             terminalRepo.deleteById(id);
             return ResponseEntity.ok(Map.of("success", true));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Terminalni xonaga biriktiradi ("oxirgi ko'ringan joy" uchun). Xona terminal maktabiga tegishli
+     * bo'lishi shart (CameraController#applyRoom bilan bir xil qoida). Xato bo'lsa i18n xabari, aks holda null.
+     */
+    private String applyTerminalRoom(FaceTerminal t, Object roomIdVal) {
+        if (roomIdVal == null || roomIdVal.toString().isBlank()) {
+            t.setRoomId(null);
+            return null;
+        }
+        Long roomId;
+        try {
+            roomId = Long.valueOf(roomIdVal.toString());
+        } catch (NumberFormatException e) {
+            return i18n.msg("error.room.invalid_id");
+        }
+        com.maktab.model.Room room = roomRepo.findById(roomId).orElse(null);
+        Long schoolId = terminalSchoolId(t);
+        if (room == null || room.getSchool() == null || !room.getSchool().getId().equals(schoolId)) {
+            return i18n.msg("error.room.not_found");
+        }
+        t.setRoomId(roomId);
+        return null;
     }
 
     private Long terminalSchoolId(FaceTerminal t) {
@@ -778,6 +809,7 @@ public class RouterController {
         m.put("model", t.getModel());
         m.put("macAddress", t.getMacAddress());
         m.put("direction", t.getDirection().name());
+        m.put("roomId", t.getRoomId());
         m.put("status", t.getStatus().name());
         m.put("ipAddress", t.getIpAddress());
         m.put("port", t.getPort());
