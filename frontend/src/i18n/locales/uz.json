@@ -622,7 +622,13 @@
       "timelineTitle": "Davomat tarixi (so'nggi hodisalar)",
       "timelineEmpty": "Hozircha davomat hodisalari yo'q",
       "eventIn": "Keldi",
-      "eventOut": "Ketdi"
+      "eventOut": "Ketdi",
+      "location": {
+        "title": "Hozirgi joylashuv (kamera)",
+        "unknownRoom": "Xona belgilanmagan kamera",
+        "seenAt": "{{time}} · {{device}}",
+        "neverSeen": "Hali hech qaysi yuz tanish kamerasida ko'rinmagan"
+      }
     },
     "modal": {
       "newTitle": "Yangi o'quvchi",

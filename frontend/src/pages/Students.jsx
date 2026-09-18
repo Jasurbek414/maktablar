@@ -153,6 +153,8 @@ export default function Students({ user }) {
   const [profileAttendance, setProfileAttendance] = useState(null);
   const [profileAttendanceEvents, setProfileAttendanceEvents] = useState([]);
   const [profileAttendanceLoading, setProfileAttendanceLoading] = useState(false);
+  const [profileLocation, setProfileLocation] = useState(null);
+  const [profileLocationLoading, setProfileLocationLoading] = useState(false);
   const [pushingFace, setPushingFace] = useState(false);
   const [pushResult, setPushResult] = useState(null);
   const [classModal, setClassModal] = useState(null); // 'add' | 'edit' | null
@@ -185,6 +187,15 @@ export default function Students({ user }) {
       .catch(() => { setProfileAttendance(null); setProfileAttendanceEvents([]); })
       .finally(() => setProfileAttendanceLoading(false));
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile?.id || user?.role === 'TEACHER') { setProfileLocation(null); return; }
+    setProfileLocationLoading(true);
+    api.get(`/api/persons/student/${profile.id}/location`)
+      .then(setProfileLocation)
+      .catch(() => setProfileLocation(null))
+      .finally(() => setProfileLocationLoading(false));
+  }, [profile?.id, user?.role]);
 
   const loadSchoolDirect = async () => {
     try {
@@ -569,6 +580,28 @@ export default function Students({ user }) {
                   </div>
                 ))}
               </div>
+
+              {/* Kamera-Reja (2026-09-18): faqat DIRECTOR/MUDIR/admin ko'radi — backend TEACHER'ni
+                  403 bilan rad etadi, shu sabab client ham TEACHER uchun so'rovni umuman yubormaydi. */}
+              {user?.role !== 'TEACHER' && (
+                <div className="mt-4 rounded-xl bg-cyan-500/[0.04] border border-cyan-500/15 p-3">
+                  <p className="text-[10px] text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                    {t('students.profile.location.title')}
+                  </p>
+                  {profileLocationLoading ? (
+                    <div className="flex justify-center py-2"><div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" /></div>
+                  ) : profileLocation?.seen ? (
+                    <>
+                      <p className="text-sm text-white mt-1.5">{profileLocation.roomName ? `${profileLocation.roomNumber} — ${profileLocation.roomName}` : t('students.profile.location.unknownRoom')}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{t('students.profile.location.seenAt', { time: new Date(profileLocation.seenAt).toLocaleString(), device: profileLocation.deviceName || '—' })}</p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-slate-500 mt-1.5">{t('students.profile.location.neverSeen')}</p>
+                  )}
+                </div>
+              )}
+
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>{t('students.profile.attendanceStatsTitle')}</h3>
                 {profileAttendanceLoading ? (

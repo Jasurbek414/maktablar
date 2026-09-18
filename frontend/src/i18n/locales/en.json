@@ -622,7 +622,13 @@
       "timelineTitle": "Attendance history (recent events)",
       "timelineEmpty": "No attendance events yet",
       "eventIn": "Arrived",
-      "eventOut": "Left"
+      "eventOut": "Left",
+      "location": {
+        "title": "Current location (camera)",
+        "unknownRoom": "Camera with no room set",
+        "seenAt": "{{time}} · {{device}}",
+        "neverSeen": "Not yet seen on any face-recognition camera"
+      }
     },
     "modal": {
       "newTitle": "New student",
