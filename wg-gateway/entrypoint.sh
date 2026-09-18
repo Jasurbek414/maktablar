@@ -41,6 +41,14 @@ iptables -P FORWARD DROP
 iptables -A FORWARD -o "$IFACE" -j ACCEPT
 iptables -A FORWARD -i "$IFACE" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
+# TCP MSS cheklovi (2026-09-18, jonli nosozlik): backend MSS 1460 e'lon qiladi, terminal ~1500
+# baytli segment yuboradi, lekin tunnel yo'li kichikroq (wg0 1420, ba'zi maktablarda OpenVPN) —
+# "fragmentatsiya kerak" ICMP xabari qurilmaga yetmaydi va katta javoblar (AcsEvent ro'yxati
+# ~1.4KB+) jimgina osilib qoladi. Natijada davomat umuman kelmay qolgan edi. 1300 — wg0 (1380)
+# va OpenVPN bo'g'inlari uchun zaxira bilan.
+iptables -t mangle -A FORWARD -o "$IFACE" -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1300
+iptables -t mangle -A FORWARD -i "$IFACE" -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1300
+
 term_handler() {
     echo "[wg-gateway] To'xtatilmoqda..."
     wg-quick down "$IFACE" || true
