@@ -862,6 +862,8 @@
       "username": "Qurilma logini",
       "password": "Qurilma paroli",
       "passwordKeep": "O'zgartirmaslik uchun bo'sh qoldiring",
+      "supportsFaceRecognition": "Bu kamera yuz tanishni o'zida qo'llab-quvvatlaydi (DeepinView/AcuSense)",
+      "supportsFaceRecognitionHint": "Faqat shu belgi yoqilgan kameralar \"odam qayerda\" real-vaqtli qidiruviga qo'shiladi. Oddiy kuzatuv kamerasi bo'lsa, belgilamang.",
       "snapshotAt": "Kadr: {{time}}",
       "refreshSnapshot": "Yangilash",
       "lastSeen": "Oxirgi aloqa",

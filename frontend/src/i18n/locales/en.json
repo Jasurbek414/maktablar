@@ -862,6 +862,8 @@
       "username": "Device login",
       "password": "Device password",
       "passwordKeep": "Leave empty to keep",
+      "supportsFaceRecognition": "This camera supports onboard face recognition (DeepinView/AcuSense)",
+      "supportsFaceRecognitionHint": "Only cameras with this checked take part in the \"where is this person\" search. Leave unchecked for a plain surveillance camera.",
       "snapshotAt": "Frame: {{time}}",
       "refreshSnapshot": "Refresh",
       "lastSeen": "Last seen",

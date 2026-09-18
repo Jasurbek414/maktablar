@@ -81,6 +81,14 @@ public class Camera {
     @Column
     private String streamChannel;
 
+    /** Kamera modeli o'zida yuz tanishni qo'llab-quvvatladimi (masalan Hikvision DeepinView/
+     * AcuSense) — barcha Hikvision kameralar ulanishi (masofadan boshqarish, snapshot, holat)
+     * mumkin bo'lsa-da, faqat shu belgi TRUE bo'lgan kameralar PersonRecognitionMonitor orqali
+     * "odam qayerda" oqimiga qo'shiladi. Admin qo'lda belgilaydi — kamera turi ISAPI orqali
+     * ishonchli avtomatik aniqlanmaydi. Standart: false (Kamera-Reja, 2026-09-18). */
+    @Column
+    private Boolean supportsFaceRecognition = false;
+
     @Column
     private String deviceUsername;
 

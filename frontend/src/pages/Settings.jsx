@@ -468,6 +468,16 @@ export default function Settings({ user, onUserUpdate }) {
                             <Input label={t('cameras.device.password')} type="password" value={camForm.devicePassword || ''} onChange={e => setCamForm({ ...camForm, devicePassword: e.target.value })} autoComplete="new-password"
                               placeholder={camEditing?.hasDevicePassword ? t('cameras.device.passwordKeep') : ''} />
                           </div>
+                          {/* Har qanday Hikvision kamera ulanadi (masofadan boshqarish/snapshot uchun) — lekin
+                              faqat shu belgi yoqilgan kameralar "odam qayerda" (yuz tanish) oqimiga qo'shiladi,
+                              chunki eski/oddiy modellarda bu funksiya qurilmaning o'zida yo'q. */}
+                          <label className="flex items-center gap-2.5 mt-1 cursor-pointer select-none">
+                            <input type="checkbox" checked={!!camForm.supportsFaceRecognition}
+                              onChange={e => setCamForm({ ...camForm, supportsFaceRecognition: e.target.checked })}
+                              className="w-4 h-4 rounded accent-cyan-500" />
+                            <span className="text-xs text-slate-300">{t('cameras.device.supportsFaceRecognition')}</span>
+                          </label>
+                          <p className="text-[10px] text-slate-500 mt-1">{t('cameras.device.supportsFaceRecognitionHint')}</p>
                         </>}
                       </div>
                       <div className="flex gap-2">

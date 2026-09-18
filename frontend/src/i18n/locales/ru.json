@@ -862,6 +862,8 @@
       "username": "Логин устройства",
       "password": "Пароль устройства",
       "passwordKeep": "Оставьте пустым, чтобы не менять",
+      "supportsFaceRecognition": "Эта камера поддерживает распознавание лиц (DeepinView/AcuSense)",
+      "supportsFaceRecognitionHint": "Только камеры с этой отметкой участвуют в поиске \"где человек сейчас\". Для обычной камеры видеонаблюдения не отмечайте.",
       "snapshotAt": "Кадр: {{time}}",
       "refreshSnapshot": "Обновить",
       "lastSeen": "Последняя связь",

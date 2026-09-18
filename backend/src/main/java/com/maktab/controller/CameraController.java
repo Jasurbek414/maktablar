@@ -166,6 +166,10 @@ public class CameraController {
             if (ch != null && !ch.matches("\\d{1,5}")) return Map.of("error", i18n.msg("error.camera.invalid_channel"));
             c.setStreamChannel(ch);
         }
+        if (body.containsKey("supportsFaceRecognition")) {
+            c.setSupportsFaceRecognition(body.get("supportsFaceRecognition") != null
+                && Boolean.parseBoolean(body.get("supportsFaceRecognition").toString()));
+        }
         return null;
     }
 
@@ -416,6 +420,7 @@ public class CameraController {
         m.put("useHttps", Boolean.TRUE.equals(c.getUseHttps()));
         m.put("rtspPort", c.getRtspPort());
         m.put("streamChannel", c.getStreamChannel());
+        m.put("supportsFaceRecognition", Boolean.TRUE.equals(c.getSupportsFaceRecognition()));
         m.put("deviceUsername", c.getDeviceUsername());
         m.put("hasDevicePassword", c.getDevicePassword() != null && !c.getDevicePassword().isBlank());
         m.put("managed", com.maktab.faceterminal.TerminalEndpointResolver.isManaged(c));
