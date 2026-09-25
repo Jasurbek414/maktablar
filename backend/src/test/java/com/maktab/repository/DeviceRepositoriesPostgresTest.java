@@ -41,6 +41,7 @@ class DeviceRepositoriesPostgresTest {
     @Autowired private StudentRepository studentRepo;
     @Autowired private FaceTerminalRepository terminalRepo;
     @Autowired private CameraRepository cameraRepo;
+    @Autowired private AbsenceRequestRepository absenceRepo;
 
     private School school(String name) {
         Province p = new Province();
@@ -78,6 +79,69 @@ class DeviceRepositoriesPostgresTest {
 
         assertTrue(studentRepo.findBySchoolIdAndDeviceEmployeeNo(b.getId(), "ABC1D2E3F456").isEmpty(),
             "boshqa maktab o'quvchisi topilmasligi kerak");
+    }
+
+    /**
+     * Ruxsat so'rovi so'rovlari (2026-09-25).
+     *
+     * Bu test aynan yuqoridagi sinf izohida tasvirlangan xato TAKRORLANGANI uchun qo'shildi:
+     * `findApprovedStudentIdsOn` dastlab HQL ichida ichki enum literalini ishlatardi
+     * (`r.status = com.maktab.model.AbsenceRequest.Status.APPROVED`) — 104 ta unit testdan
+     * o'tdi, chunki ular repozitoriyni mock qiladi, lekin production'da Spring konteksti
+     * ko'tarilmay qoldi. Bu yerda repozitoriy HAQIQATAN yaratiladi va so'rov bajariladi.
+     */
+    @Test
+    void absenceRequestQueriesAreValidAndDateBoundsInclusive() {
+        School s = school("AR");
+        Student st = student(s, "AR-1");
+        Student other = student(s, "AR-2");
+        em.flush();
+
+        AbsenceRequest approved = new AbsenceRequest();
+        approved.setStudentId(st.getId());
+        approved.setSchoolId(s.getId());
+        approved.setClassId(77L);
+        approved.setStartDate(java.time.LocalDate.of(2026, 9, 21));
+        approved.setEndDate(java.time.LocalDate.of(2026, 9, 23));
+        approved.setReasonType(AbsenceRequest.ReasonType.ILLNESS);
+        approved.setStatus(AbsenceRequest.Status.APPROVED);
+        approved.setCreatedByGuardianId(1L);
+        em.persist(approved);
+
+        // Kutilmoqda: PENDING hisobga OLINMAYDI
+        AbsenceRequest pending = new AbsenceRequest();
+        pending.setStudentId(other.getId());
+        pending.setSchoolId(s.getId());
+        pending.setClassId(77L);
+        pending.setStartDate(java.time.LocalDate.of(2026, 9, 21));
+        pending.setEndDate(java.time.LocalDate.of(2026, 9, 23));
+        pending.setReasonType(AbsenceRequest.ReasonType.OTHER);
+        pending.setStatus(AbsenceRequest.Status.PENDING);
+        pending.setCreatedByGuardianId(1L);
+        em.persist(pending);
+        em.flush();
+
+        List<Long> ids = List.of(st.getId(), other.getId());
+
+        // Ikkala chegara ham KIRADI
+        assertEquals(List.of(st.getId()),
+            absenceRepo.findApprovedStudentIdsOn(ids, java.time.LocalDate.of(2026, 9, 21)),
+            "boshlanish sanasi kiradi");
+        assertEquals(List.of(st.getId()),
+            absenceRepo.findApprovedStudentIdsOn(ids, java.time.LocalDate.of(2026, 9, 23)),
+            "tugash sanasi kiradi");
+        assertEquals(List.of(st.getId()),
+            absenceRepo.findApprovedStudentIdsOn(ids, java.time.LocalDate.of(2026, 9, 22)),
+            "o'rtadagi kun kiradi");
+
+        // Davrdan tashqarida hech kim
+        assertTrue(absenceRepo.findApprovedStudentIdsOn(ids, java.time.LocalDate.of(2026, 9, 20)).isEmpty());
+        assertTrue(absenceRepo.findApprovedStudentIdsOn(ids, java.time.LocalDate.of(2026, 9, 24)).isEmpty());
+
+        // Qolgan @Query'siz so'rovlar ham yaratila olishini tasdiqlaymiz
+        assertEquals(2, absenceRepo.findBySchoolIdOrderByCreatedAtDesc(s.getId()).size());
+        assertEquals(2, absenceRepo.findByClassIdInOrderByCreatedAtDesc(List.of(77L)).size());
+        assertEquals(1, absenceRepo.findByStudentIdInOrderByCreatedAtDesc(List.of(st.getId())).size());
     }
 
     @Test
