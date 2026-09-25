@@ -276,7 +276,17 @@
       "setupTitle": "Set up Mikrotik (3 steps)",
       "step1": "Connect to the Mikrotik with WinBox and open New Terminal",
       "step2": "Click “Show setup script”, copy the whole script and paste it into the terminal (re-running is safe)",
-      "step3": "Within a minute the router shows ONLINE here — then discover devices below"
+      "step3": "Within a minute the router shows ONLINE here — then discover devices below",
+      "ros7Note": "RouterOS 7 is required. On older versions the script stops by itself — upgrade via WinBox > System > Packages > Check For Updates.",
+      "transportLabel": "Connection type",
+      "transportWireguard": "WireGuard (recommended)",
+      "transportOpenvpn": "OpenVPN (fallback)",
+      "transportHint": "WireGuard is fast and light (UDP). If the school's internet blocks UDP or the router stays offline for more than 3 minutes, choose OpenVPN (TCP 443, passes through almost any network).",
+      "switchConfirmTitle": "Change the connection type?",
+      "switchConfirmNote": "The school stays disconnected until you paste the new script into the router. The script removes the old connection by itself.",
+      "switchConfirmBtn": "Yes, change",
+      "switchError": "Could not change the connection type",
+      "ovpnLogin": "OpenVPN login:"
     },
     "assign": {
       "title": "Assign to school",
@@ -484,7 +494,41 @@
       "studentSuffix": "students",
       "gradeSuffix": "Grade {{grade}}",
       "teacherLabel": "Homeroom teacher",
-      "noTeacher": "Not assigned"
+      "noTeacher": "Not assigned",
+      "openHint": "Click to see attendance"
+    },
+    "detail": {
+      "total": "Total",
+      "present": "Present",
+      "absent": "Absent",
+      "came": "Present",
+      "notCame": "Absent",
+      "noStudents": "This class has no students yet",
+      "loadError": "Failed to load data",
+      "downloadBtn": "Download Excel",
+      "downloading": "Preparing...",
+      "guardianOk": "Parent's Telegram is connected",
+      "guardianNone": "No parent with Telegram connected",
+      "table": {
+        "student": "Student",
+        "status": "Status",
+        "in": "In",
+        "out": "Out",
+        "guardian": "Parent"
+      }
+    },
+    "notify": {
+      "btn": "Notify absentees ({{count}})",
+      "title": "A message will be sent to the parents of {{count}} students",
+      "hint": "You can edit the text. {student} — student name, {class} — class, {date} — date.",
+      "template": "Dear parent, your child {student} did not come to school today ({date}). Please let the school know the reason.",
+      "confirmBtn": "Send",
+      "sending": "Sending...",
+      "result": "Sent to {{guardians}} parents of {{students}} students",
+      "skipped": "{{count}} students have no parent on Telegram — not sent to them",
+      "noAbsent": "Everyone was present that day — nothing to send",
+      "noReachable": "Absent students have no parents connected to Telegram",
+      "error": "Failed to send the message"
     },
     "empty": {
       "title": "This school has no classes yet",
@@ -741,6 +785,17 @@
       "entered": "Entered",
       "exited": "Exited",
       "studentsListTitle": "Student list"
+    },
+    "byClass": {
+      "title": "Attendance by class",
+      "subtitle": "Tap a class to open its student list with entry and exit times",
+      "searchPlaceholder": "Student or class...",
+      "onlyAbsent": "Absent only",
+      "empty": "No students match this filter",
+      "noClass": "No class",
+      "cameOf": "{{present}}/{{total}} present",
+      "came": "Present",
+      "notCame": "Absent"
     }
   },
   "cameras": {

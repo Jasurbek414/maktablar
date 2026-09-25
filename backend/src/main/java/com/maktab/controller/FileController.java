@@ -59,7 +59,12 @@ public class FileController {
             if (orig != null && orig.contains(".")) {
                 ext = orig.substring(orig.lastIndexOf("."));
             }
-            String filename = UUID.randomUUID().toString().substring(0, 12) + ext;
+            // XAVFSIZLIK (2026-09-25 audit): GET /api/files/** ATAYLAB ochiq (rasm <img src> orqali
+            // ko'rsatiladi va Telegram serverlari ham shu URL'dan yuklab oladi — token qo'yilsa
+            // ota-onaga rasm yetib bormaydi). Shuning uchun himoya nomning taxmin qilinmasligiga
+            // tayanadi. Avval 12 ta belgi (~44 bit) edi — endi to'liq UUID (128 bit).
+            // Mavjud fayllar o'z nomida qoladi, faqat yangilari uzun bo'ladi.
+            String filename = UUID.randomUUID().toString().replace("-", "") + ext;
             Path target = uploadDir.resolve(filename);
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
             String url = "/api/files/" + filename;

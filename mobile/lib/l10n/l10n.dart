@@ -57,7 +57,8 @@ const Map<String, Map<AppLocale, String>> _strings = {
   'nav.classes': {AppLocale.uz: 'Sinflar', AppLocale.ru: 'Классы', AppLocale.en: 'Classes'},
   'nav.teachers': {AppLocale.uz: 'O\'qituvchilar', AppLocale.ru: 'Учителя', AppLocale.en: 'Teachers'},
   'nav.profile': {AppLocale.uz: 'Profil', AppLocale.ru: 'Профиль', AppLocale.en: 'Profile'},
-  'nav.children': {AppLocale.uz: 'Farzandlarim', AppLocale.ru: 'Мои дети', AppLocale.en: 'My children'},
+  'nav.children': {AppLocale.uz: 'Farzandlar', AppLocale.ru: 'Дети', AppLocale.en: 'Children'},
+  'attendance.title': {AppLocale.uz: 'Davomat', AppLocale.ru: 'Посещаемость', AppLocale.en: 'Attendance'},
 
   'common.save': {AppLocale.uz: 'Saqlash', AppLocale.ru: 'Сохранить', AppLocale.en: 'Save'},
   'common.saved': {AppLocale.uz: 'Saqlandi', AppLocale.ru: 'Сохранено', AppLocale.en: 'Saved'},
@@ -118,7 +119,6 @@ const Map<String, Map<AppLocale, String>> _strings = {
   'notes.title': {AppLocale.uz: 'Izohlar', AppLocale.ru: 'Заметки', AppLocale.en: 'Notes'},
   'messages.replyPlaceholder': {AppLocale.uz: 'Javob yozing...', AppLocale.ru: 'Напишите ответ...', AppLocale.en: 'Write a reply...'},
   'messages.title': {AppLocale.uz: 'Xabarlar', AppLocale.ru: 'Сообщения', AppLocale.en: 'Messages'},
-  'attendance.title': {AppLocale.uz: 'Davomat', AppLocale.ru: 'Посещаемость', AppLocale.en: 'Attendance'},
 
   // Parol formasi
   'pwd.fillAll': {AppLocale.uz: 'Barcha maydonlarni to\'ldiring', AppLocale.ru: 'Заполните все поля', AppLocale.en: 'Fill in all fields'},
@@ -238,6 +238,54 @@ const Map<String, Map<AppLocale, String>> _strings = {
   'faceMonitor.liveFeed': {AppLocale.uz: 'Bugungi tanilganlar', AppLocale.ru: 'Распознанные сегодня', AppLocale.en: 'Recognized today'},
   'faceMonitor.noEvents': {AppLocale.uz: 'Bugun hali hech kim tanilmagan', AppLocale.ru: 'Сегодня пока никто не распознан', AppLocale.en: 'No one recognized today yet'},
   'faceMonitor.temperature': {AppLocale.uz: 'Harorat', AppLocale.ru: 'Температура', AppLocale.en: 'Temperature'},
+
+  // Arizalar tizimi
+  'nav.requests': {AppLocale.uz: 'Arizalar', AppLocale.ru: 'Заявления', AppLocale.en: 'Requests'},
+  'nav.dashboard': {AppLocale.uz: 'Bosh sahifa', AppLocale.ru: 'Главная', AppLocale.en: 'Home'},
+  'requests.title': {AppLocale.uz: 'Arizalar', AppLocale.ru: 'Заявления', AppLocale.en: 'Requests'},
+  'requests.empty': {AppLocale.uz: 'Hozircha arizalar yo\'q', AppLocale.ru: 'Пока нет заявлений', AppLocale.en: 'No requests yet'},
+  'requests.submit': {AppLocale.uz: 'Ariza yuborish', AppLocale.ru: 'Подать заявление', AppLocale.en: 'Submit request'},
+  'requests.myRequests': {AppLocale.uz: 'Mening arizalarim', AppLocale.ru: 'Мои заявления', AppLocale.en: 'My requests'},
+  'requests.pending': {AppLocale.uz: 'Kutilmoqda', AppLocale.ru: 'На рассмотрении', AppLocale.en: 'Pending'},
+  'requests.approved': {AppLocale.uz: 'Tasdiqlangan', AppLocale.ru: 'Одобрено', AppLocale.en: 'Approved'},
+  'requests.rejected': {AppLocale.uz: 'Rad etilgan', AppLocale.ru: 'Отклонено', AppLocale.en: 'Rejected'},
+  'requests.selectChild': {AppLocale.uz: 'Farzandni tanlang', AppLocale.ru: 'Выберите ребёнка', AppLocale.en: 'Select child'},
+  'requests.startDate': {AppLocale.uz: 'Boshlanish sanasi', AppLocale.ru: 'Дата начала', AppLocale.en: 'Start date'},
+  'requests.endDate': {AppLocale.uz: 'Tugash sanasi', AppLocale.ru: 'Дата окончания', AppLocale.en: 'End date'},
+  'requests.reason': {AppLocale.uz: 'Sabab', AppLocale.ru: 'Причина', AppLocale.en: 'Reason'},
+  'requests.reasonIllness': {AppLocale.uz: 'Kasallik', AppLocale.ru: 'Болезнь', AppLocale.en: 'Illness'},
+  'requests.reasonFamily': {AppLocale.uz: 'Oilaviy sabab', AppLocale.ru: 'Семейные обстоятельства', AppLocale.en: 'Family reason'},
+  'requests.reasonOther': {AppLocale.uz: 'Boshqa', AppLocale.ru: 'Другое', AppLocale.en: 'Other'},
+  'requests.comment': {AppLocale.uz: 'Izoh (ixtiyoriy)', AppLocale.ru: 'Комментарий (необязательно)', AppLocale.en: 'Comment (optional)'},
+  'requests.sent': {AppLocale.uz: 'Ariza yuborildi', AppLocale.ru: 'Заявление отправлено', AppLocale.en: 'Request submitted'},
+  'requests.fillRequired': {AppLocale.uz: 'Barcha maydonlarni to\'ldiring', AppLocale.ru: 'Заполните все обязательные поля', AppLocale.en: 'Fill in all required fields'},
+  'requests.approve': {AppLocale.uz: 'Tasdiqlash', AppLocale.ru: 'Одобрить', AppLocale.en: 'Approve'},
+  'requests.reject': {AppLocale.uz: 'Rad etish', AppLocale.ru: 'Отклонить', AppLocale.en: 'Reject'},
+  'requests.reviewNote': {AppLocale.uz: 'Izoh qo\'shing...', AppLocale.ru: 'Добавьте комментарий...', AppLocale.en: 'Add a note...'},
+  'requests.pendingCount': {AppLocale.uz: '{count} ta kutilmoqda', AppLocale.ru: '{count} на рассмотрении', AppLocale.en: '{count} pending'},
+  'requests.from': {AppLocale.uz: 'dan', AppLocale.ru: 'с', AppLocale.en: 'from'},
+  'requests.to': {AppLocale.uz: 'gacha', AppLocale.ru: 'до', AppLocale.en: 'to'},
+  'requests.dateRange': {AppLocale.uz: '{from} — {to}', AppLocale.ru: '{from} — {to}', AppLocale.en: '{from} — {to}'},
+  'requests.statusChanged': {AppLocale.uz: 'Ariza holati o\'zgartirildi', AppLocale.ru: 'Статус заявления изменён', AppLocale.en: 'Request status changed'},
+  'requests.allStatuses': {AppLocale.uz: 'Barchasi', AppLocale.ru: 'Все', AppLocale.en: 'All'},
+
+  // Ota-ona Dashboard
+  'parentDash.greeting': {AppLocale.uz: 'Assalomu alaykum!', AppLocale.ru: 'Здравствуйте!', AppLocale.en: 'Hello!'},
+  'parentDash.today': {AppLocale.uz: 'Bugungi holat', AppLocale.ru: 'Сегодняшний статус', AppLocale.en: 'Today\'s status'},
+  'parentDash.present': {AppLocale.uz: 'Maktabda', AppLocale.ru: 'В школе', AppLocale.en: 'At school'},
+  'parentDash.absent': {AppLocale.uz: 'Kelmagan', AppLocale.ru: 'Отсутствует', AppLocale.en: 'Absent'},
+  'parentDash.notYet': {AppLocale.uz: 'Hali qayd etilmagan', AppLocale.ru: 'Ещё не отмечен', AppLocale.en: 'Not recorded yet'},
+  'parentDash.monthlyRate': {AppLocale.uz: 'Oylik davomat', AppLocale.ru: 'Посещаемость за месяц', AppLocale.en: 'Monthly attendance'},
+  'parentDash.pendingRequests': {AppLocale.uz: 'Kutilayotgan arizalar', AppLocale.ru: 'Ожидающие заявления', AppLocale.en: 'Pending requests'},
+
+  // Direktor hisobot
+  'report.title': {AppLocale.uz: 'Davomat hisoboti', AppLocale.ru: 'Отчёт о посещаемости', AppLocale.en: 'Attendance report'},
+  'report.selectPeriod': {AppLocale.uz: 'Davrni tanlang', AppLocale.ru: 'Выберите период', AppLocale.en: 'Select period'},
+  'report.selectClass': {AppLocale.uz: 'Sinf tanlang', AppLocale.ru: 'Выберите класс', AppLocale.en: 'Select class'},
+  'report.allClasses': {AppLocale.uz: 'Barcha sinflar', AppLocale.ru: 'Все классы', AppLocale.en: 'All classes'},
+  'report.generate': {AppLocale.uz: 'Hisobot yaratish', AppLocale.ru: 'Сформировать отчёт', AppLocale.en: 'Generate report'},
+  'report.topAbsent': {AppLocale.uz: 'Eng ko\'p kelmaganlar', AppLocale.ru: 'Чаще всех отсутствуют', AppLocale.en: 'Most absent'},
+  'report.days': {AppLocale.uz: 'kun', AppLocale.ru: 'дней', AppLocale.en: 'days'},
 };
 
 String tParams(String key, Map<String, String> params) {

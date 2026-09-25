@@ -22,6 +22,20 @@ SYNC_INTERVAL="${SYNC_INTERVAL:-15}"
 WG_MAPPED_SUPERNET="${WG_MAPPED_SUPERNET:-10.30.0.0/16}"
 WG_GATEWAY_IP="${WG_GATEWAY_IP:-10.20.0.254}"
 
+# OpenVPN zaxira transporti (2026-09-19) — UDP ishlamaydigan maktablar uchun, SHU konteyner
+# ichida (wg0 va tun0 bitta tarmoq nomlar fazosida -> host marshrutlari/ko'priklari kerak emas).
+# Routerlar ro'yxati backenddan (/api/internal/ovpn-clients) keladi va OVPN_CACHE'ga yoziladi —
+# auth/connect skriptlari faqat shu keshni o'qiydi (ovpn-auth.sh, ovpn-connect.sh).
+OVPN_ENABLED="${OVPN_ENABLED:-1}"
+OVPN_PORT="${OVPN_PORT:-443}"
+OVPN_NETWORK="${OVPN_NETWORK:-10.21.0.0}"
+OVPN_PKI_DIR="${OVPN_PKI_DIR:-/etc/openvpn/pki}"
+OVPN_CACHE="$CONF_DIR/ovpn-clients.json"     # ovpn-*.sh dagi yo'l bilan BIR XIL bo'lishi shart
+OVPN_CONF="/etc/openvpn/server.conf"
+OVPN_STATUS="/run/openvpn-status.log"
+OVPN_IFACE="tun0"
+OVPN_PID=""
+
 mkdir -p "$CONF_DIR"
 
 # ── 1. Server kalit juftligini birinchi ishga tushirishda generatsiya qilish ──
@@ -90,18 +104,13 @@ iptables -A FORWARD -i "$IFACE" -o "$IFACE" -s "$WG_GATEWAY_IP" -j ACCEPT
 iptables -A FORWARD -i "$IFACE" -o "$IFACE" -d "$WG_GATEWAY_IP" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 echo "[wireguard] Route ${WG_MAPPED_SUPERNET} va izolyatsiya qoidalari o'rnatildi (faqat ${WG_GATEWAY_IP} forward qila oladi)"
 
-# MAXSUS HOLAT (2026-09-17, router 8): shu joydagi tarmoq UDP'ni (443 va boshqa portlarda ham)
-# barqaror ushlab turolmagani sabab, faqat SHU BITTA router uchun WireGuard o'rniga OpenVPN
-# (TCP 443, vpn.ecos.uz, VPS'da systemd xizmati sifatida) ishlatiladi. wg0 o'rniga eth0 orqali
-# (host -> OpenVPN tun9) ketadi, shuning uchun izolyatsiya qoidalariga bu maxsus yo'l qo'shildi.
-# Boshqa router qo'shilganda OpenVPN kerak bo'lsa, xuddi shu naqshni takrorlang (IP'larni almashtirib).
-iptables -A FORWARD -i "$IFACE" -o eth0 -s "$WG_GATEWAY_IP" -d 10.20.0.2 -j ACCEPT
-iptables -A FORWARD -i "$IFACE" -o eth0 -s "$WG_GATEWAY_IP" -d 10.30.2.0/24 -j ACCEPT
-iptables -A FORWARD -i eth0 -o "$IFACE" -s 10.20.0.2 -d "$WG_GATEWAY_IP" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A FORWARD -i eth0 -o "$IFACE" -s 10.30.2.0/24 -d "$WG_GATEWAY_IP" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-ip route replace 10.20.0.2/32 via 172.18.0.1 dev eth0 2>/dev/null || true
-ip route replace 10.30.2.0/24 via 172.18.0.1 dev eth0 2>/dev/null || true
-echo "[wireguard] Router 8 (OpenVPN TCP fallback) uchun eth0<->${IFACE} ko'prik qoidalari o'rnatildi"
+# 2026-09-19: avval shu yerda FAQAT router 8 uchun qo'lda qo'yilgan OpenVPN ko'prigi bor edi
+# (eth0 -> host tun9, IP'lar qattiq yozilgan). Endi OpenVPN shu konteyner ichida va hamma
+# OpenVPN routerlar uchun bir xil: gateway (wg0) <-> OpenVPN routerlar (tun0). Izolyatsiya o'sha:
+# faqat gateway yangi ulanish ochadi, maktablar bir-biriga ham, gateway'ga ham o'zi kira olmaydi.
+# tun0 hali yo'q bo'lsa ham iptables interfeys nomini qabul qiladi.
+iptables -A FORWARD -i "$IFACE" -o "$OVPN_IFACE" -s "$WG_GATEWAY_IP" -j ACCEPT
+iptables -A FORWARD -i "$OVPN_IFACE" -o "$IFACE" -d "$WG_GATEWAY_IP" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
 echo "════════════════════════════════════════════════════════════════"
 echo " WireGuard server tayyor. Backend'ga shu qiymatlarni bering:"
@@ -112,6 +121,7 @@ echo "════════════════════════�
 
 term_handler() {
     echo "[wireguard] To'xtatilmoqda..."
+    if [ -n "$OVPN_PID" ]; then kill "$OVPN_PID" 2>/dev/null || true; fi
     wg-quick down "$IFACE" || true
     exit 0
 }
@@ -126,15 +136,29 @@ sync_peers() {
         echo "[wireguard] Ogohlantirish: backend'dan peer ro'yxatini olib bo'lmadi ($(date -u +%FT%TZ))"
         return
     fi
+    if ! echo "$response" | jq -e 'type == "array"' >/dev/null 2>&1; then
+        echo "[wireguard] Ogohlantirish: backend kutilmagan javob qaytardi — peer'lar o'zgartirilmadi"
+        return
+    fi
 
     # Backend'dan kelgan joriy ochiq kalitlar ro'yxati
     local desired_keys
     desired_keys="$(echo "$response" | jq -r '.[].publicKey' | sort -u)"
 
+    # HIMOYA (2026-09-19): 09-18 da backend qayta ishga tushayotgan paytda to'liq bo'lmagan ro'yxat
+    # qaytgan va hub GATEWAY peer'ini o'chirib tashlagan — barcha maktablar uzilgan. Ro'yxat bo'sh
+    # yoki unda gateway yo'q bo'lsa, bu backend'ning g'ayritabiiy holati: HECH NARSA o'chirilmaydi.
+    local safe_to_remove=1
+    if [ "$(echo "$response" | jq 'length')" -eq 0 ] \
+            || [ "$(echo "$response" | jq '[.[] | select(.role == "gateway")] | length')" -eq 0 ]; then
+        echo "[wireguard] Ogohlantirish: backend ro'yxati to'liq emas (bo'sh yoki gateway yo'q) — peer'lar o'chirilmaydi"
+        safe_to_remove=0
+    fi
+
     # Hozir wg0'da ro'yxatdan o'tgan (lekin backend endi qaytarmayotgan) peer'larni olib tashlash
     local current_keys
     current_keys="$(wg show "$IFACE" peers 2>/dev/null || true)"
-    if [ -n "$current_keys" ]; then
+    if [ "$safe_to_remove" = "1" ] && [ -n "$current_keys" ]; then
         while IFS= read -r key; do
             [ -z "$key" ] && continue
             if ! echo "$desired_keys" | grep -qxF "$key"; then
@@ -176,6 +200,114 @@ report_handshakes() {
         || echo "[wireguard] Ogohlantirish: handshake hisobotini yuborib bo'lmadi ($(date -u +%FT%TZ))"
 }
 
+# ── 5. OpenVPN zaxira transporti ──
+start_openvpn() {
+    [ "$OVPN_ENABLED" = "1" ] || return 0
+    local f
+    for f in ca.crt server.crt server.key dh.pem; do
+        if [ ! -f "$OVPN_PKI_DIR/$f" ]; then
+            echo "[openvpn] Ogohlantirish: $OVPN_PKI_DIR/$f topilmadi — OpenVPN o'chirildi (WireGuard ishlayveradi)"
+            OVPN_ENABLED=0
+            return 0
+        fi
+    done
+    mkdir -p "$(dirname "$OVPN_CONF")"
+    # verify-client-cert none + username-as-common-name: RouterOS klientida sertifikat yo'q,
+    # login/parol (routerN) orqali kiriladi. Parollar faqat keshdagi SHA-256 bilan tekshiriladi.
+    cat > "$OVPN_CONF" <<EOF
+port ${OVPN_PORT}
+proto tcp4-server
+dev ${OVPN_IFACE}
+dev-type tun
+topology subnet
+server ${OVPN_NETWORK} 255.255.255.0
+ca ${OVPN_PKI_DIR}/ca.crt
+cert ${OVPN_PKI_DIR}/server.crt
+key ${OVPN_PKI_DIR}/server.key
+dh ${OVPN_PKI_DIR}/dh.pem
+data-ciphers AES-256-GCM:AES-128-GCM
+keepalive 10 60
+persist-key
+verify-client-cert none
+username-as-common-name
+script-security 2
+auth-user-pass-verify /usr/local/bin/ovpn-auth.sh via-file
+client-connect /usr/local/bin/ovpn-connect.sh
+status ${OVPN_STATUS} 10
+status-version 2
+verb 3
+EOF
+    openvpn --config "$OVPN_CONF" &
+    OVPN_PID=$!
+    echo "[openvpn] Ishga tushdi: TCP ${OVPN_PORT}, ${OVPN_IFACE} ${OVPN_NETWORK}/24 (pid ${OVPN_PID})"
+}
+
+ensure_openvpn() {
+    [ "$OVPN_ENABLED" = "1" ] || return 0
+    if [ -z "$OVPN_PID" ] || ! kill -0 "$OVPN_PID" 2>/dev/null; then
+        echo "[openvpn] Ogohlantirish: jarayon to'xtagan — qayta ishga tushirilmoqda"
+        start_openvpn
+    fi
+}
+
+# OpenVPN routerlar keshi + ularning maktab LAN marshrutlari (backend — yagona haqiqat manbai).
+# Backend javob bermasa eski kesh qoladi: ulangan routerlar ishlayveradi, qayta ulanganlar ham kiradi.
+MAPPED_PREFIX="$(echo "$WG_MAPPED_SUPERNET" | cut -d. -f1-2)."
+sync_ovpn_clients() {
+    [ "$OVPN_ENABLED" = "1" ] || return 0
+    local response
+    if ! response="$(curl -fsS --max-time 8 \
+            -H "X-Wg-Sync-Key: ${WG_SYNC_SECRET}" \
+            "${BACKEND_URL%/}/api/internal/ovpn-clients")"; then
+        echo "[openvpn] Ogohlantirish: backend'dan klientlar ro'yxatini olib bo'lmadi — eski kesh ishlatiladi"
+        return 0
+    fi
+    if ! echo "$response" | jq -e 'type == "array"' >/dev/null 2>&1; then
+        echo "[openvpn] Ogohlantirish: kutilmagan javob — kesh o'zgartirilmadi"
+        return 0
+    fi
+    echo "$response" > "${OVPN_CACHE}.tmp" && chmod 600 "${OVPN_CACHE}.tmp" && mv -f "${OVPN_CACHE}.tmp" "$OVPN_CACHE"
+
+    # Marshrutlar: OpenVPN'dagi har bir maktab LAN'i (10.30.N.0/24) tun0'ga. WireGuard'ga qaytgan
+    # routerniki tun0'dan olib tashlanadi va yana umumiy "10.30.0.0/16 dev wg0" ga tushadi.
+    # tun0'ning o'z tarmog'i (10.21.0.0/24) mapped oralig'ida emas — unga tegilmaydi.
+    ip link show "$OVPN_IFACE" >/dev/null 2>&1 || return 0
+    local desired current s
+    desired="$(jq -r '.[].mappedSubnet' "$OVPN_CACHE" | grep -F "$MAPPED_PREFIX" | sort -u || true)"
+    current="$(ip route show dev "$OVPN_IFACE" | awk -v p="$MAPPED_PREFIX" 'index($1, p) == 1 {print $1}' | sort -u || true)"
+    while IFS= read -r s; do
+        [ -z "$s" ] && continue
+        ip route replace "$s" dev "$OVPN_IFACE" 2>/dev/null \
+            || echo "[openvpn] Ogohlantirish: marshrut qo'yib bo'lmadi ($s)"
+    done <<< "$desired"
+    while IFS= read -r s; do
+        [ -z "$s" ] && continue
+        if ! echo "$desired" | grep -qxF "$s"; then
+            echo "[openvpn] Marshrut olib tashlanmoqda (router endi OpenVPN'da emas): $s"
+            ip route del "$s" dev "$OVPN_IFACE" 2>/dev/null || true
+        fi
+    done <<< "$current"
+}
+
+# Ulangan OpenVPN routerlar — routerning haqiqiy heartbeat'i (WireGuard handshake hisoboti kabi).
+report_ovpn_status() {
+    [ "$OVPN_ENABLED" = "1" ] && [ -f "$OVPN_STATUS" ] || return 0
+    local payload
+    payload="$(awk -F, '$1 == "CLIENT_LIST" && $2 != "UNDEF" {print $2}' "$OVPN_STATUS" \
+        | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')" || return 0
+    [ "$payload" = "[]" ] && return 0
+    curl -fsS --max-time 8 -o /dev/null \
+        -X POST -H "Content-Type: application/json" \
+        -H "X-Wg-Sync-Key: ${WG_SYNC_SECRET}" \
+        --data "$payload" \
+        "${BACKEND_URL%/}/api/internal/ovpn-status" \
+        || echo "[openvpn] Ogohlantirish: holat hisobotini yuborib bo'lmadi ($(date -u +%FT%TZ))"
+}
+
+# Kesh avval yangilanadi — birinchi ulangan router darhol autentifikatsiyadan o'tishi uchun
+sync_ovpn_clients || true
+start_openvpn
+
 echo "[wireguard] Peer sinxronizatsiyasi boshlandi (har ${SYNC_INTERVAL}s, ${BACKEND_URL})"
 while true; do
     # Docker HEALTHCHECK shu faylning yangiligini tekshiradi (loop jonligini
@@ -184,7 +316,10 @@ while true; do
     # loop butunlay to'xtab qolsa (masalan skript ichida kutilmagan chiqish) aniqlanadi.
     date +%s > /tmp/wg-loop-alive
     sync_peers || echo "[wireguard] Ogohlantirish: sync_peers xato bilan tugadi, keyingi urinishda davom etadi"
+    ensure_openvpn || true
+    sync_ovpn_clients || echo "[openvpn] Ogohlantirish: sync_ovpn_clients xato bilan tugadi"
     report_handshakes || true
+    report_ovpn_status || true
     sleep "$SYNC_INTERVAL" &
     wait $!
 done

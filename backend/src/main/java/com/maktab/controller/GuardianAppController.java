@@ -113,7 +113,8 @@ public class GuardianAppController {
         if (oldPassword == null || !passwordEncoder.matches(oldPassword, guardian.getPassword())) {
             return ResponseEntity.status(400).body(Map.of("error", i18n.msg("error.auth.current_password_incorrect")));
         }
-        if (newPassword == null || newPassword.length() < 6) {
+        // 2026-09-25: butun tizimda yagona chegara (avval bu yerda 6, boshqa joyda 8 edi)
+        if (newPassword == null || newPassword.length() < AuthController.MIN_PASSWORD_LENGTH) {
             return ResponseEntity.status(400).body(Map.of("error", i18n.msg("error.auth.new_password_min_length")));
         }
         guardian.setPassword(passwordEncoder.encode(newPassword));

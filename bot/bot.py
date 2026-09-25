@@ -32,7 +32,7 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
-from telegram.error import InvalidToken
+from telegram.error import InvalidToken, NetworkError, TimedOut
 import asyncio
 import threading
 
@@ -370,6 +370,14 @@ def resolve_bot_token():
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# XAVFSIZLIK (2026-09-25 audit): httpx har bir so'rov URL'ini INFO darajasida yozadi, Telegram
+# URL'i esa BOT TOKENINI o'z ichiga oladi ("api.telegram.org/bot<TOKEN>/getUpdates"). Natijada
+# "docker logs maktab-bot" ni ko'ra oladigan har kim botni to'liq egallab olardi (ota-onalarga
+# soxta xabar yuborish). Shu sabab shu kutubxonalarning so'rov loglari o'chiriladi —
+# xatolar (WARNING va yuqorisi) baribir yoziladi.
+for _noisy in ("httpx", "httpcore", "telegram.request"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
+
 # ──────────────────────────────
 # Flask – webhook receiver
 # ──────────────────────────────
@@ -530,9 +538,53 @@ def broadcast_webhook():
     return jsonify({"success": True, "sent": sent}), 200
 
 
+@flask_app.route("/webhook/admin-alert", methods=["POST"])
+def admin_alert_webhook():
+    """
+    Qurilma aloqasi uzildi/tiklandi (backend DeviceAlertService, 2026-09-19) — superadmin
+    kiritgan chat'larga oddiy matn. Body: {"chatIds": [...], "text"}.
+    Ota-ona xabarlaridan farqli: sarlavhasiz va parse_mode'siz (maktab nomidagi "_" yoki "*"
+    Markdown'ni buzib, xabar umuman ketmay qolmasligi uchun).
+    """
+    if not _authorized_webhook():
+        return jsonify({"error": "unauthorized"}), 401
+    data = flask_request.json or {}
+    text = str(data.get("text", ""))[:3500]
+    chat_ids = data.get("chatIds", [])
+    if not text or not chat_ids:
+        return jsonify({"error": "chatIds va text kerak"}), 400
+
+    sent = 0
+    for chat_id in chat_ids:
+        try:
+            if _run_on_bot_loop(_send_plain_text(int(chat_id), text)):
+                sent += 1
+        except Exception as e:
+            logger.error(f"Admin ogohlantirishi {chat_id} ga yuborilmadi: {e}")
+    return jsonify({"success": sent > 0, "sent": sent}), 200
+
+
 @flask_app.route("/health", methods=["GET"])
 def health():
     return jsonify({"service": "telegram-bot", "status": "running"}), 200
+
+
+async def _send_plain_text(chat_id: int, text: str):
+    """Formatlashsiz matn — admin ogohlantirishlari uchun."""
+    if not tg_app:
+        raise RuntimeError("bot hali tayyor emas")
+    await tg_app.bot.send_message(chat_id=chat_id, text=text)
+
+
+async def chat_id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/chatid — superadmin qurilma ogohlantirishlari uchun shu chat ID'sini bilib oladi
+    (shaxsiy chat yoki guruh). Maxfiy emas: ID bilan bot faqat O'ZI xabar yubora oladi."""
+    chat = update.effective_chat
+    await update.message.reply_text(
+        f"Chat ID: {chat.id}\n\n"
+        "Qurilma ogohlantirishlarini shu chatga olish uchun bu raqamni superadmin panelidagi "
+        "Bot sozlamalari -> \"Admin ogohlantirish chat ID'lari\" maydoniga kiriting."
+    )
 
 
 async def _send_text_notification(chat_id: int, text: str):
@@ -975,6 +1027,23 @@ async def _post_init(app: Application):
         logger.warning(f"set_my_commands(default) failed: {e}")
 
 
+async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Xato ishlovchisi (2026-09-25 audit). Avval umuman ro'yxatdan o'tkazilmagan edi — natijada
+    python-telegram-bot har bir tarmoq uzilishida "No error handlers are registered" bilan
+    to'liq traceback chiqarardi (tarixda 10 marta), Telegram'ning vaqtinchalik "Bad Gateway"
+    javoblari esa xato sifatida ko'rinardi.
+
+    Tarmoq xatolari — vaqtinchalik, kutubxona o'zi qayta urinadi: faqat qisqa ogohlantirish.
+    Qolgan xatolar to'liq yoziladi, lekin bot ishlashda davom etadi.
+    """
+    err = context.error
+    if isinstance(err, (NetworkError, TimedOut)):
+        logger.warning(f"Telegram bilan vaqtinchalik aloqa muammosi: {type(err).__name__}: {err}")
+        return
+    logger.error("Botda kutilmagan xato", exc_info=err)
+
+
 def build_application(token):
     app = Application.builder().token(token).post_init(_post_init).build()
 
@@ -1043,6 +1112,8 @@ def build_application(token):
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("menu", show_menu))
+    app.add_handler(CommandHandler("chatid", chat_id_command))
+    app.add_error_handler(on_error)
     app.add_handler(MessageHandler(filters.Regex(MENU_STATS_PATTERN), stats))
     app.add_handler(MessageHandler(filters.Regex(MENU_HELP_PATTERN), help_command))
     return app

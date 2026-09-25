@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/token_storage.dart';
+import '../../core/mock_data.dart';
+
+/// Demo/test rejimi — haqiqiy backend ulanmasdan ishlaydi.
+/// APK build vaqtida --dart-define=DEMO_MODE=false bilan o'chirish mumkin.
+const bool kDemoMode = bool.fromEnvironment('DEMO_MODE', defaultValue: true);
 
 enum AppPersona { none, director, guardian }
 
@@ -45,6 +50,12 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<String?> loginDirector(String username, String password) async {
     try {
+      if (kDemoMode) {
+        final user = MockData.directorProfile;
+        await _storage.save(token: 'demo-token-dir', role: user['role'] as String, profileJson: jsonEncode(user));
+        state = AuthState(persona: AppPersona.director, profile: user, loading: false);
+        return null;
+      }
       final res = await _api.post('/api/auth/login', data: {'username': username, 'password': password});
       final data = res.data as Map<String, dynamic>;
       final user = data['user'] as Map<String, dynamic>;
@@ -58,6 +69,12 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<String?> loginGuardian(String phone, String password) async {
     try {
+      if (kDemoMode) {
+        final guardian = MockData.parentProfile;
+        await _storage.save(token: 'demo-token-gua', role: 'GUARDIAN', profileJson: jsonEncode(guardian));
+        state = AuthState(persona: AppPersona.guardian, profile: guardian, loading: false);
+        return null;
+      }
       final res = await _api.post('/api/guardian-app/login', data: {'phone': phone, 'password': password});
       final data = res.data as Map<String, dynamic>;
       final guardian = data['guardian'] as Map<String, dynamic>;

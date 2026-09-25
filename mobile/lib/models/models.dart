@@ -276,3 +276,51 @@ class SchoolClassRoom {
         studentCount: (j['studentCount'] as num?)?.toInt() ?? 0,
       );
 }
+
+class AbsenceRequest {
+  final int id;
+  final int studentId;
+  final String studentName;
+  final String? className;
+  final String startDate; // yyyy-MM-dd
+  final String endDate;   // yyyy-MM-dd
+  final String reasonType; // ILLNESS | FAMILY | OTHER
+  final String? reasonText;
+  final String? attachmentUrl;
+  final String status; // PENDING | APPROVED | REJECTED
+  final String? reviewNote;
+  final String? reviewedBy;
+  final DateTime createdAt;
+
+  AbsenceRequest({
+    required this.id,
+    required this.studentId,
+    required this.studentName,
+    this.className,
+    required this.startDate,
+    required this.endDate,
+    required this.reasonType,
+    this.reasonText,
+    this.attachmentUrl,
+    required this.status,
+    this.reviewNote,
+    this.reviewedBy,
+    required this.createdAt,
+  });
+
+  factory AbsenceRequest.fromJson(Map<String, dynamic> j) => AbsenceRequest(
+        id: j['id'] as int,
+        studentId: j['studentId'] as int,
+        studentName: j['studentName'] as String? ?? '',
+        className: j['className'] as String?,
+        startDate: j['startDate'] as String,
+        endDate: j['endDate'] as String,
+        reasonType: j['reasonType'] as String? ?? 'OTHER',
+        reasonText: j['reasonText'] as String?,
+        attachmentUrl: j['attachmentUrl'] as String?,
+        status: j['status'] as String? ?? 'PENDING',
+        reviewNote: j['reviewNote'] as String?,
+        reviewedBy: j['reviewedBy'] as String?,
+        createdAt: DateTime.parse(j['createdAt'] as String),
+      );
+}

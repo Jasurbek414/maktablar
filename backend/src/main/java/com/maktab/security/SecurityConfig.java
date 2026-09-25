@@ -65,6 +65,9 @@ public class SecurityConfig {
                 // X-Wg-Sync-Key bilan o'z ichida autentifikatsiya qiladi (WireguardSyncController).
                 .requestMatchers(HttpMethod.GET, "/api/internal/wg-peers").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/internal/wg-handshakes").permitAll()
+                // OpenVPN zaxira transporti (2026-09-19) — xuddi shu hub, xuddi shu X-Wg-Sync-Key.
+                .requestMatchers(HttpMethod.GET, "/api/internal/ovpn-clients").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/internal/ovpn-status").permitAll()
                 // Telegram bot (bot.py) — X-Bot-Key bilan o'z ichida autentifikatsiya qiladi
                 // (BotConfigController), token'ni panel'dan olish uchun.
                 .requestMatchers(HttpMethod.GET, "/api/internal/bot-config/token").permitAll()

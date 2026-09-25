@@ -25,14 +25,32 @@ const AI_CHAT_ROLES = ['SUPERADMIN', 'ADMIN', 'REGION_DIRECTOR', 'DISTRICT_DIREC
 import Settings, { getNotifPrefs } from './pages/Settings';
 
 const api = { baseURL: '/api' };
+// MUHIM (2026-09-25 audit): bu yordamchilar avval res.ok ni TEKSHIRMASDI va 401 bo'lganda
+// tizimdan chiqarmasdi — shunchaki xato javobini JSON qilib qaytarardi. Natijada sessiya
+// muddati tugagach bildirishnoma qo'ng'irog'i abadiy "0" ko'rsatardi va foydalanuvchi
+// sababini bilmasdi (jonli loglarda 3 kunda 310 ta javobsiz 401 qayd etilgan).
+// Endi services/api.js#logout bilan BIR XIL xulq: 401 -> tokenni tozalab /login ga.
+const handleAuthFailure = (res) => {
+  if (res.status !== 401) return false;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = '/login';
+  return true;
+};
 const apiFetch = async (url) => {
   const token = localStorage.getItem('token');
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    handleAuthFailure(res);
+    throw new Error(`API xatosi: ${res.status}`);
+  }
   return res.json();
 };
 const apiPut = async (url) => {
   const token = localStorage.getItem('token');
-  return fetch(url, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(url, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) handleAuthFailure(res);
+  return res;
 };
 
 /* ── Vaqt formatlash ── */

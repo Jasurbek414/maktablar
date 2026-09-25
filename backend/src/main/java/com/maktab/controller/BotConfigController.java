@@ -66,7 +66,8 @@ public class BotConfigController {
             "guardianMessagingEnabled", config == null || config.getGuardianMessagingEnabled(),
             "attendanceNotificationsEnabled", config == null || config.getAttendanceNotificationsEnabled(),
             "attendanceDedupMinutes", config != null && config.getAttendanceDedupMinutes() != null
-                ? config.getAttendanceDedupMinutes() : 180
+                ? config.getAttendanceDedupMinutes() : 180,
+            "adminAlertChatIds", config != null && config.getAdminAlertChatIds() != null ? config.getAdminAlertChatIds() : ""
         ));
     }
 
@@ -97,6 +98,13 @@ public class BotConfigController {
             Object v = body.get("attendanceDedupMinutes");
             config.setAttendanceDedupMinutes(v != null ? Integer.valueOf(v.toString()) : null);
         }
+        if (body.containsKey("adminAlertChatIds")) {
+            // Faqat to'g'ri (raqamli) ID'lar saqlanadi — javobda normallashtirilgan qiymat qaytadi,
+            // panel nima saqlanganini aniq ko'rsatadi.
+            Object v = body.get("adminAlertChatIds");
+            config.setAdminAlertChatIds(String.join(",",
+                com.maktab.service.BotConfigService.parseChatIds(v != null ? v.toString() : null)));
+        }
         config.setUpdatedAt(Instant.now());
         botConfigRepo.save(config);
         boolean configured = config.getBotToken() != null && !config.getBotToken().isBlank();
@@ -105,7 +113,8 @@ public class BotConfigController {
             "broadcastEnabled", config.getBroadcastEnabled(),
             "guardianMessagingEnabled", config.getGuardianMessagingEnabled(),
             "attendanceNotificationsEnabled", config.getAttendanceNotificationsEnabled(),
-            "attendanceDedupMinutes", config.getAttendanceDedupMinutes() != null ? config.getAttendanceDedupMinutes() : 180
+            "attendanceDedupMinutes", config.getAttendanceDedupMinutes() != null ? config.getAttendanceDedupMinutes() : 180,
+            "adminAlertChatIds", config.getAdminAlertChatIds() != null ? config.getAdminAlertChatIds() : ""
         ));
     }
 

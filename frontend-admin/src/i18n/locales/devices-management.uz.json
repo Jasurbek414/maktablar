@@ -109,7 +109,17 @@
       "setupTitle": "Mikrotik'ni sozlash (3 qadam)",
       "step1": "WinBox bilan Mikrotik'ka kiring va New Terminal oynasini oching",
       "step2": "\"Sozlash skriptini ko'rsatish\" tugmasini bosing, skriptni to'liq nusxalab terminalga qo'ying (qayta qo'yish xavfsiz)",
-      "step3": "1 daqiqa ichida router shu yerda ONLINE bo'ladi — keyin quyida qurilmalarni qidiring"
+      "step3": "1 daqiqa ichida router shu yerda ONLINE bo'ladi — keyin quyida qurilmalarni qidiring",
+      "ros7Note": "RouterOS 7 kerak. Eski versiyada skript o'zi to'xtaydi — WinBox > System > Packages > Check For Updates orqali yangilang.",
+      "transportLabel": "Ulanish turi",
+      "transportWireguard": "WireGuard (tavsiya)",
+      "transportOpenvpn": "OpenVPN (zaxira)",
+      "transportHint": "WireGuard tez va yengil (UDP). Maktab interneti UDP'ni o'tkazmasa yoki router 3 daqiqadan ko'p ONLINE bo'lmasa — OpenVPN'ni tanlang (TCP 443, deyarli har qanday tarmoqdan o'tadi).",
+      "switchConfirmTitle": "Ulanish turini almashtirasizmi?",
+      "switchConfirmNote": "Yangi skriptni routerga qo'ymaguningizcha maktab bilan aloqa uziladi. Skript eski ulanishni o'zi olib tashlaydi.",
+      "switchConfirmBtn": "Ha, almashtirish",
+      "switchError": "Ulanish turini o'zgartirib bo'lmadi",
+      "ovpnLogin": "OpenVPN login:"
     },
     "form": {
       "editTerminalTitle": "Terminalni tahrirlash",

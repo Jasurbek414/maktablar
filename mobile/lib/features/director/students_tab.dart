@@ -32,6 +32,7 @@ class _StudentsTabState extends ConsumerState<StudentsTab> {
   Widget build(BuildContext context) {
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
+
     return Scaffold(
       appBar: AppBar(title: Text(t('nav.students'))),
       body: widget.schoolId == null
@@ -39,11 +40,14 @@ class _StudentsTabState extends ConsumerState<StudentsTab> {
           : Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
                   child: TextField(
-                    style: TextStyle(color: AppColors.textPrimary),
-                    decoration: InputDecoration(hintText: t('common.search'), prefixIcon: Icon(Icons.search_rounded, color: AppColors.textMuted)),
-                    onChanged: (v) => setState(() => _search = v.toLowerCase()),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: t('common.search'),
+                      prefixIcon: Icon(Icons.search_rounded, size: 20, color: AppColors.textMuted),
+                    ),
+                    onChanged: (v) => setState(() => _search = v.trim().toLowerCase()),
                   ),
                 ),
                 Expanded(
@@ -55,15 +59,16 @@ class _StudentsTabState extends ConsumerState<StudentsTab> {
                       final all = snap.data ?? [];
                       final list = _search.isEmpty ? all : all.where((s) => s.fullName.toLowerCase().contains(_search)).toList();
                       if (list.isEmpty) return Center(child: Text(t('common.notFound'), style: TextStyle(color: AppColors.textFaint)));
+
                       return ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         itemCount: list.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, i) {
                           final s = list[i];
                           return PersonTile(
                             name: s.fullName,
-                            subtitle: [if (s.className != null) s.className!].join(' · '),
+                            subtitle: s.className ?? '',
                             photoUrl: s.photoUrl,
                             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => StudentDetailScreen(student: s))),
                           );

@@ -40,6 +40,8 @@ public class BroadcastController {
     @Autowired private SchoolRepository schoolRepo;
     @Autowired private MessageRepository messageRepo;
     @Autowired private BroadcastLogRepository broadcastLogRepo;
+    @Autowired private com.maktab.repository.SchoolClassRepository classRepo;
+    @Autowired private com.maktab.service.ClassAttendanceService classAttendance;
     @Autowired private CurrentUserService currentUserService;
     @Autowired private NotificationService notificationService;
     @Autowired private BotConfigService botConfigService;
@@ -99,6 +101,79 @@ public class BroadcastController {
             "recipientCount", sentCount,
             "message", i18n.msg("success.broadcast.sent", sentCount)
         ));
+    }
+
+    /**
+     * POST /api/bot/notify-absent {classId, date, text} — sinfda O'SHA KUNI kelmagan o'quvchilar
+     * ota-onasiga Telegram xabari (2026-09-21, Sinflar sahifasidagi tugma).
+     *
+     * Matn andozasidagi {student}, {class}, {date} har bir o'quvchi uchun ALOHIDA almashtiriladi —
+     * ota-ona o'z farzandi haqida shaxsiy xabar oladi. Kimga yuborilgani panelda ko'rsatilgan
+     * "reachable" hisobi bilan bir xil bo'lishi uchun ro'yxat ClassAttendanceService'dan olinadi.
+     */
+    @PostMapping("/notify-absent")
+    public ResponseEntity<?> notifyAbsent(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                           @RequestBody Map<String, Object> body) {
+        User user = currentUserService.requireUser(authHeader);
+        assertCanUseBotPanel(user);
+        if (!botConfigService.isBroadcastEnabled()) {
+            return ResponseEntity.status(403).body(Map.of("error", i18n.msg("error.broadcast.disabled")));
+        }
+        if (body.get("classId") == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.class.not_found")));
+        }
+        com.maktab.model.SchoolClass sc = classRepo.findById(Long.valueOf(body.get("classId").toString())).orElse(null);
+        if (sc == null) return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.class.not_found")));
+        Long schoolId = sc.getSchool() != null ? sc.getSchool().getId() : null;
+        currentUserService.assertCanAccessSchool(user, schoolId);
+
+        String template = body.get("text") != null ? body.get("text").toString().trim() : "";
+        if (template.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.broadcast.text_required")));
+        }
+        java.time.LocalDate day;
+        try {
+            Object raw = body.get("date");
+            day = raw != null && !raw.toString().isBlank()
+                ? java.time.LocalDate.parse(raw.toString())
+                : java.time.LocalDate.now(com.maktab.service.ClassAttendanceService.TASHKENT);
+        } catch (java.time.format.DateTimeParseException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.class.invalid_date")));
+        }
+
+        List<Student> absent = classAttendance.absentStudents(sc, day);
+        int students = 0, guardians = 0, sent = 0, skipped = 0;
+        for (Student s : absent) {
+            List<Guardian> recipients = classAttendance.reachableGuardians(s);
+            if (recipients.isEmpty()) { skipped++; continue; }
+            String text = template
+                .replace("{student}", s.getFullName() == null ? "" : s.getFullName())
+                .replace("{class}", sc.getName() == null ? "" : sc.getName())
+                .replace("{date}", day.toString());
+            int ok = notificationService.broadcastToGuardians(recipients, text);
+            students++;
+            guardians += recipients.size();
+            sent += ok;
+        }
+
+        if (students > 0) {
+            BroadcastLog log = new BroadcastLog();
+            log.setSentByUserId(user.getId());
+            log.setSentByName(user.getFullName());
+            log.setSchoolId(schoolId);
+            log.setSchoolName(sc.getSchool() != null ? sc.getSchool().getName() : null);
+            log.setText("[" + sc.getName() + " " + day + "] " + template);
+            log.setRecipientCount(sent);
+            broadcastLogRepo.save(log);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("absent", absent.size());
+        result.put("students", students);          // nechta o'quvchi bo'yicha xabar ketdi
+        result.put("guardians", guardians);        // nechta vasiyga
+        result.put("sent", sent);                  // haqiqatda yuborilgani
+        result.put("skippedNoTelegram", skipped);  // Telegram'i yo'q o'quvchilar
+        return ResponseEntity.ok(result);
     }
 
     /** GET /api/bot/broadcast/history — o'tgan broadcastlar (audit). Ko'lam cheklovi bilan. */

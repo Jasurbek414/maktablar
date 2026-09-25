@@ -437,11 +437,17 @@ function SettingsTab() {
   const [loading, setLoading] = useState(true)
   const [dedupInput, setDedupInput] = useState('')
   const [savingDedup, setSavingDedup] = useState(false)
+  const [alertInput, setAlertInput] = useState('')
+  const [savingAlert, setSavingAlert] = useState(false)
 
   const load = () => {
     setLoading(true)
     botConfigAPI.getStatus()
-      .then(res => { setStatus(res.data); setDedupInput(String(res.data.attendanceDedupMinutes ?? 180)) })
+      .then(res => {
+        setStatus(res.data)
+        setDedupInput(String(res.data.attendanceDedupMinutes ?? 180))
+        setAlertInput(res.data.adminAlertChatIds ?? '')
+      })
       .catch(() => toast.error(t('telegram.settings.saveError')))
       .finally(() => setLoading(false))
   }
@@ -463,6 +469,15 @@ function SettingsTab() {
       .then(() => toast.success(t('telegram.settings.saved')))
       .catch(() => { toast.error(t('telegram.settings.saveError')); load() })
       .finally(() => setSavingDedup(false))
+  }
+
+  const saveAlertChats = () => {
+    setSavingAlert(true)
+    botConfigAPI.updateToggles({ adminAlertChatIds: alertInput })
+      // Backend faqat to'g'ri raqamli ID'larni saqlaydi — aynan nima saqlanganini ko'rsatamiz
+      .then(res => { setAlertInput(res.data.adminAlertChatIds ?? ''); toast.success(t('telegram.settings.saved')) })
+      .catch(() => { toast.error(t('telegram.settings.saveError')); load() })
+      .finally(() => setSavingAlert(false))
   }
 
   if (loading || !status) return null
@@ -498,6 +513,19 @@ function SettingsTab() {
             <button onClick={saveDedup} disabled={savingDedup}
               style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: savingDedup ? '#C7D2FE' : '#4F46E5', color: 'white', fontSize: 13, fontWeight: 700, cursor: savingDedup ? 'default' : 'pointer' }}>
               {savingDedup ? t('telegram.settings.saving') : t('common.save')}
+            </button>
+          </div>
+        </div>
+        <div style={{ padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 6, borderTop: '1px solid #F1F5F9' }}>
+          <span style={{ fontSize: 13.5, color: '#334155' }}>{t('telegram.settings.alertChatIdsLabel')}</span>
+          <p style={{ fontSize: 11.5, color: '#94A3B8', margin: 0 }}>{t('telegram.settings.alertChatIdsHint')}</p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+            <input type="text" value={alertInput} onChange={e => setAlertInput(e.target.value)}
+              placeholder={t('telegram.settings.alertChatIdsPlaceholder')}
+              style={{ flex: '1 1 240px', minWidth: 0, padding: '8px 12px', border: '1.5px solid #E2E8F0', borderRadius: 8, fontSize: 13.5, outline: 'none', fontFamily: 'monospace' }} />
+            <button onClick={saveAlertChats} disabled={savingAlert}
+              style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: savingAlert ? '#C7D2FE' : '#4F46E5', color: 'white', fontSize: 13, fontWeight: 700, cursor: savingAlert ? 'default' : 'pointer' }}>
+              {savingAlert ? t('telegram.settings.saving') : t('common.save')}
             </button>
           </div>
         </div>

@@ -30,10 +30,13 @@ class _ChildrenTabState extends ConsumerState<ChildrenTab> {
   Widget build(BuildContext context) {
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
+
     return Scaffold(
       appBar: AppBar(title: Text(t('nav.children'))),
       body: RefreshIndicator(
         onRefresh: () async => _reload(),
+        color: AppColors.emerald,
+        backgroundColor: AppColors.bgCard,
         child: FutureBuilder<List<Student>>(
           future: _future,
           builder: (context, snap) {
@@ -66,9 +69,9 @@ class _ChildrenTabState extends ConsumerState<ChildrenTab> {
               );
             }
             return ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: kids.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, i) => _ChildCard(
                 student: kids[i],
                 onTap: () => Navigator.of(context).push(
@@ -90,16 +93,14 @@ class _ChildCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final initial = student.fullName.isNotEmpty ? student.fullName[0].toUpperCase() : '?';
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [AppColors.bgCard, AppColors.bgCardAlt], begin: Alignment.topLeft, end: Alignment.bottomRight),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.borderEmerald),
-        ),
+        padding: const EdgeInsets.all(16),
+        decoration: AppDecorations.card(),
         child: Row(
           children: [
             ClipRRect(
@@ -107,20 +108,23 @@ class _ChildCard extends StatelessWidget {
               child: student.photoUrl != null
                   ? CachedNetworkImage(
                       imageUrl: '$kApiBaseUrl${student.photoUrl}',
-                      width: 56,
-                      height: 56,
+                      width: 50,
+                      height: 50,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => _initialsAvatar(student.fullName),
+                      errorWidget: (_, __, ___) => _avatar(initial),
                     )
-                  : _initialsAvatar(student.fullName),
+                  : _avatar(initial),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(student.fullName, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
-                  const SizedBox(height: 4),
+                  Text(
+                    student.fullName,
+                    style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15.5),
+                  ),
+                  const SizedBox(height: 3),
                   Text(
                     [if (student.className != null) student.className!, if (student.schoolName != null) student.schoolName!].join(' · '),
                     style: TextStyle(color: AppColors.textMuted, fontSize: 12.5),
@@ -128,21 +132,24 @@ class _ChildCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: AppColors.textFaint),
+            Icon(Icons.chevron_right_rounded, color: AppColors.textFaint, size: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _initialsAvatar(String name) => Container(
-        width: 56,
-        height: 56,
-        color: AppColors.emerald.withOpacity(0.15),
+  Widget _avatar(String initial) => Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: AppColors.emerald.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(14),
+        ),
         alignment: Alignment.center,
         child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: TextStyle(color: AppColors.emerald, fontWeight: FontWeight.bold, fontSize: 20),
+          initial,
+          style: TextStyle(color: AppColors.emerald, fontWeight: FontWeight.bold, fontSize: 18),
         ),
       );
 }

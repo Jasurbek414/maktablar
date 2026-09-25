@@ -135,12 +135,14 @@ public class V1AuthController {
         if (oldPassword == null || !passwordEncoder.matches(oldPassword, user.getPassword())) {
             return ResponseEntity.status(400).body(Map.of("old_password", List.of(i18n.msg("error.auth.current_password_incorrect"))));
         }
-        if (newPassword == null || newPassword.length() < 8) {
+        if (newPassword == null || newPassword.length() < AuthController.MIN_PASSWORD_LENGTH) {
             return ResponseEntity.status(400).body(Map.of("new_password", List.of(i18n.msg("error.auth.new_password_min_length_8"))));
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        // 2026-09-25: parol o'zgargach barcha ochiq sessiyalar bekor qilinadi
+        refreshTokenRepository.revokeAllForUser(user.getId());
         return ResponseEntity.ok(Map.of("message", i18n.msg("success.password_changed")));
     }
 

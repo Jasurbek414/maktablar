@@ -27,15 +27,23 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen> with 
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
     final teacher = widget.teacher;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(teacher.fullName),
-        bottom: TabBar(
-          controller: _tabs,
-          indicatorColor: AppColors.emerald,
-          labelColor: AppColors.emerald,
-          unselectedLabelColor: AppColors.textMuted,
-          tabs: [Tab(text: t('detail.infoTab')), Tab(text: t('detail.notesTab'))],
+        title: Text(teacher.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.borderSubtle))),
+            child: TabBar(
+              controller: _tabs,
+              indicatorColor: AppColors.emerald,
+              indicatorWeight: 2.5,
+              labelColor: AppColors.emerald,
+              unselectedLabelColor: AppColors.textMuted,
+              tabs: [Tab(text: t('detail.infoTab')), Tab(text: t('detail.notesTab'))],
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -44,9 +52,19 @@ class _TeacherDetailScreenState extends ConsumerState<TeacherDetailScreen> with 
           ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _InfoRow(label: t('profile.login'), value: teacher.username),
-              _InfoRow(label: t('teacher.subject'), value: teacher.subject ?? t('common.notSpecified')),
-              _InfoRow(label: t('profile.phoneField'), value: teacher.phone ?? t('common.notSpecified')),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: AppDecorations.card(),
+                child: Column(
+                  children: [
+                    _InfoRow(label: t('profile.login'), value: teacher.username),
+                    const Divider(height: 20),
+                    _InfoRow(label: t('teacher.subject'), value: teacher.subject ?? t('common.notSpecified')),
+                    const Divider(height: 20),
+                    _InfoRow(label: t('profile.phoneField'), value: teacher.phone ?? t('common.notSpecified')),
+                  ],
+                ),
+              ),
             ],
           ),
           NotesPanel(personType: 'TEACHER', personId: teacher.id),
@@ -63,17 +81,12 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.borderEmerald)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-          Text(value, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+        Text(value, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13.5)),
+      ],
     );
   }
 }

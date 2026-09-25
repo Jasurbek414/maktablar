@@ -103,12 +103,31 @@ function RouterCard({ router, onOpen, onDelete }) {
   )
 }
 
-function ConnectionPanel({ router, t }) {
+function ConnectionPanel({ router, t, onChanged }) {
   const [script, setScript] = useState(null)
   const [showScript, setShowScript] = useState(false)
   const [scriptLoading, setScriptLoading] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [pendingTransport, setPendingTransport] = useState(null)
+  const [switching, setSwitching] = useState(false)
+
+  const transport = router.transport || 'WIREGUARD'
+  const isOvpn = transport === 'OPENVPN'
+
+  // Transport almashganda boshqa transport uchun olingan skript ko'rsatilib qolmasligi kerak
+  useEffect(() => { setScript(null); setShowScript(false); setPendingTransport(null) }, [router.id, transport])
+
+  const changeTransport = async () => {
+    if (!pendingTransport) return
+    setSwitching(true)
+    try {
+      const { data } = await routersAPI.updateRouter(router.id, { transport: pendingTransport })
+      setPendingTransport(null)
+      onChanged?.(data)
+    } catch { toast.error(t('devices.network.switchError')) }
+    setSwitching(false)
+  }
 
   const copy = async (text) => {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch {}
@@ -119,7 +138,7 @@ function ConnectionPanel({ router, t }) {
     if (script) { setShowScript(true); return }
     setScriptLoading(true)
     try {
-      const { data } = await routersAPI.getWgScript(router.id)
+      const { data } = await routersAPI.getScript(router.id)
       setScript(data.script)
       setShowScript(true)
     } catch { toast.error(t('devices.network.loadError')) }
@@ -150,22 +169,60 @@ function ConnectionPanel({ router, t }) {
         <p style={{ fontSize: 13, fontWeight: 700, color: '#1D4ED8' }}>{t('devices.network.title')}</p>
       </div>
 
+      <div style={{ background: 'white', borderRadius: 9, padding: '10px 12px', marginBottom: 12 }}>
+        <p style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>{t('devices.network.transportLabel')}</p>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {['WIREGUARD', 'OPENVPN'].map(tp => {
+            const active = tp === transport
+            return (
+              <button key={tp} type="button" disabled={switching}
+                onClick={() => !active && setPendingTransport(tp)}
+                style={{
+                  padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: active ? 'default' : 'pointer',
+                  border: active ? '1px solid #1D4ED8' : '1px solid #CBD5E1',
+                  background: active ? '#1D4ED8' : 'white', color: active ? 'white' : '#334155',
+                }}>
+                {tp === 'WIREGUARD' ? t('devices.network.transportWireguard') : t('devices.network.transportOpenvpn')}
+              </button>
+            )
+          })}
+        </div>
+        <p style={{ fontSize: 11, color: '#64748B', marginTop: 6, lineHeight: 1.5 }}>{t('devices.network.transportHint')}</p>
+        {pendingTransport && (
+          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 9, padding: '10px 12px', marginTop: 8 }}>
+            <p style={{ fontSize: 11.5, fontWeight: 700, color: '#D97706' }}>{t('devices.network.switchConfirmTitle')}</p>
+            <p style={{ fontSize: 10.5, color: '#92400E', marginTop: 2 }}>{t('devices.network.switchConfirmNote')}</p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <Button size="sm" loading={switching} onClick={changeTransport}>{t('devices.network.switchConfirmBtn')}</Button>
+              <Button size="sm" variant="secondary" disabled={switching} onClick={() => setPendingTransport(null)}>{t('common.cancel')}</Button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
         <div style={{ background: 'white', borderRadius: 9, padding: '8px 12px' }}>
           <p style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>{t('devices.network.vpnIp')}</p>
           <p style={{ fontSize: 12.5, color: '#1D4ED8', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{router.vpnIp || '—'}</p>
         </div>
-        <div style={{ background: 'white', borderRadius: 9, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>{t('devices.network.publicKey')}</p>
-            <p style={{ fontSize: 12.5, color: '#1D4ED8', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{router.wgPublicKey || '—'}</p>
+        {isOvpn ? (
+          <div style={{ background: 'white', borderRadius: 9, padding: '8px 12px' }}>
+            <p style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>{t('devices.network.ovpnLogin')}</p>
+            <p style={{ fontSize: 12.5, color: '#1D4ED8', fontFamily: 'monospace' }}>router{router.id}</p>
           </div>
-          {router.wgPublicKey && (
-            <button onClick={() => copy(router.wgPublicKey)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', flexShrink: 0 }}>
-              {copied ? <Check style={{ width: 14, height: 14, color: '#059669' }} /> : <Copy style={{ width: 14, height: 14 }} />}
-            </button>
-          )}
-        </div>
+        ) : (
+          <div style={{ background: 'white', borderRadius: 9, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>{t('devices.network.publicKey')}</p>
+              <p style={{ fontSize: 12.5, color: '#1D4ED8', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{router.wgPublicKey || '—'}</p>
+            </div>
+            {router.wgPublicKey && (
+              <button onClick={() => copy(router.wgPublicKey)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', flexShrink: 0 }}>
+                {copied ? <Check style={{ width: 14, height: 14, color: '#059669' }} /> : <Copy style={{ width: 14, height: 14 }} />}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {!serverConfigured && (
@@ -190,15 +247,18 @@ function ConnectionPanel({ router, t }) {
           <li>{t('devices.network.step2')}</li>
           <li>{t('devices.network.step3')}</li>
         </ol>
+        <p style={{ fontSize: 11, color: '#B45309', marginTop: 6 }}>{t('devices.network.ros7Note')}</p>
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Button size="sm" icon={Code2} loading={scriptLoading} onClick={toggleScript}>
           {showScript ? t('devices.network.hideScriptBtn') : t('devices.network.showScriptBtn')}
         </Button>
-        <Button size="sm" variant="secondary" icon={Download} loading={downloading} onClick={downloadConf}>
-          {t('devices.network.downloadConfBtn')}
-        </Button>
+        {!isOvpn && (
+          <Button size="sm" variant="secondary" icon={Download} loading={downloading} onClick={downloadConf}>
+            {t('devices.network.downloadConfBtn')}
+          </Button>
+        )}
       </div>
 
       {showScript && script && (
@@ -476,7 +536,7 @@ function RouterDetailModal({ router, schools, onClose, onRefresh }) {
             )}
           </div>
 
-          <ConnectionPanel router={detail} t={t} />
+          <ConnectionPanel router={detail} t={t} onChanged={(updated) => { setDetail(updated); onRefresh() }} />
 
           <DiscoveryPanel router={detail} t={t}
             onAddTerminal={(prefill) => { setEditingTerm(null); setTermPrefill(prefill); setShowTermForm(true) }} />

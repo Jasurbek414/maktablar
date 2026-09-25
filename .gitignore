@@ -12,6 +12,9 @@ seed_andijon.sql
 # Mobil ilova APK'si — katta binary fayl, git repo public bo'lgani uchun bu yerga
 # commit qilinmaydi (nginx /downloads/ orqali volume sifatida serve qilinadi).
 downloads/
+*.apk
+mobile/releases/
+mobile/build/
 
 # Python bytecode
 __pycache__/
@@ -19,3 +22,6 @@ __pycache__/
 
 # Uyning joriy ochiq IP keshi (DDNS skripti yozadi) — public repoga kerak emas
 wireguard-server/.last-known-ip
+
+# OpenVPN sertifikatlari va server xususiy kaliti — faqat serverda turadi, repoga HECH QACHON
+wireguard-server/ovpn-pki/

@@ -5,9 +5,8 @@ import '../../theme/app_theme.dart';
 import '../auth/auth_controller.dart';
 import 'classes_tab.dart';
 import 'dashboard_tab.dart';
+import 'director_attendance_tab.dart';
 import 'profile_tab.dart';
-import 'students_tab.dart';
-import 'teachers_tab.dart';
 
 class DirectorHomeShell extends ConsumerStatefulWidget {
   const DirectorHomeShell({super.key});
@@ -24,29 +23,55 @@ class _DirectorHomeShellState extends ConsumerState<DirectorHomeShell> {
     final profile = ref.watch(authControllerProvider).profile;
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
-    final schoolId = (profile?['schoolId'] is int) ? (profile!['schoolId'] as int) : null;
+    final schoolId = (profile?['schoolId'] is int) ? (profile!['schoolId'] as int) : 1;
 
     final tabs = [
       DashboardTab(profile: profile),
-      StudentsTab(schoolId: schoolId),
       ClassesTab(schoolId: schoolId),
-      TeachersTab(schoolId: schoolId),
+      DirectorAttendanceTab(schoolId: schoolId),
       ProfileTab(profile: profile),
     ];
 
     return Scaffold(
       body: IndexedStack(index: _index, children: tabs),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(icon: const Icon(Icons.dashboard_rounded), label: t('nav.home')),
-          BottomNavigationBarItem(icon: const Icon(Icons.groups_rounded), label: t('nav.students')),
-          BottomNavigationBarItem(icon: const Icon(Icons.grid_view_rounded), label: t('nav.classes')),
-          BottomNavigationBarItem(icon: const Icon(Icons.badge_rounded), label: t('nav.teachers')),
-          BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: t('nav.profile')),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgSidebar,
+          border: Border(top: BorderSide(color: AppColors.borderSubtle, width: 1)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: BottomNavigationBar(
+              currentIndex: _index,
+              onTap: (i) => setState(() => _index = i),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              items: [
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.home_outlined),
+                  activeIcon: const Icon(Icons.home_rounded),
+                  label: t('nav.home'),
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.grid_view_outlined),
+                  activeIcon: const Icon(Icons.grid_view_rounded),
+                  label: t('nav.classes'),
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.fact_check_outlined),
+                  activeIcon: const Icon(Icons.fact_check_rounded),
+                  label: t('attendance.title'),
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.person_outline_rounded),
+                  activeIcon: const Icon(Icons.person_rounded),
+                  label: t('nav.profile'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

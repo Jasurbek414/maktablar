@@ -32,6 +32,7 @@ class _TeachersTabState extends ConsumerState<TeachersTab> {
   Widget build(BuildContext context) {
     ref.watch(themeModeProvider);
     ref.watch(l10n.localeProvider);
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.t('nav.teachers'))),
       body: widget.schoolId == null
@@ -39,11 +40,14 @@ class _TeachersTabState extends ConsumerState<TeachersTab> {
           : Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
                   child: TextField(
-                    style: TextStyle(color: AppColors.textPrimary),
-                    decoration: InputDecoration(hintText: l10n.t('common.search'), prefixIcon: Icon(Icons.search_rounded, color: AppColors.textMuted)),
-                    onChanged: (v) => setState(() => _search = v.toLowerCase()),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'O\'qituvchini qidirish...',
+                      prefixIcon: Icon(Icons.search_rounded, size: 20, color: AppColors.textMuted),
+                    ),
+                    onChanged: (v) => setState(() => _search = v.trim().toLowerCase()),
                   ),
                 ),
                 Expanded(
@@ -55,16 +59,24 @@ class _TeachersTabState extends ConsumerState<TeachersTab> {
                       final all = snap.data ?? [];
                       final list = _search.isEmpty ? all : all.where((tc) => tc.fullName.toLowerCase().contains(_search)).toList();
                       if (list.isEmpty) return Center(child: Text(l10n.t('common.notFound'), style: TextStyle(color: AppColors.textFaint)));
+
                       return ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         itemCount: list.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, i) {
                           final tch = list[i];
                           return PersonTile(
                             name: tch.fullName,
-                            subtitle: tch.subject ?? '',
+                            subtitle: tch.subject ?? 'Fan o\'qituvchisi',
                             photoUrl: null,
+                            badge: tch.subject != null
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: AppDecorations.badge(color: AppColors.purple),
+                                    child: Text(tch.subject!, style: TextStyle(color: AppColors.purple, fontSize: 11, fontWeight: FontWeight.w600)),
+                                  )
+                                : null,
                             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TeacherDetailScreen(teacher: tch))),
                           );
                         },

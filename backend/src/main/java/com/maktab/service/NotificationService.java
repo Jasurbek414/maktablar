@@ -261,6 +261,33 @@ public class NotificationService {
     }
 
     /**
+     * Qurilma ogohlantirishi (router/terminal uzildi-tiklandi) — superadmin chat'lariga oddiy matn.
+     * Ota-onalar uchun broadcast'dan farqli: sarlavhasiz, Markdown'siz (maktab nomida "_" bo'lsa buzilmasin).
+     */
+    public boolean sendAdminAlert(List<String> chatIds, String text) {
+        if (chatIds == null || chatIds.isEmpty()) return false;
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("chatIds", chatIds);
+            payload.put("text", text);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(botUrl + "/webhook/admin-alert"))
+                    .header("Content-Type", "application/json")
+                    .header("X-Bot-Key", botSharedSecret)
+                    .timeout(REQUEST_TIMEOUT)
+                    .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(payload)))
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            boolean ok = response.statusCode() >= 200 && response.statusCode() < 300;
+            if (!ok) log.warn("Admin ogohlantirishi yuborilmadi: bot status={}", response.statusCode());
+            return ok;
+        } catch (Exception e) {
+            log.error("Admin ogohlantirishi yuborilmadi: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Admin panel'dan ommaviy xabar (broadcast) — BroadcastController shu metodni chaqiradi,
      * qamrovdagi guardian'lar ro'yxatini o'zi hisoblab kelgan bo'ladi (schoolId bo'yicha
      * cheklangan yoki cheklovsiz — CurrentUserService.resolveSchoolScope orqali).

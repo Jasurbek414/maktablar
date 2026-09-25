@@ -5,36 +5,73 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum AppThemeMode { dark, light }
 
-/// AppColors getterlari o'qiydigan global holat. Riverpod providerdan tashqarida
-/// ham (masalan static getterlar ichida) o'qish kerak bo'lgani uchun oddiy statik
-/// bayroq sifatida saqlanadi; haqiqiy manba — ThemeModeController.
 class _ThemeState {
   static bool isDark = true;
 }
 
-/// Veb-ilova (frontend/) bilan bir xil rang palitrasi: qorong'i fon + zumrad (emerald)
-/// urg'u — endi kun/tun rejimiga qarab ikkita palitra orasida almashadi.
+/// Minimalist, zamonaviy va toza ranglar palitrasi.
+/// Qorong'i rejimda chuqur Obsidian/Slate tuslari, yorug' rejimda musaffo oq/kulrang tuslar.
 class AppColors {
-  static Color get bgMain => _ThemeState.isDark ? const Color(0xFF020504) : const Color(0xFFF4F7F5);
-  static Color get bgSidebar => _ThemeState.isDark ? const Color(0xFF0A120E) : const Color(0xFFFFFFFF);
-  static Color get bgCard => _ThemeState.isDark ? const Color(0xFF0D1A14) : const Color(0xFFFFFFFF);
-  static Color get bgCardAlt => _ThemeState.isDark ? const Color(0xFF0A1410) : const Color(0xFFF1F5F3);
-  static Color get bgInput => _ThemeState.isDark ? const Color(0xFF0A120E) : const Color(0xFFF1F5F3);
+  // Fon ranglari
+  static Color get bgMain => _ThemeState.isDark ? const Color(0xFF090B10) : const Color(0xFFF8FAFC);
+  static Color get bgSidebar => _ThemeState.isDark ? const Color(0xFF0E121A) : const Color(0xFFFFFFFF);
+  static Color get bgCard => _ThemeState.isDark ? const Color(0xFF131823) : const Color(0xFFFFFFFF);
+  static Color get bgCardAlt => _ThemeState.isDark ? const Color(0xFF18202E) : const Color(0xFFF1F5F9);
+  static Color get bgInput => _ThemeState.isDark ? const Color(0xFF0E131C) : const Color(0xFFF8FAFC);
 
+  // Asosiy va aksent ranglar
   static Color get emerald => _ThemeState.isDark ? const Color(0xFF10B981) : const Color(0xFF059669);
   static Color get emeralddark => _ThemeState.isDark ? const Color(0xFF059669) : const Color(0xFF047857);
-  static Color get cyan => _ThemeState.isDark ? const Color(0xFF22D3EE) : const Color(0xFF0891B2);
+  static Color get cyan => _ThemeState.isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
   static Color get amber => _ThemeState.isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
-  static Color get red => _ThemeState.isDark ? const Color(0xFFEF4444) : const Color(0xFFDC2626);
-  static Color get purple => _ThemeState.isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA);
+  static Color get red => _ThemeState.isDark ? const Color(0xFFF43F5E) : const Color(0xFFE11D48);
+  static Color get purple => _ThemeState.isDark ? const Color(0xFFA855F7) : const Color(0xFF7E22CE);
 
-  static Color get textPrimary => _ThemeState.isDark ? Colors.white : const Color(0xFF0F172A);
+  // Matn ranglari
+  static Color get textPrimary => _ThemeState.isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
   static Color get textSecondary => _ThemeState.isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
   static Color get textMuted => _ThemeState.isDark ? const Color(0xFF64748B) : const Color(0xFF64748B);
   static Color get textFaint => _ThemeState.isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8);
 
-  static Color get borderEmerald => _ThemeState.isDark ? const Color(0x1A10B981) : const Color(0x1A059669);
-  static Color get borderWhite => _ThemeState.isDark ? const Color(0x0AFFFFFF) : const Color(0x0A000000);
+  // Chegaralar (Borders) - mayin, toza 1px
+  static Color get borderEmerald => _ThemeState.isDark ? const Color(0x3310B981) : const Color(0x2E059669);
+  static Color get borderWhite => _ThemeState.isDark ? const Color(0x14FFFFFF) : const Color(0xFFE2E8F0);
+  static Color get borderSubtle => _ThemeState.isDark ? const Color(0x18FFFFFF) : const Color(0xFFE2E8F0);
+}
+
+/// Minimalist dizayn uchun umumiy dekoratsiya va stillar
+class AppDecorations {
+  static BoxDecoration card({
+    Color? color,
+    BorderRadius? borderRadius,
+    Border? border,
+    bool elevated = false,
+  }) {
+    return BoxDecoration(
+      color: color ?? AppColors.bgCard,
+      borderRadius: borderRadius ?? BorderRadius.circular(18),
+      border: border ?? Border.all(color: AppColors.borderSubtle, width: 1),
+      boxShadow: elevated
+          ? [
+              BoxShadow(
+                color: _ThemeState.isDark
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ]
+          : null,
+    );
+  }
+
+  static BoxDecoration badge({required Color color, double opacity = 0.12}) {
+    return BoxDecoration(
+      color: color.withOpacity(opacity),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: color.withOpacity(0.25), width: 1),
+    );
+  }
 }
 
 class ThemeModeController extends StateNotifier<AppThemeMode> {
@@ -87,51 +124,92 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.bgMain,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
         foregroundColor: AppColors.textPrimary,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+          letterSpacing: -0.3,
+        ),
       ),
       cardTheme: CardThemeData(
         color: AppColors.bgCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.borderEmerald),
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: AppColors.borderSubtle, width: 1),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.bgCard,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: AppColors.borderSubtle, width: 1),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: AppColors.bgCard,
+        modalBackgroundColor: AppColors.bgCard,
+        elevation: 12,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.bgInput,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.borderEmerald),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.borderSubtle, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.borderEmerald),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.borderSubtle, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: AppColors.emerald, width: 1.5),
         ),
-        hintStyle: TextStyle(color: AppColors.textFaint),
-        labelStyle: TextStyle(color: AppColors.textSecondary),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.red, width: 1),
+        ),
+        hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
+        labelStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.emerald,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15, letterSpacing: -0.2),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
+          side: BorderSide(color: AppColors.borderSubtle, width: 1),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.bgSidebar,
+        elevation: 0,
         selectedItemColor: AppColors.emerald,
         unselectedItemColor: AppColors.textFaint,
+        selectedLabelStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w500),
         type: BottomNavigationBarType.fixed,
       ),
-      dividerTheme: DividerThemeData(color: AppColors.borderWhite, thickness: 1),
+      dividerTheme: DividerThemeData(color: AppColors.borderSubtle, thickness: 1, space: 1),
     );
   }
 

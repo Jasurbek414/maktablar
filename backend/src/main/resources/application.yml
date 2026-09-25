@@ -64,3 +64,19 @@ app:
     # WireGuard server (wireguard-server/ papkasi, alohida joylashtiriladi) shu maxfiy
     # kalit bilan /api/internal/wg-peers'ni chaqirib, peer ro'yxatini sinxronlaydi.
     sync-secret: ${WG_SYNC_SECRET:}
+
+  openvpn:
+    # Zaxira transport (2026-09-19) — WireGuard (UDP) ishlamaydigan maktablar uchun. Server hub
+    # konteyneri ichida (wireguard-server/), TCP, manzil WG_SERVER_ENDPOINT bilan bir xil.
+    # Router N tunneli 10.21.0.N; maktab LAN'i transportdan qat'i nazar 10.30.N.0/24.
+    subnet-base: ${OVPN_SUBNET_BASE:10.21.0}
+    port: ${OVPN_PORT:443}
+
+  retention:
+    # Eski ma'lumotlarni tozalash (RetentionService, 2026-09-25). Har kuni 03:30 da —
+    # kunlik zaxira nusxa 03:00 da tugagach, ya'ni o'chirilgani zaxirada qoladi.
+    # Kamera joylashuv yozuvlari shaxsiy ma'lumot: muddati ataylab qisqa.
+    cron: ${RETENTION_CRON:0 30 3 * * *}
+    recognition-events-days: ${RETENTION_RECOGNITION_DAYS:30}
+    refresh-tokens-days: ${RETENTION_REFRESH_TOKEN_DAYS:7}
+    notifications-days: ${RETENTION_NOTIFICATION_DAYS:90}

@@ -40,10 +40,23 @@ services:
       SYNC_INTERVAL: ${SYNC_INTERVAL:-15}
       WG_MAPPED_SUPERNET: ${WG_MAPPED_SUPERNET:-10.30.0.0/16}
       WG_GATEWAY_IP: ${WG_GATEWAY_IP:-10.20.0.254}
+      # OpenVPN zaxira transporti (2026-09-19) — shu konteyner ichida, TCP. Backend'dagi
+      # OVPN_PORT / OVPN_SUBNET_BASE (10.21.0) bilan bir xil bo'lishi shart.
+      OVPN_ENABLED: ${OVPN_ENABLED:-1}
+      OVPN_PORT: ${OVPN_PORT:-443}
+      OVPN_NETWORK: ${OVPN_NETWORK:-10.21.0.0}
+    # OpenVPN tun0 yaratishi uchun
+    devices:
+      - /dev/net/tun:/dev/net/tun
     ports:
       - "${WG_LISTEN_PORT:-51820}:${WG_LISTEN_PORT:-51820}/udp"
+      # 443/udp (WireGuard) va 443/tcp (OpenVPN) bir-biriga xalaqit bermaydi — protokol boshqa.
+      - "${OVPN_PORT:-443}:${OVPN_PORT:-443}/tcp"
     volumes:
       - wg-data:/etc/wireguard
+      # ca.crt, server.crt, server.key, dh.pem — faqat serverda (repoda .gitignore'da).
+      # Papka bo'lmasa OpenVPN o'chiq qoladi, WireGuard esa ishlayveradi.
+      - ./ovpn-pki:/etc/openvpn/pki:ro
     networks:
       - default
       - maktab_shared

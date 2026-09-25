@@ -28,10 +28,20 @@ public class VpnAddressing {
     @Value("${app.wireguard.subnet-base:10.20.0}") private String tunnelBase;
     @Value("${app.wireguard.mapped-base:10.30}") private String mappedBase;
     @Value("${app.wireguard.gateway-ip:10.20.0.254}") private String gatewayIp;
+    // OpenVPN zaxira transporti (2026-09-19): router N tunneli 10.21.0.N — WireGuard 10.20.0.0/24
+    // bilan BIR XIL bo'lmasligi shart (09-19 dagi uzilish aynan bir xil IP ikki interfeysda edi).
+    @Value("${app.openvpn.subnet-base:10.21.0}") private String ovpnTunnelBase;
 
     public static final String DEFAULT_LAN_SUBNET = "192.168.88.0/24";
 
     public String tunnelBase() { return tunnelBase; }
+    public String ovpnTunnelBase() { return ovpnTunnelBase; }
+    public String ovpnSubnet() { return ovpnTunnelBase + ".0/24"; }
+
+    /** OpenVPN routerining tunnel IP'si (10.21.0.N) — hub client-connect orqali beradi. */
+    public String routerOvpnIp(MikrotikRouter r) {
+        return ovpnTunnelBase + "." + hostOctet(r);
+    }
     public String tunnelSubnet() { return tunnelBase + ".0/24"; }
     public String mappedSupernet() { return mappedBase + ".0.0/16"; }
     public String serverTunnelIp() { return tunnelBase + ".1"; }
@@ -103,7 +113,8 @@ public class VpnAddressing {
         boolean isPrivate = a == 10 || (a == 172 && b >= 16 && b <= 31) || (a == 192 && b == 168);
         if (!isPrivate) return null;
         String normalized = a + "." + b + "." + c + ".0/24";
-        if (normalized.startsWith(tunnelBase + ".") || normalized.startsWith(mappedBase + ".")) return null;
+        if (normalized.startsWith(tunnelBase + ".") || normalized.startsWith(mappedBase + ".")
+                || normalized.startsWith(ovpnTunnelBase + ".")) return null;
         return normalized;
     }
 

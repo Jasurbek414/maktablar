@@ -35,4 +35,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     // Tur bo'yicha
     List<Notification> findByTypeOrderByCreatedAtDesc(Notification.NotificationType type);
+
+    /** Retention (2026-09-25): eski bildirishnomalar — jadval cheksiz o'smasligi uchun. */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff")
+    int deleteOlderThan(@Param("cutoff") java.time.OffsetDateTime cutoff);
 }

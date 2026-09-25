@@ -42,4 +42,10 @@ public class BotConfig {
      * o'zgartiriladi. Null bo'lsa standart 180 daqiqa (3 soat) qo'llaniladi. */
     @Column
     private Integer attendanceDedupMinutes;
+
+    /** Qurilma uzilishi/tiklanishi haqida Telegram ogohlantirishi yuboriladigan chat ID'lar
+     * (vergul bilan). Xodimlarda Telegram bog'lanishi yo'q — superadmin botga /chatid yozib,
+     * o'z ID'sini (yoki guruh ID'sini) shu yerga kiritadi. Bo'sh — faqat panel bildirishnomasi. */
+    @Column(columnDefinition = "TEXT")
+    private String adminAlertChatIds;
 }

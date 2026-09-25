@@ -3,9 +3,6 @@ import '../core/api_client.dart';
 import '../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 
-/// Direktor (features/director) va ota-ona (features/parent) profil ekranlarida
-/// bir xil "parolni o'zgartirish" formasi — faqat backend endpointi farq qiladi
-/// (chaqiruvchi buni onSubmit orqali beradi).
 class PasswordChangeForm extends StatefulWidget {
   const PasswordChangeForm({super.key, required this.onSubmit});
   final Future<void> Function(String oldPassword, String newPassword) onSubmit;
@@ -71,8 +68,9 @@ class _PasswordChangeFormState extends State<PasswordChangeForm> {
           style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             labelText: t('profile.currentPassword'),
+            prefixIcon: Icon(Icons.lock_outline_rounded, size: 20, color: AppColors.textMuted),
             suffixIcon: IconButton(
-              icon: Icon(_obscureOld ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: AppColors.textMuted, size: 20),
+              icon: Icon(_obscureOld ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: AppColors.textMuted, size: 20),
               onPressed: () => setState(() => _obscureOld = !_obscureOld),
             ),
           ),
@@ -84,8 +82,9 @@ class _PasswordChangeFormState extends State<PasswordChangeForm> {
           style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             labelText: t('profile.newPassword'),
+            prefixIcon: Icon(Icons.lock_reset_rounded, size: 20, color: AppColors.textMuted),
             suffixIcon: IconButton(
-              icon: Icon(_obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: AppColors.textMuted, size: 20),
+              icon: Icon(_obscureNew ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: AppColors.textMuted, size: 20),
               onPressed: () => setState(() => _obscureNew = !_obscureNew),
             ),
           ),
@@ -95,17 +94,38 @@ class _PasswordChangeFormState extends State<PasswordChangeForm> {
           controller: _confirmCtrl,
           obscureText: _obscureNew,
           style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-          decoration: InputDecoration(labelText: t('profile.confirmPassword')),
+          decoration: InputDecoration(
+            labelText: t('profile.confirmPassword'),
+            prefixIcon: Icon(Icons.check_circle_outline_rounded, size: 20, color: AppColors.textMuted),
+          ),
         ),
-        if (_error != null) ...[
-          const SizedBox(height: 10),
-          Text(_error!, style: TextStyle(color: AppColors.red, fontSize: 12.5)),
-        ],
-        if (_success != null) ...[
-          const SizedBox(height: 10),
-          Text(_success!, style: TextStyle(color: AppColors.emerald, fontSize: 12.5)),
-        ],
-        const SizedBox(height: 14),
+        if (_error != null)
+          Container(
+            margin: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: AppDecorations.badge(color: AppColors.red),
+            child: Row(
+              children: [
+                Icon(Icons.info_rounded, color: AppColors.red, size: 16),
+                const SizedBox(width: 8),
+                Expanded(child: Text(_error!, style: TextStyle(color: AppColors.red, fontSize: 12))),
+              ],
+            ),
+          ),
+        if (_success != null)
+          Container(
+            margin: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: AppDecorations.badge(color: AppColors.emerald),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: AppColors.emerald, size: 16),
+                const SizedBox(width: 8),
+                Expanded(child: Text(_success!, style: TextStyle(color: AppColors.emerald, fontSize: 12))),
+              ],
+            ),
+          ),
+        const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(

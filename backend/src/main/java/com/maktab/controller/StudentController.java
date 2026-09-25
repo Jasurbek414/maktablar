@@ -569,7 +569,8 @@ public class StudentController {
                         }
                         if (jpeg != null) {
                             Files.createDirectories(importUploadDir);
-                            String filename = UUID.randomUUID().toString().substring(0, 12) + ".jpg";
+                            // FileController#upload bilan bir xil: nom taxmin qilinmasligi kerak (2026-09-25)
+                            String filename = UUID.randomUUID().toString().replace("-", "") + ".jpg";
                             writtenPhoto = importUploadDir.resolve(filename);
                             Files.write(writtenPhoto, jpeg);
                             s.setPhotoUrl("/api/files/" + filename);

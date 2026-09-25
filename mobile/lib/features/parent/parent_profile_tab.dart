@@ -25,7 +25,7 @@ class _ParentProfileTabState extends ConsumerState<ParentProfileTab> {
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController(text: widget.profile?['name'] as String? ?? '');
+    _nameCtrl = TextEditingController(text: widget.profile?['name'] as String? ?? widget.profile?['fullName'] as String? ?? '');
   }
 
   @override
@@ -53,37 +53,55 @@ class _ParentProfileTabState extends ConsumerState<ParentProfileTab> {
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
     final p = widget.profile;
-    final nameForInitial = p?['name'] as String? ?? '';
-    final initial = nameForInitial.isNotEmpty ? nameForInitial.substring(0, 1).toUpperCase() : '?';
+    final name = p?['fullName'] as String? ?? p?['name'] as String? ?? 'Ota-ona';
+    final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
 
     return Scaffold(
       appBar: AppBar(title: Text(t('nav.profile'))),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          Center(
-            child: Column(
+          // ── Header Card ──
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: AppDecorations.card(),
+            child: Row(
               children: [
                 Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(gradient: LinearGradient(colors: [AppColors.emerald, const Color(0xFF34D399)]), borderRadius: BorderRadius.circular(20)),
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: AppColors.cyan.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.cyan.withOpacity(0.25)),
+                  ),
                   alignment: Alignment.center,
-                  child: Text(initial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 26)),
+                  child: Text(initial, style: TextStyle(color: AppColors.cyan, fontWeight: FontWeight.bold, fontSize: 22)),
                 ),
-                const SizedBox(height: 12),
-                Text(nameForInitial.isNotEmpty ? nameForInitial : (p?['phone'] as String? ?? ''), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 17)),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: AppColors.cyan.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                  child: Text(t('profile.parent'), style: TextStyle(color: AppColors.cyan, fontSize: 12)),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16.5)),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: AppDecorations.badge(color: AppColors.cyan),
+                        child: Text(
+                          t('profile.parent'),
+                          style: TextStyle(color: AppColors.cyan, fontSize: 11.5, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 16),
 
+          // ── Appearance ──
           _SectionCard(
             title: t('profile.appearance'),
             child: const AppearanceSettingsSection(),
@@ -91,6 +109,7 @@ class _ParentProfileTabState extends ConsumerState<ParentProfileTab> {
 
           const SizedBox(height: 16),
 
+          // ── Personal Info ──
           _SectionCard(
             title: t('profile.personalInfo'),
             child: Column(
@@ -99,29 +118,42 @@ class _ParentProfileTabState extends ConsumerState<ParentProfileTab> {
                 TextField(
                   controller: _nameCtrl,
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                  decoration: InputDecoration(labelText: t('profile.yourName'), hintText: 'Ism Familiya'),
+                  decoration: InputDecoration(
+                    labelText: t('profile.yourName'),
+                    prefixIcon: Icon(Icons.person_outline_rounded, size: 20, color: AppColors.textMuted),
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(color: AppColors.bgCardAlt, borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgInput,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderSubtle),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(t('profile.phoneField'), style: TextStyle(color: AppColors.textMuted, fontSize: 12.5)),
-                      Text(p?['phone'] as String? ?? '', style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, fontFamily: 'monospace')),
+                      Text(t('profile.phone'), style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                      Text(p?['phone'] as String? ?? '', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
-                if (_error != null) ...[
-                  const SizedBox(height: 10),
-                  Text(_error!, style: TextStyle(color: AppColors.red, fontSize: 12.5)),
-                ],
-                if (_success != null) ...[
-                  const SizedBox(height: 10),
-                  Text(_success!, style: TextStyle(color: AppColors.emerald, fontSize: 12.5)),
-                ],
-                const SizedBox(height: 14),
+                if (_error != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: AppDecorations.badge(color: AppColors.red),
+                    child: Text(_error!, style: TextStyle(color: AppColors.red, fontSize: 12)),
+                  ),
+                if (_success != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: AppDecorations.badge(color: AppColors.emerald),
+                    child: Text(_success!, style: TextStyle(color: AppColors.emerald, fontSize: 12)),
+                  ),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -137,6 +169,7 @@ class _ParentProfileTabState extends ConsumerState<ParentProfileTab> {
 
           const SizedBox(height: 16),
 
+          // ── Change Password ──
           _SectionCard(
             title: t('profile.changePassword'),
             child: PasswordChangeForm(
@@ -146,6 +179,7 @@ class _ParentProfileTabState extends ConsumerState<ParentProfileTab> {
 
           const SizedBox(height: 16),
 
+          // ── Logout ──
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -153,12 +187,11 @@ class _ParentProfileTabState extends ConsumerState<ParentProfileTab> {
               icon: Icon(Icons.logout_rounded, color: AppColors.red, size: 18),
               label: Text(t('common.logout'), style: TextStyle(color: AppColors.red)),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0x33EF4444)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                side: BorderSide(color: AppColors.red.withOpacity(0.3)),
               ),
             ),
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -173,16 +206,12 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AppColors.bgCard, AppColors.bgCardAlt], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderEmerald),
-      ),
+      padding: const EdgeInsets.all(18),
+      decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+          Text(title, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14.5)),
           const SizedBox(height: 14),
           child,
         ],

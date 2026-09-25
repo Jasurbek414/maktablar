@@ -59,13 +59,32 @@ function StatTile({ label, value, icon, color, glow }) {
   );
 }
 
-function ConnectionPanel({ router, t }) {
+function ConnectionPanel({ router, t, canWrite, onChanged }) {
   const [script, setScript] = useState(null);
   const [showScript, setShowScript] = useState(false);
   const [scriptLoading, setScriptLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [pendingTransport, setPendingTransport] = useState(null);
+  const [switching, setSwitching] = useState(false);
+
+  const transport = router.transport || 'WIREGUARD';
+  const isOvpn = transport === 'OPENVPN';
+
+  // Transport almashganda boshqa transport uchun olingan skript ko'rsatilib qolmasligi kerak
+  useEffect(() => { setScript(null); setShowScript(false); setPendingTransport(null); }, [router.id, transport]);
+
+  const changeTransport = async () => {
+    if (!pendingTransport) return;
+    setSwitching(true); setError('');
+    try {
+      const updated = await api.put(`/api/routers/${router.id}`, { transport: pendingTransport });
+      setPendingTransport(null);
+      onChanged?.(updated);
+    } catch { setError(t('devices.network.switchError')); }
+    setSwitching(false);
+  };
 
   const copy = async (text) => {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {}
@@ -76,7 +95,7 @@ function ConnectionPanel({ router, t }) {
     if (script) { setShowScript(true); return; }
     setScriptLoading(true); setError('');
     try {
-      const res = await api.get(`/api/routers/${router.id}/wg-script`);
+      const res = await api.get(`/api/routers/${router.id}/script`);
       setScript(res.script);
       setShowScript(true);
     } catch { setError(t('devices.network.loadError')); }
@@ -104,6 +123,30 @@ function ConnectionPanel({ router, t }) {
     <div className="rounded-xl bg-blue-500/[0.05] border border-blue-500/10 p-4 space-y-3">
       <div className="flex items-center gap-2"><I d={ICONS.wifi} c="w-4 h-4 text-blue-400"/><p className="text-[12px] font-semibold text-blue-400">{t('devices.network.title')}</p></div>
 
+      <div className="rounded-lg bg-black/20 px-3 py-2.5 space-y-2">
+        <p className="text-[9px] text-slate-600 uppercase tracking-wider">{t('devices.network.transportLabel')}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {['WIREGUARD', 'OPENVPN'].map(tp => (
+            <button key={tp} disabled={!canWrite || switching}
+              onClick={() => tp !== transport && setPendingTransport(tp)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all disabled:cursor-not-allowed ${tp === transport ? 'bg-blue-600 text-white' : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] disabled:opacity-50'}`}>
+              {tp === 'WIREGUARD' ? t('devices.network.transportWireguard') : t('devices.network.transportOpenvpn')}
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-slate-500">{t('devices.network.transportHint')}</p>
+        {pendingTransport && (
+          <div className="rounded-lg bg-amber-500/[0.06] border border-amber-500/15 px-3 py-2.5 space-y-2">
+            <p className="text-[11px] font-semibold text-amber-400">{t('devices.network.switchConfirmTitle')}</p>
+            <p className="text-[10px] text-slate-400">{t('devices.network.switchConfirmNote')}</p>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={changeTransport} disabled={switching} className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-white bg-amber-600 hover:bg-amber-500 transition-all disabled:opacity-50">{t('devices.network.switchConfirmBtn')}</button>
+              <button onClick={() => setPendingTransport(null)} disabled={switching} className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-slate-300 bg-white/[0.05] hover:bg-white/[0.1] transition-all">{t('common.cancel')}</button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div className="rounded-lg bg-black/20 px-3 py-2">
           <p className="text-[9px] text-slate-600 uppercase tracking-wider">{t('devices.network.vpnIp')}</p>
@@ -113,13 +156,20 @@ function ConnectionPanel({ router, t }) {
           <p className="text-[9px] text-slate-600 uppercase tracking-wider">{t('devices.network.lanSubnet')}</p>
           <p className="text-[12px] text-blue-300 font-mono truncate">{router.lanSubnet || '—'} <span className="text-slate-600">→ {router.mappedSubnet || '—'}</span></p>
         </div>
-        <div className="rounded-lg bg-black/20 px-3 py-2 flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[9px] text-slate-600 uppercase tracking-wider">{t('devices.network.publicKey')}</p>
-            <p className="text-[12px] text-blue-300 font-mono truncate">{router.wgPublicKey || '—'}</p>
+        {isOvpn ? (
+          <div className="rounded-lg bg-black/20 px-3 py-2">
+            <p className="text-[9px] text-slate-600 uppercase tracking-wider">{t('devices.network.ovpnLogin')}</p>
+            <p className="text-[12px] text-blue-300 font-mono truncate">router{router.id}</p>
           </div>
-          {router.wgPublicKey && <button onClick={()=>copy(router.wgPublicKey)} className="p-1 rounded text-slate-500 hover:text-blue-300 shrink-0" title={t('devices.network.copyBtn')}><I d={copied?ICONS.check:ICONS.copy} c="w-3.5 h-3.5"/></button>}
-        </div>
+        ) : (
+          <div className="rounded-lg bg-black/20 px-3 py-2 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[9px] text-slate-600 uppercase tracking-wider">{t('devices.network.publicKey')}</p>
+              <p className="text-[12px] text-blue-300 font-mono truncate">{router.wgPublicKey || '—'}</p>
+            </div>
+            {router.wgPublicKey && <button onClick={()=>copy(router.wgPublicKey)} className="p-1 rounded text-slate-500 hover:text-blue-300 shrink-0" title={t('devices.network.copyBtn')}><I d={copied?ICONS.check:ICONS.copy} c="w-3.5 h-3.5"/></button>}
+          </div>
+        )}
       </div>
 
       {!serverConfigured && (
@@ -139,15 +189,18 @@ function ConnectionPanel({ router, t }) {
           <li>{t('devices.network.step2')}</li>
           <li>{t('devices.network.step3')}</li>
         </ol>
+        <p className="text-[10px] text-amber-400/80 pt-1">{t('devices.network.ros7Note')}</p>
       </div>
 
       <div className="flex flex-wrap gap-2 pt-1">
         <button onClick={toggleScript} disabled={scriptLoading} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-500 transition-all disabled:opacity-50">
           <I d={ICONS.code} c="w-3.5 h-3.5"/>{showScript ? t('devices.network.hideScriptBtn') : t('devices.network.showScriptBtn')}
         </button>
-        <button onClick={downloadConf} disabled={downloading} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-all disabled:opacity-50" title={t('devices.network.note')}>
-          <I d={ICONS.download} c="w-3.5 h-3.5"/>{t('devices.network.downloadConfBtn')}
-        </button>
+        {!isOvpn && (
+          <button onClick={downloadConf} disabled={downloading} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 transition-all disabled:opacity-50" title={t('devices.network.note')}>
+            <I d={ICONS.download} c="w-3.5 h-3.5"/>{t('devices.network.downloadConfBtn')}
+          </button>
+        )}
       </div>
 
       {error && <p className="text-[11px] text-red-400">{error}</p>}
@@ -579,7 +632,7 @@ export default function Devices({ user }) {
           </div>
 
           {/* Mikrotik connection setup */}
-          <ConnectionPanel router={detail} t={t} />
+          <ConnectionPanel router={detail} t={t} canWrite={canWriteDevices} onChanged={(updated) => { setDetail(updated); load(); }} />
 
           {/* Router ortidagi Face ID / kameralarni qidirish */}
           <DiscoveryPanel router={detail} canWrite={canWriteDevices} t={t} onAddTerminal={startAddDiscovered} />

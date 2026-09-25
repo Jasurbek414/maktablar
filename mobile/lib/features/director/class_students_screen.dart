@@ -8,7 +8,6 @@ import '../../theme/app_theme.dart';
 import 'director_repository.dart';
 import 'student_detail_screen.dart';
 
-/// Bitta o'quvchi va uning haqiqiy 30 kunlik davomat foizi (sinf ro'yxati uchun).
 class _StudentRow {
   _StudentRow(this.student, this.stats);
   final Student student;
@@ -57,8 +56,17 @@ class _ClassStudentsScreenState extends ConsumerState<ClassStudentsScreen> {
   Widget build(BuildContext context) {
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.classRoom.name)),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${widget.classRoom.name} sinfi', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+            Text('${widget.classRoom.studentCount} o\'quvchi', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+          ],
+        ),
+      ),
       body: FutureBuilder<List<_StudentRow>>(
         future: _future,
         builder: (context, snap) {
@@ -66,41 +74,49 @@ class _ClassStudentsScreenState extends ConsumerState<ClassStudentsScreen> {
           if (snap.hasError) return Center(child: Text(apiErrorMessage(snap.error!), style: TextStyle(color: AppColors.textSecondary)));
           final rows = snap.data ?? [];
           if (rows.isEmpty) return Center(child: Text(t('classes.empty2'), style: TextStyle(color: AppColors.textFaint)));
+
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, i) {
               final row = rows[i];
               final percent = row.stats?.percent;
+              final initial = row.student.fullName.isNotEmpty ? row.student.fullName[0].toUpperCase() : '?';
+
               return InkWell(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => StudentDetailScreen(student: row.student))),
                 child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.bgCard,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.borderEmerald),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: AppDecorations.card(),
                   child: Row(
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(color: AppColors.emerald.withOpacity(0.15), borderRadius: BorderRadius.circular(11)),
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         alignment: Alignment.center,
-                        child: Text(row.student.fullName.isNotEmpty ? row.student.fullName[0].toUpperCase() : '?', style: TextStyle(color: AppColors.emerald, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          initial,
+                          style: TextStyle(color: AppColors.emerald, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(row.student.fullName, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500, fontSize: 14)),
+                            Text(
+                              row.student.fullName,
+                              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14.5),
+                            ),
                             const SizedBox(height: 2),
                             Text(
-                              percent != null ? t('classes.attendanceLabel') : t('classes.noAttendanceData'),
+                              percent != null ? 'Davomat ko\'rsatkichi: $percent%' : t('classes.noAttendanceData'),
                               style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                             ),
                           ],
@@ -108,12 +124,15 @@ class _ClassStudentsScreenState extends ConsumerState<ClassStudentsScreen> {
                       ),
                       if (percent != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(color: _percentColor(percent).withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
-                          child: Text('$percent%', style: TextStyle(color: _percentColor(percent), fontWeight: FontWeight.bold, fontSize: 13)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: AppDecorations.badge(color: _percentColor(percent)),
+                          child: Text(
+                            '$percent%',
+                            style: TextStyle(color: _percentColor(percent), fontWeight: FontWeight.bold, fontSize: 12.5),
+                          ),
                         ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.chevron_right_rounded, color: AppColors.textFaint, size: 20),
+                      const SizedBox(width: 6),
+                      Icon(Icons.chevron_right_rounded, color: AppColors.textFaint, size: 18),
                     ],
                   ),
                 ),

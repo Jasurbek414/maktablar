@@ -28,6 +28,14 @@ public class AuthController {
     @Autowired
     private I18nService i18n;
 
+    // 2026-09-25 audit: parol almashtirilganda ochiq sessiyalar ham bekor qilinishi shart —
+    // aks holda o'g'irlangan refresh token yana 30 kun ishlayverardi.
+    @Autowired
+    private com.maktab.repository.RefreshTokenRepository refreshTokenRepository;
+
+    /** Butun tizim uchun yagona minimal parol uzunligi (2026-09-25 gacha 6/6/8 xilma-xil edi). */
+    public static final int MIN_PASSWORD_LENGTH = 8;
+
     /**
      * Login endpoint
      * POST /api/auth/login
@@ -120,11 +128,14 @@ public class AuthController {
         if (oldPassword == null || !passwordEncoder.matches(oldPassword, user.getPassword())) {
             return ResponseEntity.status(400).body(Map.of("error", i18n.msg("error.auth.current_password_incorrect")));
         }
-        if (newPassword == null || newPassword.length() < 6) {
+        // 2026-09-25: uchta controller'da uch xil chegara bor edi (6/6/8) — endi hammasi 8.
+        if (newPassword == null || newPassword.length() < MIN_PASSWORD_LENGTH) {
             return ResponseEntity.status(400).body(Map.of("error", i18n.msg("error.auth.new_password_min_length")));
         }
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        // Barcha ochiq sessiyalarni bekor qilish — parol o'zgargach eski token ishlamasligi kerak
+        refreshTokenRepository.revokeAllForUser(user.getId());
         return ResponseEntity.ok(Map.of("message", i18n.msg("success.password_changed")));
     }
 

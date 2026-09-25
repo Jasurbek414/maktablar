@@ -276,7 +276,17 @@
       "setupTitle": "Mikrotik'ni sozlash (3 qadam)",
       "step1": "WinBox bilan Mikrotik'ka kiring va New Terminal oynasini oching",
       "step2": "\"Sozlash skriptini ko'rsatish\" tugmasini bosing, skriptni to'liq nusxalab terminalga qo'ying (qayta qo'yish xavfsiz)",
-      "step3": "1 daqiqa ichida router shu yerda ONLINE bo'ladi — keyin quyida qurilmalarni qidiring"
+      "step3": "1 daqiqa ichida router shu yerda ONLINE bo'ladi — keyin quyida qurilmalarni qidiring",
+      "ros7Note": "RouterOS 7 kerak. Eski versiyada skript o'zi to'xtaydi — WinBox > System > Packages > Check For Updates orqali yangilang.",
+      "transportLabel": "Ulanish turi",
+      "transportWireguard": "WireGuard (tavsiya)",
+      "transportOpenvpn": "OpenVPN (zaxira)",
+      "transportHint": "WireGuard tez va yengil (UDP). Maktab interneti UDP'ni o'tkazmasa yoki router 3 daqiqadan ko'p ONLINE bo'lmasa — OpenVPN'ni tanlang (TCP 443, deyarli har qanday tarmoqdan o'tadi).",
+      "switchConfirmTitle": "Ulanish turini almashtirasizmi?",
+      "switchConfirmNote": "Yangi skriptni routerga qo'ymaguningizcha maktab bilan aloqa uziladi. Skript eski ulanishni o'zi olib tashlaydi.",
+      "switchConfirmBtn": "Ha, almashtirish",
+      "switchError": "Ulanish turini o'zgartirib bo'lmadi",
+      "ovpnLogin": "OpenVPN login:"
     },
     "assign": {
       "title": "Maktabga biriktirish",
@@ -484,7 +494,41 @@
       "studentSuffix": "o'quvchi",
       "gradeSuffix": "{{grade}}-sinf",
       "teacherLabel": "Sinf rahbari",
-      "noTeacher": "Biriktirilmagan"
+      "noTeacher": "Biriktirilmagan",
+      "openHint": "Davomatni ko'rish uchun bosing"
+    },
+    "detail": {
+      "total": "Jami",
+      "present": "Keldi",
+      "absent": "Kelmadi",
+      "came": "Keldi",
+      "notCame": "Kelmadi",
+      "noStudents": "Bu sinfda hali o'quvchi yo'q",
+      "loadError": "Ma'lumotni olishda xatolik",
+      "downloadBtn": "Excel yuklab olish",
+      "downloading": "Tayyorlanmoqda...",
+      "guardianOk": "Ota-onasining Telegrami ulangan",
+      "guardianNone": "Telegrami ulangan ota-ona yo'q",
+      "table": {
+        "student": "O'quvchi",
+        "status": "Holat",
+        "in": "Kirdi",
+        "out": "Chiqdi",
+        "guardian": "Ota-ona"
+      }
+    },
+    "notify": {
+      "btn": "Kelmaganlarga xabar ({{count}})",
+      "title": "{{count}} ta o'quvchi ota-onasiga xabar yuboriladi",
+      "hint": "Matnni o'zgartirishingiz mumkin. {student} — o'quvchi ismi, {class} — sinf, {date} — sana bilan almashtiriladi.",
+      "template": "Hurmatli ota-ona, farzandingiz {student} bugun ({date}) maktabga kelmadi. Iltimos, sababini maktabga ma'lum qiling.",
+      "confirmBtn": "Yuborish",
+      "sending": "Yuborilmoqda...",
+      "result": "{{students}} ta o'quvchi bo'yicha {{guardians}} ta ota-onaga yuborildi",
+      "skipped": "{{count}} ta o'quvchining Telegramga ulangan ota-onasi yo'q — ularga yuborilmadi",
+      "noAbsent": "Bu kuni hamma kelgan — xabar yuborish shart emas",
+      "noReachable": "Kelmaganlarning ota-onasi Telegramga ulanmagan",
+      "error": "Xabar yuborishda xatolik"
     },
     "empty": {
       "title": "Bu maktabda hali sinf yo'q",
@@ -741,6 +785,17 @@
       "entered": "Kirdi",
       "exited": "Chiqdi",
       "studentsListTitle": "O'quvchilar ro'yxati"
+    },
+    "byClass": {
+      "title": "Sinflar bo'yicha davomat",
+      "subtitle": "Sinf ustiga bosing — o'quvchilar ro'yxati, kirgan va chiqqan vaqti bilan ochiladi",
+      "searchPlaceholder": "O'quvchi yoki sinf...",
+      "onlyAbsent": "Faqat kelmaganlar",
+      "empty": "Bu shart bo'yicha o'quvchi topilmadi",
+      "noClass": "Sinfsiz",
+      "cameOf": "{{present}}/{{total}} keldi",
+      "came": "Keldi",
+      "notCame": "Kelmadi"
     }
   },
   "cameras": {

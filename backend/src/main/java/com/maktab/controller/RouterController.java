@@ -62,6 +62,38 @@ public class RouterController {
     @Value("${app.wireguard.server-port:51820}") private String wgServerPort;
     @Value("${app.wireguard.subnet-base:10.20.0}") private String wgSubnetBase;
     @Value("${app.wireguard.allowed-ips:10.20.0.0/24}") private String wgAllowedIps;
+    @Value("${app.openvpn.port:443}") private String ovpnPort;
+
+    @Autowired(required = false) private com.maktab.service.DeviceAlertService alerts;
+
+    static final String SCRIPT_TAG = "maktab_davomad";
+    static final String WG_IF = "wg-maktab";
+    static final String OVPN_IF = "ovpn-maktab";
+
+    private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
+    private static final String PW_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+    /** OpenVPN paroli — skriptda qo'shtirnoq ichida turadi, shu sabab faqat harf/raqam. */
+    static String newOvpnPassword() {
+        StringBuilder sb = new StringBuilder(24);
+        for (int i = 0; i < 24; i++) sb.append(PW_ALPHABET.charAt(RANDOM.nextInt(PW_ALPHABET.length())));
+        return sb.toString();
+    }
+
+    /** null/bo'sh — o'zgartirilmaydi; noto'g'ri qiymat — IllegalArgumentException. */
+    static MikrotikRouter.Transport parseTransport(Object raw) {
+        if (raw == null || raw.toString().isBlank()) return null;
+        return MikrotikRouter.Transport.valueOf(raw.toString().trim().toUpperCase(Locale.ROOT));
+    }
+
+    /** Transportni o'rnatadi; OpenVPN uchun parol bo'lmasa generatsiya qiladi (mavjudi saqlanadi —
+     * aks holda transport qayta tanlanganda routerdagi eski skript ishlamay qolardi). */
+    static void applyTransport(MikrotikRouter r, MikrotikRouter.Transport t) {
+        r.setTransport(t);
+        if (t == MikrotikRouter.Transport.OPENVPN && (r.getOvpnPassword() == null || r.getOvpnPassword().isBlank())) {
+            r.setOvpnPassword(newOvpnPassword());
+        }
+    }
 
     @ExceptionHandler(com.maktab.faceterminal.TerminalException.class)
     public ResponseEntity<?> onDeviceError(com.maktab.faceterminal.TerminalException e) {
@@ -120,10 +152,14 @@ public class RouterController {
      *  - /tool fetch va scheduler ishlatilmaydi — RouterOS 7 "device-mode=home" ularni bloklaydi.
      *  - Netmap: server maktab LAN'ini 10.30.N.0/24 orqali ko'radi (to'qnashuvsiz), faqat backend
      *    gateway (10.20.0.254) dan kelgan trafikka ruxsat beriladi.
+     *  - 2026-09-19: ikki transport (router.transport). BITTA router — BITTA VPN: skript boshqa
+     *    transportning maktab_davomad interfeysini o'chiradi (09-19 dagi uzilish bir xil IP ikki
+     *    interfeysda turgani sabab bo'lgan). RouterOS 7 majburiy (WireGuard faqat v7 da).
      */
     private String buildRouterOsScript(MikrotikRouter r) {
-        final String iface = "wg-maktab";
-        final String tag = "maktab_davomad";
+        final boolean ovpn = r.effectiveTransport() == MikrotikRouter.Transport.OPENVPN;
+        final String iface = ovpn ? OVPN_IF : WG_IF;
+        final String tag = SCRIPT_TAG;
         String lan = vpn.lanSubnet(r);
         String lanNetwork = lan.substring(0, lan.indexOf('/'));
         String mapped = vpn.mappedSubnet(r);
@@ -137,37 +173,80 @@ public class RouterController {
 
         StringBuilder sb = new StringBuilder();
         sb.append("# maktab_davomad - ").append(schoolName).append(" (router #").append(r.getId()).append(")\n");
+        sb.append("# Ulanish turi: ").append(ovpn ? "OpenVPN (TCP " + ovpnPort + ")" : "WireGuard (UDP " + wgServerPort + ")")
+          .append(". RouterOS 7 kerak.\n");
         sb.append("# WinBox > New Terminal oynasiga TO'LIQ nusxalab qo'ying. Qayta qo'yish xavfsiz.\n");
         if (!wgServerConfigured()) {
             sb.append("# DIQQAT: markaziy VPN server hali sozlanmagan - <SERVER_...> qiymatlarini admin to'ldirishi kerak.\n");
         }
         sb.append("{\n");
-        sb.append(":local wgIf \"").append(iface).append("\"\n");
+        sb.append(":local vpnIf \"").append(iface).append("\"\n");
         sb.append(":local tag \"").append(tag).append("\"\n");
+        sb.append(":local ver [/system resource get version]\n");
+        sb.append(":if ([:tonum [:pick $ver 0 [:find $ver \".\"]]] < 7) do={\n");
+        sb.append("  :error \"").append(tag).append(": RouterOS 7 kerak (hozir $ver). System > Packages > Check For Updates orqali yangilang.\"\n");
+        sb.append("}\n");
         sb.append(":if ([:len [/ip address find where network=\"").append(lanNetwork).append("\"]] = 0) do={\n");
         sb.append("  :error \"").append(tag).append(": bu routerda ").append(lan)
           .append(" LAN topilmadi. Paneldagi LAN subnetni to'g'rilab, skriptni qayta oling.\"\n");
-        sb.append("}\n\n");
+        sb.append("}\n");
+        // 2026-09-19: DNS faqat yuqoridagi routerdan (dinamik) bo'lsa, reboot'dan keyin server domeni
+        // yechilmay qolgan ("could not resolve name"). Statik server bo'lmasa qo'shiladi, mavjudiga tegilmaydi.
+        sb.append(":if ([:len [/ip dns get servers]] = 0) do={ /ip dns set servers=8.8.8.8,1.1.1.1 }\n\n");
 
-        sb.append("# 1. WireGuard interfeysi\n");
-        sb.append(":if ([:len [/interface wireguard find where name=$wgIf]] = 0) do={\n");
-        sb.append("  /interface wireguard add name=$wgIf mtu=1420 private-key=\"").append(r.getWgPrivateKey()).append("\" comment=$tag\n");
-        sb.append("} else={\n");
-        sb.append("  /interface wireguard set [find where name=$wgIf] mtu=1420 private-key=\"").append(r.getWgPrivateKey()).append("\" comment=$tag disabled=no\n");
-        sb.append("}\n\n");
+        if (ovpn) {
+            sb.append("# 1. Eski WireGuard ulanishi (bo'lsa) olib tashlanadi - bitta router, bitta VPN\n");
+            sb.append("/ip address remove [find where interface=\"").append(WG_IF).append("\"]\n");
+            sb.append("/interface wireguard peers remove [find where interface=\"").append(WG_IF).append("\"]\n");
+            sb.append("/interface wireguard remove [find where name=\"").append(WG_IF).append("\"]\n\n");
 
-        sb.append("# 2. Tunnel manzili\n");
-        sb.append("/ip address remove [find where interface=$wgIf]\n");
-        sb.append("/ip address add address=").append(vpn.routerTunnelAddress(r)).append(" interface=$wgIf comment=$tag\n\n");
+            String ovpnArgs = " connect-to=" + hubHost + " port=" + ovpnPort + " protocol=tcp mode=ip"
+                + " user=\"" + r.ovpnUsername() + "\" password=\"" + r.getOvpnPassword() + "\""
+                + " cipher=aes256-gcm auth=sha1 add-default-route=no use-peer-dns=no verify-server-certificate=no"
+                + " comment=$tag disabled=yes";
+            // 2026-09-19 (RouterOS 7.18.2, jonli routerda 2 marta): klient yaratilgan zahoti ulana
+            // boshlasa, qolgan sozlamalar (marshrut, NAT, firewall) qo'shilayotgan paytda birinchi
+            // ulanish "using encoding" bosqichida osilib qolardi; o'chirib-yoqish darhol tuzatardi.
+            // Shu sabab klient o'chiq holda sozlanadi va skript OXIRIDA yoqiladi.
+            sb.append("# 2. OpenVPN ulanishi (TCP - UDP'ni bloklaydigan tarmoqlardan ham o'tadi); oxirida yoqiladi\n");
+            sb.append(":if ([:len [/interface ovpn-client find where name=$vpnIf]] = 0) do={\n");
+            sb.append("  /interface ovpn-client add name=$vpnIf").append(ovpnArgs).append("\n");
+            sb.append("} else={\n");
+            sb.append("  /interface ovpn-client set [find where name=$vpnIf]").append(ovpnArgs).append("\n");
+            sb.append("}\n\n");
 
-        sb.append("# 3. Markaziy server\n");
-        sb.append("/interface wireguard peers remove [find where interface=$wgIf]\n");
-        sb.append("/interface wireguard peers add interface=$wgIf public-key=\"").append(hubKey).append("\"")
-          .append(" endpoint-address=").append(hubHost).append(" endpoint-port=").append(wgServerPort)
-          .append(" allowed-address=").append(vpn.tunnelSubnet())
-          .append(" persistent-keepalive=25s comment=$tag\n\n");
+            sb.append("# 3. Server gateway'iga (").append(gw).append(") javoblar tunnel orqali qaytadi\n");
+            sb.append("/ip route remove [find where comment=$tag]\n");
+            sb.append("/ip route add dst-address=").append(gw).append("/32 gateway=$vpnIf comment=$tag\n\n");
+        } else {
+            sb.append("# 1. Eski OpenVPN ulanishi (bo'lsa) olib tashlanadi - bitta router, bitta VPN\n");
+            sb.append("/interface ovpn-client remove [find where name=\"").append(OVPN_IF).append("\"]\n");
+            sb.append("/ip route remove [find where comment=$tag]\n\n");
 
-        sb.append("# 4. Server maktab LAN'ini ").append(mapped).append(" orqali ko'radi (netmap -> ").append(lan).append(")\n");
+            // 2026-09-19: router 8 da ofis routeri (ikki qavat NAT) bitta manba portga eski NAT yozuvini
+            // ushlab qolgan — server->router paketlar borardi, router->server yo'q. Har safar yangi
+            // tasodifiy port: skriptni qayta qo'yishning o'zi shu muammoni tuzatadi.
+            sb.append("# 2. WireGuard interfeysi (har qo'yishda yangi port - qotib qolgan NAT'dan himoya)\n");
+            sb.append(":local wgPort [:rndnum from=20000 to=60000]\n");
+            sb.append(":if ([:len [/interface wireguard find where name=$vpnIf]] = 0) do={\n");
+            sb.append("  /interface wireguard add name=$vpnIf mtu=1420 listen-port=$wgPort private-key=\"").append(r.getWgPrivateKey()).append("\" comment=$tag\n");
+            sb.append("} else={\n");
+            sb.append("  /interface wireguard set [find where name=$vpnIf] mtu=1420 listen-port=$wgPort private-key=\"").append(r.getWgPrivateKey()).append("\" comment=$tag disabled=no\n");
+            sb.append("}\n\n");
+
+            sb.append("# 3. Tunnel manzili\n");
+            sb.append("/ip address remove [find where interface=$vpnIf]\n");
+            sb.append("/ip address add address=").append(vpn.routerTunnelAddress(r)).append(" interface=$vpnIf comment=$tag\n\n");
+
+            sb.append("# 4. Markaziy server\n");
+            sb.append("/interface wireguard peers remove [find where interface=$vpnIf]\n");
+            sb.append("/interface wireguard peers add interface=$vpnIf public-key=\"").append(hubKey).append("\"")
+              .append(" endpoint-address=").append(hubHost).append(" endpoint-port=").append(wgServerPort)
+              .append(" allowed-address=").append(vpn.tunnelSubnet())
+              .append(" persistent-keepalive=25s comment=$tag\n\n");
+        }
+
+        sb.append("# Server maktab LAN'ini ").append(mapped).append(" orqali ko'radi (netmap -> ").append(lan).append(")\n");
         sb.append("/ip firewall nat remove [find where comment~\"^").append(tag).append("\"]\n");
         sb.append(":local natTop [/ip firewall nat find]\n");
         sb.append(":if ([:len $natTop] > 0) do={\n");
@@ -178,45 +257,50 @@ public class RouterController {
           .append(" action=masquerade comment=\"").append(tag).append(": server -> LAN\"\n");
         sb.append("}\n");
         sb.append(":set natTop [/ip firewall nat find]\n");
-        sb.append("/ip firewall nat add chain=dstnat in-interface=$wgIf dst-address=").append(mapped)
+        sb.append("/ip firewall nat add chain=dstnat in-interface=$vpnIf dst-address=").append(mapped)
           .append(" action=netmap to-addresses=").append(lan)
           .append(" comment=\"").append(tag).append(": netmap\" place-before=[:pick $natTop 0]\n\n");
 
-        sb.append("# 5. Firewall: faqat server gateway'i (").append(gw).append(") LAN'ga kira oladi\n");
+        sb.append("# Firewall: faqat server gateway'i (").append(gw).append(") LAN'ga kira oladi\n");
         sb.append("/ip firewall filter remove [find where comment~\"^").append(tag).append("\"]\n");
         sb.append(":local fTop [/ip firewall filter find]\n");
         sb.append(":if ([:len $fTop] > 0) do={\n");
-        sb.append("  /ip firewall filter add chain=forward in-interface=$wgIf src-address=").append(gw).append(" dst-address=").append(lan)
+        sb.append("  /ip firewall filter add chain=forward in-interface=$vpnIf src-address=").append(gw).append(" dst-address=").append(lan)
           .append(" action=accept comment=\"").append(tag).append(": server -> LAN\" place-before=[:pick $fTop 0]\n");
         sb.append("} else={\n");
-        sb.append("  /ip firewall filter add chain=forward in-interface=$wgIf src-address=").append(gw).append(" dst-address=").append(lan)
+        sb.append("  /ip firewall filter add chain=forward in-interface=$vpnIf src-address=").append(gw).append(" dst-address=").append(lan)
           .append(" action=accept comment=\"").append(tag).append(": server -> LAN\"\n");
         sb.append("}\n");
         // drop qoidasi accept'dan keyin, lekin mavjud qoidalardan OLDIN turishi kerak
         sb.append(":set fTop [/ip firewall filter find]\n");
         sb.append(":if ([:len $fTop] > 1) do={\n");
-        sb.append("  /ip firewall filter add chain=forward in-interface=$wgIf action=drop comment=\"").append(tag)
+        sb.append("  /ip firewall filter add chain=forward in-interface=$vpnIf action=drop comment=\"").append(tag)
           .append(": boshqa VPN trafik\" place-before=[:pick $fTop 1]\n");
         sb.append("} else={\n");
-        sb.append("  /ip firewall filter add chain=forward in-interface=$wgIf action=drop comment=\"").append(tag)
+        sb.append("  /ip firewall filter add chain=forward in-interface=$vpnIf action=drop comment=\"").append(tag)
           .append(": boshqa VPN trafik\"\n");
         sb.append("}\n\n");
 
-        sb.append("# 6. Input: hub javobi RouterOS defconf \"drop all not coming from LAN\" qoidasi tomonidan\n");
-        sb.append("# o'chirilmasligi uchun. RouterOS UDP connection-tracking muddati qisqa (odatda ~10s) -\n");
-        sb.append("# birinchi handshake javobi kelguncha \"established\" holati tugab ketishi mumkin, shunda\n");
-        sb.append("# keyingi javob \"WAN'dan kelgan yangi paket\" deb hisoblanib o'chiriladi (2026-09-16 jonli\n");
-        sb.append("# routerda aniqlangan va tasdiqlangan). Port bo'yicha moslash - hub IP o'zgarsa ham ishlaydi.\n");
-        sb.append(":local wgPort [/interface wireguard get $wgIf listen-port]\n");
-        sb.append("/ip firewall filter remove [find where comment=\"").append(tag).append(": hub javobi\"]\n");
-        sb.append(":local iTop [/ip firewall filter find where chain=input]\n");
-        sb.append(":if ([:len $iTop] > 0) do={\n");
-        sb.append("  /ip firewall filter add chain=input protocol=udp dst-port=$wgPort action=accept comment=\"")
-          .append(tag).append(": hub javobi\" place-before=[:pick $iTop 0]\n");
-        sb.append("} else={\n");
-        sb.append("  /ip firewall filter add chain=input protocol=udp dst-port=$wgPort action=accept comment=\"")
-          .append(tag).append(": hub javobi\"\n");
-        sb.append("}\n\n");
+        if (!ovpn) {
+            sb.append("# Input: hub javobi RouterOS defconf \"drop all not coming from LAN\" qoidasi tomonidan\n");
+            sb.append("# o'chirilmasligi uchun. RouterOS UDP connection-tracking muddati qisqa (odatda ~10s) -\n");
+            sb.append("# birinchi handshake javobi kelguncha \"established\" holati tugab ketishi mumkin, shunda\n");
+            sb.append("# keyingi javob \"WAN'dan kelgan yangi paket\" deb hisoblanib o'chiriladi (2026-09-16 jonli\n");
+            sb.append("# routerda aniqlangan va tasdiqlangan). Port bo'yicha moslash - hub IP o'zgarsa ham ishlaydi.\n");
+            sb.append(":local iTop [/ip firewall filter find where chain=input]\n");
+            sb.append(":if ([:len $iTop] > 0) do={\n");
+            sb.append("  /ip firewall filter add chain=input protocol=udp dst-port=$wgPort action=accept comment=\"")
+              .append(tag).append(": hub javobi\" place-before=[:pick $iTop 0]\n");
+            sb.append("} else={\n");
+            sb.append("  /ip firewall filter add chain=input protocol=udp dst-port=$wgPort action=accept comment=\"")
+              .append(tag).append(": hub javobi\"\n");
+            sb.append("}\n\n");
+        }
+
+        if (ovpn) {
+            sb.append("# OpenVPN faqat hamma sozlama tayyor bo'lgach yoqiladi (yuqoridagi izohga qarang)\n");
+            sb.append("/interface ovpn-client set [find where name=$vpnIf] disabled=no\n\n");
+        }
 
         sb.append(":put \"").append(tag).append(": sozlash tugadi. 1 daqiqa ichida panelda router ONLINE bo'lishi kerak.\"\n");
         sb.append("}\n");
@@ -273,8 +357,15 @@ public class RouterController {
                 return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.router.invalid_lan_subnet")));
             }
         }
+        MikrotikRouter.Transport transport;
+        try {
+            transport = parseTransport(body.get("transport"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.router.invalid_transport")));
+        }
 
         MikrotikRouter router = new MikrotikRouter();
+        applyTransport(router, transport != null ? transport : MikrotikRouter.Transport.WIREGUARD);
         router.setSchool(school);
         router.setName(name);
         router.setVpnIp(vpnIp);
@@ -292,6 +383,7 @@ public class RouterController {
         result.put("schoolName", school.getName());
         result.put("vpnIp", vpnIp);
         result.put("wgPublicKey", wg.publicKeyB64());
+        result.put("transport", router.effectiveTransport().name());
         result.put("serverConfigured", wgServerConfigured());
         result.put("message", i18n.msg("success.router.key_created"));
         return ResponseEntity.ok(result);
@@ -316,18 +408,27 @@ public class RouterController {
         ));
     }
 
-    /** RouterOS (Mikrotik CLI) skripti — GET /api/routers/{id}/wg-script */
-    @GetMapping("/{id}/wg-script")
+    /**
+     * RouterOS (Mikrotik CLI) skripti — GET /api/routers/{id}/script (transportga qarab WireGuard
+     * yoki OpenVPN). /wg-script — eski nom, ochiq qolgan panellar uchun (natija bir xil).
+     */
+    @GetMapping({"/{id}/script", "/{id}/wg-script"})
     public ResponseEntity<?> getWgScript(@PathVariable Long id,
                                           @RequestHeader(value = "Authorization", required = false) String authHeader) {
         User caller = currentUserService.requireUser(authHeader);
         MikrotikRouter router = routerRepo.findById(id).orElse(null);
         if (router == null) return ResponseEntity.notFound().build();
-        // MUHIM (2026-09-18 audit): getWgConfig bilan bir xil sabab — skript ham
-        // wgPrivateKey'ni o'z ichiga oladi, shuning uchun YOZISH darajasi talab qilinadi.
+        // MUHIM (2026-09-18 audit): getWgConfig bilan bir xil sabab — skript ham maxfiy
+        // wgPrivateKey/ovpnPassword'ni o'z ichiga oladi, shuning uchun YOZISH darajasi talab qilinadi.
         currentUserService.assertCanWriteSchoolData(caller, router.getSchool().getId());
+        if (router.effectiveTransport() == MikrotikRouter.Transport.OPENVPN
+                && (router.getOvpnPassword() == null || router.getOvpnPassword().isBlank())) {
+            applyTransport(router, MikrotikRouter.Transport.OPENVPN); // qo'lda o'zgartirilgan qator uchun
+            routerRepo.save(router);
+        }
         return ResponseEntity.ok(Map.of(
             "script", buildRouterOsScript(router),
+            "transport", router.effectiveTransport().name(),
             "serverConfigured", wgServerConfigured()
         ));
     }
@@ -487,6 +588,17 @@ public class RouterController {
                     }
                     r.setLanSubnet(lan);
                 }
+            }
+            if (body.containsKey("transport")) {
+                // Transport almashtirilgach panel yangi skriptni beradi; routerga qo'yilguncha u eski
+                // transportda qoladi va hub uni ko'rmay qo'yadi — shu sabab panel almashtirishda ogohlantiradi.
+                MikrotikRouter.Transport t;
+                try {
+                    t = parseTransport(body.get("transport"));
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.router.invalid_transport")));
+                }
+                if (t != null) applyTransport(r, t);
             }
             if (body.containsKey("notes")) r.setNotes((String) body.get("notes"));
             if (body.containsKey("routerAdminUsername")) r.setRouterAdminUsername((String) body.get("routerAdminUsername"));
@@ -731,9 +843,12 @@ public class RouterController {
         // gateway IP'siga 10.20.0.254) o'zgartirib, hub'ning WireGuard marshrutlashini
         // (AllowedIPs) o'g'irlashi mumkin edi. vpnIp endi FAQAT server tomonidan
         // (createKey#nextFreeVpnIp) tayinlanadi — heartbeat uni hech qachon o'zgartirmaydi.
+        boolean wasOnline = router.getStatus() == MikrotikRouter.RouterStatus.ONLINE;
+        boolean firstConnection = router.getLastHeartbeat() == null;
         router.setStatus(MikrotikRouter.RouterStatus.ONLINE);
         router.setLastHeartbeat(LocalDateTime.now());
         routerRepo.save(router);
+        if (!wasOnline && alerts != null) alerts.routerOnline(router, firstConnection);
         return ResponseEntity.ok(Map.of("status", "ok", "serverTime", LocalDateTime.now().toString()));
     }
 
@@ -747,6 +862,7 @@ public class RouterController {
             if (r.getStatus() != MikrotikRouter.RouterStatus.OFFLINE) {
                 r.setStatus(MikrotikRouter.RouterStatus.OFFLINE);
                 routerRepo.save(r);
+                if (alerts != null) alerts.routerOffline(r);
             }
         }
     }
@@ -767,6 +883,7 @@ public class RouterController {
             m.put("mappedSubnet", null); // vpnIp qo'lda noto'g'ri kiritilgan bo'lsa ro'yxat yiqilmasin
         }
         m.put("wgPublicKey", r.getWgPublicKey());
+        m.put("transport", r.effectiveTransport().name());
         m.put("wgServerConfigured", wgServerConfigured());
         m.put("status", r.getStatus().name());
         m.put("lastHeartbeat", r.getLastHeartbeat() != null ? r.getLastHeartbeat().toString() : null);

@@ -20,6 +20,8 @@ export const routersAPI = {
 
   getWgConfig: (id) => apiRootClient.get(`/routers/${id}/wg-config`),
   getWgScript: (id) => apiRootClient.get(`/routers/${id}/wg-script`),
+  // Transportga qarab (WireGuard yoki OpenVPN) to'g'ri skript — 2026-09-19
+  getScript: (id) => apiRootClient.get(`/routers/${id}/script`),
 
   // Routerning o'z ARP/DHCP jadvalidan haqiqiy ulangan qurilmalar — "Terminal qo'shish"
   // formasida IP maydonini avtomatik to'ldirish uchun (MikrotikRestClient, RouterController).

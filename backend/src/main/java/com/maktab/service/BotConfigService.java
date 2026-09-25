@@ -59,4 +59,19 @@ public class BotConfigService {
     public long attendanceDedupSeconds(Long schoolId) {
         return effectiveDedupMinutes(schoolId) * 60L;
     }
+
+    /** Qurilma ogohlantirishlari uchun Telegram chat ID'lari (faqat raqamli, guruhlar uchun manfiy). */
+    public java.util.List<String> adminAlertChatIds() {
+        BotConfig c = current();
+        return parseChatIds(c != null ? c.getAdminAlertChatIds() : null);
+    }
+
+    public static java.util.List<String> parseChatIds(String raw) {
+        if (raw == null || raw.isBlank()) return java.util.List.of();
+        return java.util.Arrays.stream(raw.split("[,;\\s]+"))
+            .map(String::trim)
+            .filter(s -> s.matches("-?\\d{3,20}"))
+            .distinct()
+            .toList();
+    }
 }

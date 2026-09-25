@@ -737,6 +737,9 @@
       "dedupMinutesLabel": "Same-type re-pass block window (minutes)",
       "dedupMinutesHint": "E.g. after passing the entrance terminal, another IN won't be counted until this much time passes — same rule for entrance and exit. This is the GLOBAL value: it only applies to schools whose director has not set their own value in the profile. Default: 180 minutes (3 hours).",
       "dedupInvalid": "Enter a whole number greater than 1",
+      "alertChatIdsLabel": "Device alerts (Telegram chat IDs)",
+      "alertChatIdsHint": "When a school's router or Face ID terminal goes offline/recovers, these chats get a message. To find the ID, send /chatid to the bot (for a group, add the bot to the group and send it there). Separate several with commas. Empty = panel notification only.",
+      "alertChatIdsPlaceholder": "e.g. 123456789, -1001234567890",
       "saveError": "Failed to save the setting",
       "saved": "Setting saved",
       "saving": "Saving..."

@@ -29,19 +29,36 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> with Sing
   Widget build(BuildContext context) {
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.student.fullName),
-        bottom: TabBar(
-          controller: _tabs,
-          indicatorColor: AppColors.emerald,
-          labelColor: AppColors.emerald,
-          unselectedLabelColor: AppColors.textMuted,
-          tabs: [
-            Tab(text: t('detail.attendanceTab')),
-            Tab(text: t('detail.notesTab')),
-            Tab(text: t('detail.messagesTab')),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.student.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+            Text(
+              [if (widget.student.className != null) widget.student.className!, if (widget.student.schoolName != null) widget.student.schoolName!].join(' · '),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
           ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.borderSubtle))),
+            child: TabBar(
+              controller: _tabs,
+              indicatorColor: AppColors.emerald,
+              indicatorWeight: 2.5,
+              labelColor: AppColors.emerald,
+              unselectedLabelColor: AppColors.textMuted,
+              tabs: [
+                Tab(text: t('detail.attendanceTab')),
+                Tab(text: t('detail.notesTab')),
+                Tab(text: t('detail.messagesTab')),
+              ],
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -78,18 +95,15 @@ class _AttendanceTabState extends ConsumerState<_AttendanceTab> {
     return FutureBuilder<List<AttendanceEvent>>(
       future: _future,
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snap.hasError) {
-          return Center(child: Text(apiErrorMessage(snap.error!), style: TextStyle(color: AppColors.textSecondary)));
-        }
+        if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snap.hasError) return Center(child: Text(apiErrorMessage(snap.error!), style: TextStyle(color: AppColors.textSecondary)));
         final events = snap.data ?? [];
         final stats = computeAttendanceStats(events, days: 30);
         final sorted = [...events]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        final fmt = DateFormat('dd.MM.yyyy HH:mm');
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           children: [
             Row(
               children: [
@@ -97,34 +111,52 @@ class _AttendanceTabState extends ConsumerState<_AttendanceTab> {
                 const SizedBox(width: 10),
                 _StatBox(label: t('detail.absent'), value: '${stats.absentDays}', color: AppColors.red),
                 const SizedBox(width: 10),
-                _StatBox(label: '%', value: '${stats.percent}%', color: AppColors.amber),
+                _StatBox(label: 'Foiz', value: '${stats.percent}%', color: AppColors.cyan),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(tParams('attendance.periodNote', {'days': '${stats.periodDays}'}),
-                style: TextStyle(color: AppColors.textFaint, fontSize: 11.5)),
+            const SizedBox(height: 12),
+            Text(
+              tParams('attendance.periodNote', {'days': '${stats.periodDays}'}),
+              style: TextStyle(color: AppColors.textFaint, fontSize: 11.5),
+            ),
             if (stats.schoolDays > 0) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.emerald.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderEmerald),
-                ),
-                child: Text(_summaryText(stats), style: TextStyle(color: AppColors.emerald, fontSize: 13)),
+                padding: const EdgeInsets.all(14),
+                decoration: AppDecorations.badge(color: AppColors.emerald),
+                child: Text(_summaryText(stats), style: TextStyle(color: AppColors.emerald, fontSize: 13, height: 1.3)),
               ),
             ],
-            const SizedBox(height: 22),
-            Text(t('attendance.history'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+            const SizedBox(height: 20),
+            Text(t('attendance.history'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14.5)),
             const SizedBox(height: 10),
             if (sorted.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Text(t('detail.noEvents'), style: TextStyle(color: AppColors.textFaint)),
-              )
+              Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: Center(child: Text(t('detail.noEvents'), style: TextStyle(color: AppColors.textFaint))))
             else
-              ...sorted.take(30).map((ev) => _EventRow(ev: ev)),
+              ...sorted.take(30).map((ev) {
+                final isIn = ev.type == 'IN';
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: AppDecorations.card(),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(color: isIn ? AppColors.emerald : AppColors.amber, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        isIn ? t('event.in') : t('event.out'),
+                        style: TextStyle(color: isIn ? AppColors.emerald : AppColors.amber, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const Spacer(),
+                      Text(fmt.format(ev.timestamp.toLocal()), style: TextStyle(color: AppColors.textMuted, fontSize: 12.5)),
+                    ],
+                  ),
+                );
+              }),
           ],
         );
       },
@@ -160,44 +192,14 @@ class _StatBox extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+        decoration: AppDecorations.card(),
         child: Column(
           children: [
             Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(color: AppColors.textFaint, fontSize: 10)),
+            Text(label, style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EventRow extends StatelessWidget {
-  const _EventRow({required this.ev});
-  final AttendanceEvent ev;
-
-  @override
-  Widget build(BuildContext context) {
-    final isIn = ev.type == 'IN';
-    final fmt = DateFormat('dd.MM.yyyy HH:mm');
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: isIn ? AppColors.emerald : AppColors.textFaint, shape: BoxShape.circle)),
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: (isIn ? AppColors.emerald : AppColors.textFaint).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(isIn ? t('event.in') : t('event.out'), style: TextStyle(color: isIn ? AppColors.emerald : AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(width: 10),
-          Text(fmt.format(ev.timestamp.toLocal()), style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5)),
-        ],
       ),
     );
   }
@@ -239,21 +241,21 @@ class _NotesTabState extends ConsumerState<_NotesTab> {
           itemBuilder: (context, i) {
             final n = notes[i];
             return Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.bgCardAlt,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borderWhite),
-              ),
+              padding: const EdgeInsets.all(14),
+              decoration: AppDecorations.card(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(n.text, style: TextStyle(color: AppColors.textPrimary, fontSize: 13.5)),
-                  const SizedBox(height: 8),
+                  Text(n.text, style: TextStyle(color: AppColors.textPrimary, fontSize: 13.5, height: 1.35)),
+                  const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(n.authorName, style: TextStyle(color: AppColors.emerald, fontSize: 11)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: AppDecorations.badge(color: AppColors.emerald),
+                        child: Text(n.authorName, style: TextStyle(color: AppColors.emerald, fontSize: 11, fontWeight: FontWeight.w600)),
+                      ),
                       Text(fmt.format(n.createdAt.toLocal()), style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
                     ],
                   ),
@@ -304,15 +306,19 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
         _messages = msgs;
         _loading = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
-      });
+      _scrollToBottom();
     } catch (e) {
       setState(() {
         _error = apiErrorMessage(e);
         _loading = false;
       });
     }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
+    });
   }
 
   Future<void> _send() async {
@@ -325,9 +331,7 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
         _messages = [..._messages, m];
         _ctrl.clear();
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scroll.hasClients) _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
-      });
+      _scrollToBottom();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
     } finally {
@@ -345,39 +349,44 @@ class _MessagesTabState extends ConsumerState<_MessagesTab> {
         Expanded(
           child: _messages.isEmpty
               ? Center(child: Text(t('messages.emptyFirst'), style: TextStyle(color: AppColors.textFaint)))
-              : ListView.builder(
+              : ListView.separated(
                   controller: _scroll,
                   padding: const EdgeInsets.all(16),
                   itemCount: _messages.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) => _MessageBubble(msg: _messages[i]),
                 ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ctrl,
-                    style: TextStyle(color: AppColors.textPrimary),
-                    minLines: 1,
-                    maxLines: 4,
-                    decoration: InputDecoration(hintText: t('messages.replyPlaceholder')),
-                    onSubmitted: (_) => _send(),
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.borderSubtle))),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _ctrl,
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13.5),
+                  decoration: InputDecoration(
+                    hintText: t('messages.replyPlaceholder'),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
+                  onSubmitted: (_) => _send(),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: _sending ? null : _send,
-                  icon: _sending
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.send_rounded),
-                  style: IconButton.styleFrom(backgroundColor: AppColors.emerald),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: _sending ? null : _send,
+                icon: _sending
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.send_rounded, size: 18),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.emerald,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
@@ -393,29 +402,33 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMine = msg.senderType == 'GUARDIAN';
     final fmt = DateFormat('HH:mm');
+
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isMine ? AppColors.emerald.withOpacity(0.18) : AppColors.bgCardAlt,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(14),
-            topRight: const Radius.circular(14),
-            bottomLeft: Radius.circular(isMine ? 14 : 2),
-            bottomRight: Radius.circular(isMine ? 2 : 14),
-          ),
+          color: isMine ? AppColors.emerald : AppColors.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          border: isMine ? null : Border.all(color: AppColors.borderSubtle),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (!isMine) Text(msg.senderName, style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
-            if (!isMine) const SizedBox(height: 3),
-            Text(msg.text, style: TextStyle(color: AppColors.textPrimary, fontSize: 13.5)),
+            if (!isMine) ...[
+              Text(msg.senderName, style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 3),
+            ],
+            Text(
+              msg.text,
+              style: TextStyle(color: isMine ? Colors.white : AppColors.textPrimary, fontSize: 13.5, height: 1.35),
+            ),
             const SizedBox(height: 4),
-            Text(fmt.format(msg.createdAt.toLocal()), style: TextStyle(color: AppColors.textFaint, fontSize: 10)),
+            Text(
+              fmt.format(msg.createdAt.toLocal()),
+              style: TextStyle(color: isMine ? Colors.white.withOpacity(0.7) : AppColors.textFaint, fontSize: 10.5),
+            ),
           ],
         ),
       ),

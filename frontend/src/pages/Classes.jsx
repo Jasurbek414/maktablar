@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
+import ClassAttendanceModal from '../components/classes/ClassAttendanceModal';
 
 export default function Classes({ user }) {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ export default function Classes({ user }) {
   const [form, setForm] = useState({});
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
+  const [detailClass, setDetailClass] = useState(null); // bosilgan sinf — davomat oynasi
 
   useEffect(() => {
     if (isSingleSchoolRole) {
@@ -175,16 +177,18 @@ export default function Classes({ user }) {
         {filtered.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: '0.75rem' }}>
             {filtered.map(c => (
-              <div key={c.id} className="group rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/20 transition-all p-4 relative overflow-hidden">
+              <div key={c.id} onClick={() => setDetailClass({ ...c, schoolName: c.schoolName || selSchoolObj?.name })}
+                title={t('classes.card.openHint')}
+                className="group cursor-pointer rounded-2xl bg-gradient-to-br from-[#0d1a14] to-[#0a1410] border border-emerald-500/[0.06] hover:border-emerald-500/20 transition-all p-4 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 <div className="relative">
                   <div className="flex items-center justify-between mb-3">
                     <div className={`px-3 py-1.5 rounded-lg text-sm font-bold ${gradeColors[c.grade] || 'bg-slate-500/10 text-slate-400'}`}>{c.name}</div>
                     <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEdit(c)} className="p-1 rounded-lg text-slate-600 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors">
+                      <button onClick={e => { e.stopPropagation(); openEdit(c); }} className="p-1 rounded-lg text-slate-600 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
                       </button>
-                      <button onClick={() => setDeleteId(c.id)} className="p-1 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                      <button onClick={e => { e.stopPropagation(); setDeleteId(c.id); }} className="p-1 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79" /></svg>
                       </button>
                     </div>
@@ -254,6 +258,10 @@ export default function Classes({ user }) {
         </div>
       )}
       <ConfirmModal open={!!deleteId} onCancel={() => setDeleteId(null)} onConfirm={() => remove(deleteId)} />
+
+      {detailClass && (
+        <ClassAttendanceModal cls={detailClass} user={user} t={t} onClose={() => setDetailClass(null)} />
+      )}
     </div>
   );
 }

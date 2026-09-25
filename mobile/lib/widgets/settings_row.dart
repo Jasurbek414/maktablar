@@ -3,9 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 
-/// Direktor va ota-ona Profil ekranlarida ishlatiladigan umumiy "Ko'rinish"
-/// bo'limi — kun/tun rejimi va til tanlovi, ikkalasi ham darhol qo'llanadi va
-/// SharedPreferences orqali saqlanadi.
 class AppearanceSettingsSection extends ConsumerWidget {
   const AppearanceSettingsSection({super.key});
 
@@ -20,7 +17,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(t('profile.theme'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            Text(t('profile.theme'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13.5, fontWeight: FontWeight.w500)),
             _ThemeSegment(
               isDark: mode == AppThemeMode.dark,
               onChanged: (isDark) => ref.read(themeModeProvider.notifier).setMode(isDark ? AppThemeMode.dark : AppThemeMode.light),
@@ -31,7 +28,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(t('profile.language'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            Text(t('profile.language'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13.5, fontWeight: FontWeight.w500)),
             _LanguageSegment(
               current: locale,
               onChanged: (l) => ref.read(localeProvider.notifier).setLocale(l),
@@ -43,8 +40,6 @@ class AppearanceSettingsSection extends ConsumerWidget {
   }
 }
 
-/// Kirish (login) ekrani uchun ixcham til tanlagich — hali profilga
-/// yetib bo'lmagan holatda ham tilni almashtirish imkonini beradi.
 class CompactLanguagePicker extends ConsumerWidget {
   const CompactLanguagePicker({super.key});
 
@@ -64,7 +59,11 @@ class _ThemeSegment extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(color: AppColors.bgInput, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: AppColors.bgInput,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -76,18 +75,28 @@ class _ThemeSegment extends StatelessWidget {
   }
 
   Widget _segmentButton({required IconData icon, required String label, required bool selected, required VoidCallback onTap}) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(color: selected ? AppColors.emerald.withOpacity(0.15) : null, borderRadius: BorderRadius.circular(8)),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.emerald : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: selected ? AppColors.emerald : AppColors.textFaint),
+            Icon(icon, size: 14, color: selected ? Colors.white : AppColors.textMuted),
             const SizedBox(width: 5),
-            Text(label, style: TextStyle(fontSize: 12, color: selected ? AppColors.emerald : AppColors.textFaint, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: selected ? Colors.white : AppColors.textSecondary,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
@@ -105,23 +114,30 @@ class _LanguageSegment extends StatelessWidget {
     return PopupMenuButton<AppLocale>(
       initialValue: current,
       onSelected: onChanged,
-      color: AppColors.bgCardAlt,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.borderEmerald)),
+      color: AppColors.bgCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.borderSubtle)),
       itemBuilder: (context) => AppLocale.values
           .map((l) => PopupMenuItem(
                 value: l,
-                child: Text(localeLabel(l), style: TextStyle(color: l == current ? AppColors.emerald : AppColors.textPrimary, fontSize: 13)),
+                child: Text(
+                  localeLabel(l),
+                  style: TextStyle(color: l == current ? AppColors.emerald : AppColors.textPrimary, fontSize: 13, fontWeight: l == current ? FontWeight.bold : FontWeight.normal),
+                ),
               ))
           .toList(),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(color: AppColors.bgInput, borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.bgInput,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(localeLabel(current), style: TextStyle(fontSize: 12.5, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more_rounded, size: 16, color: AppColors.textFaint),
+            Icon(Icons.expand_more_rounded, size: 16, color: AppColors.textMuted),
           ],
         ),
       ),

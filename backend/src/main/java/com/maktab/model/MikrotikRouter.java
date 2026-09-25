@@ -59,6 +59,20 @@ public class MikrotikRouter {
     @Column(name = "wg_private_key")
     private String wgPrivateKey;
 
+    /**
+     * VPN transporti (2026-09-19). Standart — WireGuard; UDP ishlamaydigan maktablar uchun panelda
+     * OpenVPN (TCP 443) tanlanadi. Ikkalasi ham to'liq avtomatik, bitta router bir vaqtda faqat
+     * bittasida bo'ladi. Ustun keyin qo'shilgani uchun eski qatorlarda null — {@link #effectiveTransport()}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transport")
+    private Transport transport;
+
+    /** OpenVPN login paroli — wgPrivateKey kabi skriptni qayta generatsiya qilish uchun saqlanadi.
+     * Hub unga faqat SHA-256 xeshi orqali ega bo'ladi (WireguardSyncController#ovpnClients). */
+    @Column(name = "ovpn_password")
+    private String ovpnPassword;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RouterStatus status = RouterStatus.OFFLINE;
@@ -78,7 +92,20 @@ public class MikrotikRouter {
         if (status == null) status = RouterStatus.OFFLINE;
     }
 
+    public Transport effectiveTransport() {
+        return transport != null ? transport : Transport.WIREGUARD;
+    }
+
+    /** OpenVPN common-name / login — id'ga bog'liq, o'zgarmas (vpnIp okteti emas). */
+    public String ovpnUsername() {
+        return "router" + id;
+    }
+
     public enum RouterStatus {
         ONLINE, OFFLINE
+    }
+
+    public enum Transport {
+        WIREGUARD, OPENVPN
     }
 }

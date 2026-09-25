@@ -67,6 +67,7 @@ public class FaceTerminalMonitor {
     @Autowired private FaceTerminalRepository terminalRepo;
     @Autowired private TerminalEndpointResolver resolver;
     @Autowired private FaceAttendanceIngestService ingest;
+    @Autowired(required = false) private com.maktab.service.DeviceAlertService alerts;
 
     private final Map<Long, ReentrantLock> locks = new ConcurrentHashMap<>();
     private final ExecutorService io = Executors.newFixedThreadPool(IO_THREADS, r -> {
@@ -132,10 +133,12 @@ public class FaceTerminalMonitor {
             HikvisionIsapiClient c = resolver.hikvision(t);
             HikvisionIsapiClient.DeviceInfo info = c.deviceInfo();
             HikvisionIsapiClient.UserCounts counts = c.userCounts();
+            boolean wasOffline = t.getStatus() != FaceTerminal.TerminalStatus.ONLINE;
             terminalRepo.markOnline(t.getId(), FaceTerminal.TerminalStatus.ONLINE, LocalDateTime.now(),
                 info.model() != null ? info.model() : t.getModel(),
                 info.firmwareVersion() != null ? info.firmwareVersion() : t.getFirmwareVersion(),
                 counts.users(), counts.usersWithFace());
+            if (wasOffline && alerts != null) alerts.terminalOnline(t);
 
             // Qurilma zavod sozlamasiga qaytarilsa serialNo qaytadan boshlanadi — aks holda
             // hisoblagich eski katta qiymatda qolib, yangi voqealar hech qachon o'qilmasdi.
@@ -160,6 +163,10 @@ public class FaceTerminalMonitor {
         FaceTerminal.TerminalStatus status = stale ? FaceTerminal.TerminalStatus.OFFLINE
             : (t.getStatus() != null ? t.getStatus() : FaceTerminal.TerminalStatus.OFFLINE);
         terminalRepo.markError(t.getId(), status, truncate(e.getMessage(), 500));
+        if (status == FaceTerminal.TerminalStatus.OFFLINE && t.getStatus() == FaceTerminal.TerminalStatus.ONLINE
+                && alerts != null) {
+            alerts.terminalOffline(t, e.getMessage());
+        }
     }
 
     // ─── Voqealar ────────────────────────────────────────────────────────────────

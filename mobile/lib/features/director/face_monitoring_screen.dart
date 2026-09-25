@@ -9,10 +9,6 @@ import '../../theme/app_theme.dart';
 import 'director_repository.dart';
 import 'student_detail_screen.dart';
 
-/// Face ID orqali tanilgan o'quvchilarni real vaqtda kuzatish — qurilmalar holati
-/// (onlayn/oflayn) + bugungi kunda tanilganlar ro'yxati. Bu `/api/attendance/devices`
-/// va `/api/attendance/school/{id}` dan foydalanadi — CamerasScreen'dagi video-kuzatuv
-/// (`/api/cameras`) bilan ARALASHTIRILMASIN, bular backend'da alohida tizimlar.
 class FaceMonitoringScreen extends ConsumerStatefulWidget {
   const FaceMonitoringScreen({super.key, required this.schoolId});
   final int schoolId;
@@ -45,14 +41,20 @@ class _FaceMonitoringScreenState extends ConsumerState<FaceMonitoringScreen> {
   Widget build(BuildContext context) {
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
+
     return Scaffold(
       appBar: AppBar(title: Text(t('faceMonitor.title'))),
       body: RefreshIndicator(
         onRefresh: _reload,
+        color: AppColors.emerald,
+        backgroundColor: AppColors.bgCard,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
-            Text(t('faceMonitor.devices'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+            Text(
+              t('faceMonitor.devices'),
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 15, letterSpacing: -0.3),
+            ),
             const SizedBox(height: 10),
             FutureBuilder<List<RecognitionDevice>>(
               future: _devicesFuture,
@@ -63,27 +65,41 @@ class _FaceMonitoringScreenState extends ConsumerState<FaceMonitoringScreen> {
                 if (snap.hasError) return Text(apiErrorMessage(snap.error!), style: TextStyle(color: AppColors.textSecondary));
                 final devices = snap.data ?? [];
                 if (devices.isEmpty) return Text(t('faceMonitor.noDevices'), style: TextStyle(color: AppColors.textFaint, fontSize: 12.5));
-                return Column(children: devices.map((d) => _DeviceRow(device: d)).toList());
+                return Column(
+                  children: devices.map((d) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _DeviceRow(device: d),
+                  )).toList(),
+                );
               },
             ),
-            const SizedBox(height: 26),
-            Text(t('faceMonitor.liveFeed'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+            const SizedBox(height: 20),
+            Text(
+              t('faceMonitor.liveFeed'),
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 15, letterSpacing: -0.3),
+            ),
             const SizedBox(height: 10),
             FutureBuilder<List<RecognitionEvent>>(
               future: _feedFuture,
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
-                  return const Padding(padding: EdgeInsets.symmetric(vertical: 30), child: Center(child: CircularProgressIndicator()));
+                  return const Padding(padding: EdgeInsets.symmetric(vertical: 40), child: Center(child: CircularProgressIndicator()));
                 }
                 if (snap.hasError) return Text(apiErrorMessage(snap.error!), style: TextStyle(color: AppColors.textSecondary));
-                final events = [...(snap.data ?? [])]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-                if (events.isEmpty) {
+                final feed = snap.data ?? [];
+                if (feed.isEmpty) {
                   return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Text(t('faceMonitor.noEvents'), style: TextStyle(color: AppColors.textFaint, fontSize: 12.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: Text(t('faceMonitor.noEvents'), style: TextStyle(color: AppColors.textFaint))),
                   );
                 }
-                return Column(children: events.map((e) => _EventRow(event: e)).toList());
+                final fmt = DateFormat('HH:mm:ss');
+                return Column(
+                  children: feed.map((e) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _EventTile(event: e, fmt: fmt),
+                  )).toList(),
+                );
               },
             ),
           ],
@@ -99,96 +115,130 @@ class _DeviceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = device.online ? AppColors.emerald : AppColors.red;
+    final isOnline = device.online;
+    final color = isOnline ? AppColors.emerald : AppColors.red;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.borderEmerald)),
+      padding: const EdgeInsets.all(14),
+      decoration: AppDecorations.card(),
       child: Row(
         children: [
-          Container(width: 9, height: 9, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 10),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.tablet_android_rounded, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(device.deviceName ?? device.deviceSerial, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
-                if (device.ipAddress != null)
-                  Text(device.ipAddress!, style: TextStyle(color: AppColors.textFaint, fontSize: 11, fontFamily: 'monospace')),
+                Text(
+                  (device.deviceName != null && device.deviceName!.isNotEmpty) ? device.deviceName! : device.deviceSerial,
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13.5),
+                ),
+                Text(
+                  device.ipAddress ?? device.deviceSerial,
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 11.5),
+                ),
               ],
             ),
           ),
-          if (device.pendingEvents > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: AppColors.amber.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
-              child: Text('${device.pendingEvents} ${t('faceMonitor.pending')}', style: TextStyle(color: AppColors.amber, fontSize: 10.5, fontWeight: FontWeight.w600)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: AppDecorations.badge(color: color),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(width: 5, height: 5, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                const SizedBox(width: 5),
+                Text(
+                  isOnline ? 'ONLAYN' : 'OFLAYN',
+                  style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _EventRow extends StatelessWidget {
-  const _EventRow({required this.event});
+class _EventTile extends StatelessWidget {
+  const _EventTile({required this.event, required this.fmt});
   final RecognitionEvent event;
+  final DateFormat fmt;
 
   @override
   Widget build(BuildContext context) {
-    final isIn = event.type == 'IN';
-    final fmt = DateFormat('HH:mm:ss');
-    final hot = (event.temperature ?? 0) > 37.2;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => StudentDetailScreen(student: Student(id: event.studentId, fullName: event.studentName, photoUrl: event.studentPhoto, faceId: event.faceId)),
-      )),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: AppColors.bgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.borderEmerald)),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: event.studentPhoto != null
-                  ? CachedNetworkImage(imageUrl: '$kApiBaseUrl${event.studentPhoto}', width: 40, height: 40, fit: BoxFit.cover, errorWidget: (_, __, ___) => _avatar())
-                  : _avatar(),
+    final isOut = event.type == 'OUT';
+    final initial = event.studentName.isNotEmpty ? event.studentName[0].toUpperCase() : '?';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: AppDecorations.card(),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.emerald.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(event.studentName, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
-                  const SizedBox(height: 2),
-                  Row(children: [
-                    Text(fmt.format(event.timestamp.toLocal()), style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+            alignment: Alignment.center,
+            child: Text(
+              initial,
+              style: TextStyle(color: AppColors.emerald, fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.studentName,
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13.5),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      fmt.format(event.timestamp.toLocal()),
+                      style: TextStyle(color: AppColors.textFaint, fontSize: 11.5),
+                    ),
                     if (event.temperature != null) ...[
                       const SizedBox(width: 8),
-                      Text('${event.temperature}°C', style: TextStyle(color: hot ? AppColors.red : AppColors.textFaint, fontSize: 11, fontWeight: hot ? FontWeight.w700 : FontWeight.normal)),
+                      Text(
+                        '${event.temperature!.toStringAsFixed(1)}°C',
+                        style: TextStyle(color: AppColors.cyan, fontSize: 11.5, fontWeight: FontWeight.w500),
+                      ),
                     ],
-                  ]),
-                ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: AppDecorations.badge(color: isOut ? AppColors.amber : AppColors.emerald),
+            child: Text(
+              isOut ? 'CHIQISH' : 'KIRISH',
+              style: TextStyle(
+                color: isOut ? AppColors.amber : AppColors.emerald,
+                fontSize: 10.5,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(color: (isIn ? AppColors.emerald : AppColors.textFaint).withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
-              child: Text(isIn ? t('event.in') : t('event.out'), style: TextStyle(color: isIn ? AppColors.emerald : AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-
-  Widget _avatar() => Container(
-        width: 40,
-        height: 40,
-        color: AppColors.emerald.withOpacity(0.15),
-        alignment: Alignment.center,
-        child: Text(event.studentName.isNotEmpty ? event.studentName[0].toUpperCase() : '?', style: TextStyle(color: AppColors.emerald, fontWeight: FontWeight.bold)),
-      );
 }

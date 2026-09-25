@@ -30,15 +30,34 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> with 
   Widget build(BuildContext context) {
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.student.fullName),
-        bottom: TabBar(
-          controller: _tabs,
-          indicatorColor: AppColors.emerald,
-          labelColor: AppColors.emerald,
-          unselectedLabelColor: AppColors.textMuted,
-          tabs: [Tab(text: t('detail.attendanceTab')), Tab(text: t('detail.notesTab')), Tab(text: t('detail.messagesTab'))],
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.student.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+            if (widget.student.className != null)
+              Text(widget.student.className!, style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+          ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.borderSubtle))),
+            child: TabBar(
+              controller: _tabs,
+              indicatorColor: AppColors.emerald,
+              indicatorWeight: 2.5,
+              labelColor: AppColors.emerald,
+              unselectedLabelColor: AppColors.textMuted,
+              tabs: [
+                Tab(text: t('detail.attendanceTab')),
+                Tab(text: t('detail.notesTab')),
+                Tab(text: t('detail.messagesTab')),
+              ],
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -83,7 +102,7 @@ class _StudentAttendanceTabState extends ConsumerState<_StudentAttendanceTab> {
         final fmt = DateFormat('dd.MM.yyyy HH:mm');
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           children: [
             Row(
               children: [
@@ -91,26 +110,37 @@ class _StudentAttendanceTabState extends ConsumerState<_StudentAttendanceTab> {
                 const SizedBox(width: 10),
                 _Stat(label: t('detail.absent'), value: '${stats.absentDays}', color: AppColors.red),
                 const SizedBox(width: 10),
-                _Stat(label: '%', value: '${stats.percent}%', color: AppColors.amber),
+                _Stat(label: 'Foiz', value: '${stats.percent}%', color: AppColors.cyan),
               ],
             ),
             const SizedBox(height: 20),
-            Text(t('detail.last30days'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+            Text(t('detail.last30days'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14.5)),
             const SizedBox(height: 10),
             if (sorted.isEmpty)
-              Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text(t('detail.noEvents'), style: TextStyle(color: AppColors.textFaint)))
+              Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: Center(child: Text(t('detail.noEvents'), style: TextStyle(color: AppColors.textFaint))))
             else
               ...sorted.take(30).map((ev) {
                 final isIn = ev.type == 'IN';
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(children: [
-                    Container(width: 8, height: 8, decoration: BoxDecoration(color: isIn ? AppColors.emerald : AppColors.textFaint, shape: BoxShape.circle)),
-                    const SizedBox(width: 10),
-                    Text(isIn ? t('event.in') : t('event.out'), style: TextStyle(color: isIn ? AppColors.emerald : AppColors.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                    const SizedBox(width: 10),
-                    Text(fmt.format(ev.timestamp.toLocal()), style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5)),
-                  ]),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: AppDecorations.card(),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(color: isIn ? AppColors.emerald : AppColors.amber, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        isIn ? t('event.in') : t('event.out'),
+                        style: TextStyle(color: isIn ? AppColors.emerald : AppColors.amber, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const Spacer(),
+                      Text(fmt.format(ev.timestamp.toLocal()), style: TextStyle(color: AppColors.textMuted, fontSize: 12.5)),
+                    ],
+                  ),
                 );
               }),
           ],
@@ -130,11 +160,11 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+          decoration: AppDecorations.card(),
           child: Column(children: [
             Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(color: AppColors.textFaint, fontSize: 10)),
+            Text(label, style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
           ]),
         ),
       );
@@ -177,12 +207,19 @@ class _StudentMessagesPanelState extends ConsumerState<_StudentMessagesPanel> {
         _messages = msgs;
         _loading = false;
       });
+      _scrollToBottom();
     } catch (e) {
       setState(() {
         _error = apiErrorMessage(e);
         _loading = false;
       });
     }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
+    });
   }
 
   Future<void> _send() async {
@@ -195,6 +232,7 @@ class _StudentMessagesPanelState extends ConsumerState<_StudentMessagesPanel> {
         _messages = [..._messages, m];
         _ctrl.clear();
       });
+      _scrollToBottom();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
     } finally {
@@ -206,62 +244,78 @@ class _StudentMessagesPanelState extends ConsumerState<_StudentMessagesPanel> {
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) return Center(child: Text(_error!, style: TextStyle(color: AppColors.textSecondary)));
-    final fmt = DateFormat('HH:mm');
 
     return Column(
       children: [
         Expanded(
           child: _messages.isEmpty
               ? Center(child: Text(t('detail.noMessages'), style: TextStyle(color: AppColors.textFaint)))
-              : ListView.builder(
+              : ListView.separated(
                   controller: _scroll,
                   padding: const EdgeInsets.all(16),
                   itemCount: _messages.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
                     final m = _messages[i];
-                    final isMine = m.senderType == 'STAFF';
+                    final isStaff = m.senderType == 'STAFF';
                     return Align(
-                      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: isStaff ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
-                        margin: const EdgeInsets.only(bottom: 10),
                         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isMine ? AppColors.emerald.withOpacity(0.18) : AppColors.bgCardAlt,
-                          borderRadius: BorderRadius.circular(14),
+                          color: isStaff ? AppColors.emerald : AppColors.bgCard,
+                          borderRadius: BorderRadius.circular(16),
+                          border: isStaff ? null : Border.all(color: AppColors.borderSubtle),
                         ),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          if (!isMine) Text(m.senderName, style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
-                          Text(m.text, style: TextStyle(color: AppColors.textPrimary, fontSize: 13.5)),
-                          const SizedBox(height: 4),
-                          Text(fmt.format(m.createdAt.toLocal()), style: TextStyle(color: AppColors.textFaint, fontSize: 10)),
-                        ]),
+                        child: Column(
+                          crossAxisAlignment: isStaff ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              m.text,
+                              style: TextStyle(color: isStaff ? Colors.white : AppColors.textPrimary, fontSize: 13.5, height: 1.35),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              m.senderName,
+                              style: TextStyle(color: isStaff ? Colors.white.withOpacity(0.7) : AppColors.textFaint, fontSize: 10.5),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
                 ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: Row(children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.borderSubtle))),
+          child: Row(
+            children: [
               Expanded(
                 child: TextField(
                   controller: _ctrl,
-                  style: TextStyle(color: AppColors.textPrimary),
-                  minLines: 1,
-                  maxLines: 4,
-                  decoration: InputDecoration(hintText: t('messages.replyPlaceholder')),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13.5),
+                  decoration: InputDecoration(
+                    hintText: t('messages.replyPlaceholder'),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton.filled(
+              IconButton(
                 onPressed: _sending ? null : _send,
-                icon: _sending ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.send_rounded),
-                style: IconButton.styleFrom(backgroundColor: AppColors.emerald),
+                icon: _sending
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.send_rounded, size: 18),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.emerald,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
               ),
-            ]),
+            ],
           ),
         ),
       ],
