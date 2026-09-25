@@ -209,6 +209,7 @@ class ClassAttendanceTest {
     private NotificationService notifications;
     private BotConfigService botConfig;
     private User director;
+    private CurrentUserService cus;
 
     private void setUpController() {
         controller = new BroadcastController();
@@ -216,7 +217,7 @@ class ClassAttendanceTest {
         botConfig = mock(BotConfigService.class);
         SchoolClassRepository classRepo = mock(SchoolClassRepository.class);
         BroadcastLogRepository logRepo = mock(BroadcastLogRepository.class);
-        CurrentUserService cus = mock(CurrentUserService.class);
+        cus = mock(CurrentUserService.class);
         I18nService i18n = mock(I18nService.class);
 
         when(botConfig.isBroadcastEnabled()).thenReturn(true);
@@ -282,12 +283,49 @@ class ClassAttendanceTest {
         verifyNoInteractions(notifications);
     }
 
+    /**
+     * 2026-09-25 da qoida ATAYLAB o'zgartirildi: avval TEACHER bu endpointdan butunlay
+     * rad etilardi (`assertCanUseBotPanel`). Endi sinf rahbari O'Z SINFIDAGI kelmaganlar
+     * ota-onasiga xabar yubora oladi — bu uning asosiy ish oqimi.
+     */
     @Test
-    void teacherCannotSend() {
+    void teacherCanSendForOwnClass() {
         setUpController();
         director.setRole(User.Role.TEACHER);
+        // assertCanAccessClass hech narsa tashlamaydi => bu sinf o'qituvchiniki
+        ResponseEntity<?> res = controller.notifyAbsent(null,
+            Map.of("classId", 5, "date", DAY.toString(), "text", "{student} kelmadi"));
+
+        assertEquals(200, res.getStatusCode().value());
+        verify(notifications, times(1)).broadcastToGuardians(anyList(), anyString());
+        // Sinf tekshiruvi HAQIQATAN chaqirilgani tasdiqlanadi — aks holda o'qituvchi
+        // istalgan sinf uchun xabar yubora olardi.
+        verify(cus).assertCanAccessClass(eq(director), eq(sc));
+    }
+
+    /** Begona sinf uchun o'qituvchi xabar yubora olmaydi. */
+    @Test
+    void teacherCannotSendForForeignClass() {
+        setUpController();
+        director.setRole(User.Role.TEACHER);
+        doThrow(new ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN))
+            .when(cus).assertCanAccessClass(any(), any());
+
         assertThrows(ResponseStatusException.class, () -> controller.notifyAbsent(null,
             Map.of("classId", 5, "text", "salom")));
+        verifyNoInteractions(notifications);
+    }
+
+    /**
+     * Ommaviy /broadcast (butun maktabga) TEACHER uchun YOPIQ qoladi — notify-absent
+     * uchun berilgan kengaytma u yerga o'tib ketmasligi kerak.
+     */
+    @Test
+    void teacherStillCannotBroadcastToWholeSchool() {
+        setUpController();
+        director.setRole(User.Role.TEACHER);
+        assertThrows(ResponseStatusException.class, () -> controller.broadcast(null,
+            Map.of("text", "hammaga salom")));
         verifyNoInteractions(notifications);
     }
 }

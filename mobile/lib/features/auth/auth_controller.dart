@@ -17,7 +17,22 @@ import '../../core/mock_data.dart';
 /// `--dart-define`ni unutish jimgina yana soxta APK beradi.
 const bool kDemoMode = bool.fromEnvironment('DEMO_MODE', defaultValue: false);
 
-enum AppPersona { none, director, guardian }
+/// Ilovadagi uchta foydalanuvchi turi.
+///
+/// MUHIM (2026-09-25): avval faqat `director` va `guardian` bor edi — TEACHER roli bilan
+/// kirgan o'qituvchi direktor bilan AYNAN bir xil interfeysni olardi. Endi u alohida
+/// persona: faqat o'zi sinf rahbari bo'lgan sinfni ko'radi (server tomonida ham
+/// cheklangan — CurrentUserService#allowedClassIds).
+enum AppPersona { none, director, teacher, guardian }
+
+/// Xodim rolidan personani aniqlaydi. Bitta joyda turishi SHART — `_restore()` va
+/// `loginDirector()` ikkalasi ham shuni ishlatadi, aks holda ilovani qayta ochganda
+/// persona o'zgarib ketishi mumkin.
+AppPersona personaForRole(String? role) {
+  if (role == 'GUARDIAN') return AppPersona.guardian;
+  if (role == 'TEACHER') return AppPersona.teacher;
+  return AppPersona.director;
+}
 
 class AuthState {
   final AppPersona persona;
@@ -32,8 +47,15 @@ class AuthState {
         loading: loading ?? this.loading,
       );
 
-  /// Direktor ilovasida staff rolining o'zi (DIRECTOR/MUDIR/TEACHER/SUPERADMIN va h.k.)
-  String? get staffRole => persona == AppPersona.director ? (profile?['role'] as String?) : null;
+  /// Xodim (direktor yoki o'qituvchi) rolining o'zi — DIRECTOR/MUDIR/TEACHER/SUPERADMIN va h.k.
+  /// Ota-ona uchun har doim null.
+  String? get staffRole => isStaff ? (profile?['role'] as String?) : null;
+
+  /// Xodimmi (direktor yoki o'qituvchi) — ota-onadan farqlash uchun.
+  bool get isStaff => persona == AppPersona.director || persona == AppPersona.teacher;
+
+  /// Profildagi maktab id — xodim ekranlari shunga tayanadi.
+  int? get schoolId => profile?['schoolId'] is int ? profile!['schoolId'] as int : null;
 }
 
 class AuthController extends StateNotifier<AuthState> {
@@ -49,8 +71,11 @@ class AuthController extends StateNotifier<AuthState> {
     final role = await _storage.readRole();
     final profileJson = await _storage.readProfileJson();
     if (token != null && role != null && profileJson != null) {
-      final persona = role == 'GUARDIAN' ? AppPersona.guardian : AppPersona.director;
-      state = AuthState(persona: persona, profile: jsonDecode(profileJson) as Map<String, dynamic>, loading: false);
+      state = AuthState(
+        persona: personaForRole(role),
+        profile: jsonDecode(profileJson) as Map<String, dynamic>,
+        loading: false,
+      );
     } else {
       state = state.copyWith(loading: false);
     }
@@ -61,14 +86,16 @@ class AuthController extends StateNotifier<AuthState> {
       if (kDemoMode) {
         final user = MockData.directorProfile;
         await _storage.save(token: 'demo-token-dir', role: user['role'] as String, profileJson: jsonEncode(user));
-        state = AuthState(persona: AppPersona.director, profile: user, loading: false);
+        state = AuthState(
+            persona: personaForRole(user['role'] as String?), profile: user, loading: false);
         return null;
       }
       final res = await _api.post('/api/auth/login', data: {'username': username, 'password': password});
       final data = res.data as Map<String, dynamic>;
       final user = data['user'] as Map<String, dynamic>;
       await _storage.save(token: data['token'] as String, role: user['role'] as String, profileJson: jsonEncode(user));
-      state = AuthState(persona: AppPersona.director, profile: user, loading: false);
+      state = AuthState(
+          persona: personaForRole(user['role'] as String?), profile: user, loading: false);
       return null;
     } catch (e) {
       return apiErrorMessage(e, fallback: 'Login yoki parol noto\'g\'ri');

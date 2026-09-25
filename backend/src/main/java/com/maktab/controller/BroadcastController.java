@@ -115,7 +115,14 @@ public class BroadcastController {
     public ResponseEntity<?> notifyAbsent(@RequestHeader(value = "Authorization", required = false) String authHeader,
                                            @RequestBody Map<String, Object> body) {
         User user = currentUserService.requireUser(authHeader);
-        assertCanUseBotPanel(user);
+        // MUHIM (2026-09-25): bu endpoint uchun ruxsat ATAYLAB kengaytirilgan — sinf rahbari
+        // (TEACHER) o'z sinfidagi kelmaganlarning ota-onasiga xabar yubora oladi, chunki bu
+        // uning ASOSIY ish oqimi. Ommaviy /broadcast (butun maktabga) esa TEACHER uchun
+        // YOPIQ qoladi. O'qituvchining sinfi quyida assertCanAccessClass bilan tekshiriladi,
+        // ya'ni u begona sinf uchun xabar yubora olmaydi.
+        if (user.getRole() != User.Role.TEACHER) {
+            assertCanUseBotPanel(user);
+        }
         if (!botConfigService.isBroadcastEnabled()) {
             return ResponseEntity.status(403).body(Map.of("error", i18n.msg("error.broadcast.disabled")));
         }
@@ -125,7 +132,8 @@ public class BroadcastController {
         com.maktab.model.SchoolClass sc = classRepo.findById(Long.valueOf(body.get("classId").toString())).orElse(null);
         if (sc == null) return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.class.not_found")));
         Long schoolId = sc.getSchool() != null ? sc.getSchool().getId() : null;
-        currentUserService.assertCanAccessSchool(user, schoolId);
+        // Maktab + (TEACHER bo'lsa) SINF tekshiruvi — avval faqat maktab tekshirilardi.
+        currentUserService.assertCanAccessClass(user, sc);
 
         String template = body.get("text") != null ? body.get("text").toString().trim() : "";
         if (template.isEmpty()) {

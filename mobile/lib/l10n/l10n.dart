@@ -286,6 +286,76 @@ const Map<String, Map<AppLocale, String>> _strings = {
   'report.generate': {AppLocale.uz: 'Hisobot yaratish', AppLocale.ru: 'Сформировать отчёт', AppLocale.en: 'Generate report'},
   'report.topAbsent': {AppLocale.uz: 'Eng ko\'p kelmaganlar', AppLocale.ru: 'Чаще всех отсутствуют', AppLocale.en: 'Most absent'},
   'report.days': {AppLocale.uz: 'kun', AppLocale.ru: 'дней', AppLocale.en: 'days'},
+
+  // ── O'qituvchi ilovasi (2026-09-25) ──
+  'teacher.navMyClass': {AppLocale.uz: 'Mening sinfim', AppLocale.ru: 'Мой класс', AppLocale.en: 'My class'},
+  'teacher.navAttendance': {AppLocale.uz: 'Davomat', AppLocale.ru: 'Посещаемость', AppLocale.en: 'Attendance'},
+  'teacher.myClassTitle': {AppLocale.uz: 'Mening sinfim', AppLocale.ru: 'Мой класс', AppLocale.en: 'My class'},
+  'teacher.attendanceTitle': {AppLocale.uz: 'Sinf davomati', AppLocale.ru: 'Посещаемость класса', AppLocale.en: 'Class attendance'},
+  'teacher.rate': {AppLocale.uz: 'Davomat', AppLocale.ru: 'Посещаемость', AppLocale.en: 'Rate'},
+  'teacher.present': {AppLocale.uz: 'Keldi', AppLocale.ru: 'Пришли', AppLocale.en: 'Present'},
+  'teacher.absent': {AppLocale.uz: 'Kelmadi', AppLocale.ru: 'Отсутствуют', AppLocale.en: 'Absent'},
+  'teacher.excused': {AppLocale.uz: 'Sababli', AppLocale.ru: 'По уважит.', AppLocale.en: 'Excused'},
+  'teacher.statusPresent': {AppLocale.uz: 'Keldi', AppLocale.ru: 'Пришёл', AppLocale.en: 'Present'},
+  'teacher.statusAbsent': {AppLocale.uz: 'Kelmadi', AppLocale.ru: 'Отсутствует', AppLocale.en: 'Absent'},
+  'teacher.statusExcused': {AppLocale.uz: 'Sababli', AppLocale.ru: 'Уважительно', AppLocale.en: 'Excused'},
+  'teacher.notifyAbsent': {
+    AppLocale.uz: 'Kelmaganlar ota-onasiga xabar ({count})',
+    AppLocale.ru: 'Сообщить родителям отсутствующих ({count})',
+    AppLocale.en: 'Notify absentees\' parents ({count})',
+  },
+  'teacher.noOneToNotify': {
+    AppLocale.uz: 'Xabar yuboriladigan ota-ona yo\'q',
+    AppLocale.ru: 'Некому отправлять сообщение',
+    AppLocale.en: 'No parents to notify',
+  },
+  'teacher.notifyHint': {
+    AppLocale.uz: 'Matndagi {student}, {class}, {date} har bir o\'quvchi uchun alohida almashtiriladi — ota-ona shaxsiy xabar oladi.',
+    AppLocale.ru: 'В тексте {student}, {class}, {date} подставляются отдельно для каждого ученика — родитель получит персональное сообщение.',
+    AppLocale.en: 'In the text {student}, {class} and {date} are substituted per student, so each parent gets a personal message.',
+  },
+  'teacher.notifyTemplate': {
+    AppLocale.uz: 'Hurmatli ota-ona! Farzandingiz {student} bugun ({date}) {class} sinfiga kelmadi. Iltimos, maktab bilan bog\'laning.',
+    AppLocale.ru: 'Уважаемый родитель! Ваш ребёнок {student} сегодня ({date}) не пришёл в класс {class}. Пожалуйста, свяжитесь со школой.',
+    AppLocale.en: 'Dear parent, your child {student} did not attend class {class} today ({date}). Please contact the school.',
+  },
+  'teacher.messageText': {AppLocale.uz: 'Xabar matni', AppLocale.ru: 'Текст сообщения', AppLocale.en: 'Message text'},
+  'teacher.send': {AppLocale.uz: 'Yuborish', AppLocale.ru: 'Отправить', AppLocale.en: 'Send'},
+  'teacher.notifyResult': {
+    AppLocale.uz: '{students} o\'quvchi bo\'yicha {sent} ta xabar yuborildi, {skipped} tasida Telegram yo\'q',
+    AppLocale.ru: 'По {students} ученикам отправлено {sent} сообщений, у {skipped} нет Telegram',
+    AppLocale.en: 'Sent {sent} messages for {students} students; {skipped} have no Telegram',
+  },
+  'teacher.notifyFailed': {
+    AppLocale.uz: 'Xabar yuborilmadi',
+    AppLocale.ru: 'Сообщение не отправлено',
+    AppLocale.en: 'Message was not sent',
+  },
+  'teacher.noTelegram': {
+    AppLocale.uz: 'Ota-onasida Telegram yo\'q',
+    AppLocale.ru: 'У родителя нет Telegram',
+    AppLocale.en: 'Parent has no Telegram',
+  },
+  'teacher.classesLoadFailed': {
+    AppLocale.uz: 'Sinflarni yuklab bo\'lmadi',
+    AppLocale.ru: 'Не удалось загрузить классы',
+    AppLocale.en: 'Could not load classes',
+  },
+  'teacher.attendanceLoadFailed': {
+    AppLocale.uz: 'Davomatni yuklab bo\'lmadi',
+    AppLocale.ru: 'Не удалось загрузить посещаемость',
+    AppLocale.en: 'Could not load attendance',
+  },
+  'teacher.noClassAssigned': {
+    AppLocale.uz: 'Sizga hali sinf biriktirilmagan',
+    AppLocale.ru: 'Вам ещё не назначен класс',
+    AppLocale.en: 'No class has been assigned to you yet',
+  },
+  'teacher.noClassHint': {
+    AppLocale.uz: 'Sinf rahbari maktab ma\'muriyati tomonidan tayinlanadi. Iltimos, direktorga murojaat qiling.',
+    AppLocale.ru: 'Классного руководителя назначает администрация школы. Пожалуйста, обратитесь к директору.',
+    AppLocale.en: 'The class teacher is assigned by the school administration. Please contact the director.',
+  },
 };
 
 String tParams(String key, Map<String, String> params) {

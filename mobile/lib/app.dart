@@ -4,6 +4,7 @@ import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
 import 'features/director/director_home_shell.dart';
 import 'features/parent/parent_home_screen.dart';
+import 'features/teacher/teacher_home_shell.dart';
 import 'theme/app_theme.dart';
 
 class MaktabDavomadApp extends ConsumerWidget {
@@ -38,6 +39,8 @@ class _RootRouter extends ConsumerWidget {
     switch (auth.persona) {
       case AppPersona.guardian:
         return const ParentHomeScreen();
+      case AppPersona.teacher:
+        return const TeacherHomeShell();
       case AppPersona.director:
         return const DirectorHomeShell();
       case AppPersona.none:
