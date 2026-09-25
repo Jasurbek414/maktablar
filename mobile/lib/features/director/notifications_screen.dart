@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/mock_data.dart';
+import '../../core/api_client.dart';
+import '../../core/notification_repository.dart';
 import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/error_state.dart';
+import 'director_repository.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key, required this.schoolId});
@@ -34,7 +37,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
 
-    final pendingCount = MockData.allAbsenceRequests.where((r) => r.status == 'PENDING').length;
+    final pendingCount =
+        ref.watch(directorPendingRequestCountProvider(widget.schoolId)).valueOrNull ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -68,7 +72,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                     ],
                   ),
                 ),
-                const Tab(text: 'Xabarlar'),
+                // Bu tab tizim bildirishnomalarini (`/api/notifications`) ko'rsatadi —
+                // avval u soxta o'quvchi xabarlarini ko'rsatardi, shuning uchun nomi
+                // ham haqiqatga moslandi.
+                const Tab(text: 'Tizim'),
               ],
             ),
           ),
@@ -104,7 +111,18 @@ class _ArizalarListState extends ConsumerState<_ArizalarList> {
 
   @override
   Widget build(BuildContext context) {
-    final all = MockData.allAbsenceRequests;
+    final async = ref.watch(directorAbsenceRequestsProvider(widget.schoolId));
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => AppErrorState(
+        message: apiErrorMessage(e, fallback: 'Arizalarni yuklab bo\'lmadi'),
+        onRetry: () => ref.invalidate(directorAbsenceRequestsProvider(widget.schoolId)),
+      ),
+      data: (all) => _buildList(all),
+    );
+  }
+
+  Widget _buildList(List<AbsenceRequest> all) {
     final filtered = _filter == 'ALL' ? all : all.where((r) => r.status == _filter).toList();
 
     return Column(
@@ -154,8 +172,8 @@ class _ArizalarListState extends ConsumerState<_ArizalarList> {
                     final req = filtered[i];
                     return _RequestCard(
                       request: req,
+                      schoolId: widget.schoolId,
                       reasonLabel: _reasonLabel(req.reasonType),
-                      onAction: () => setState(() {}),
                     );
                   },
                 ),
@@ -165,11 +183,15 @@ class _ArizalarListState extends ConsumerState<_ArizalarList> {
   }
 }
 
-class _RequestCard extends StatelessWidget {
-  const _RequestCard({required this.request, required this.reasonLabel, required this.onAction});
+class _RequestCard extends ConsumerWidget {
+  const _RequestCard({
+    required this.request,
+    required this.schoolId,
+    required this.reasonLabel,
+  });
   final AbsenceRequest request;
+  final int schoolId;
   final String reasonLabel;
-  final VoidCallback onAction;
 
   Color get _statusColor => switch (request.status) {
         'APPROVED' => AppColors.emerald,
@@ -183,7 +205,7 @@ class _RequestCard extends StatelessWidget {
         _ => 'Kutilmoqda',
       };
 
-  Future<void> _review(BuildContext context, String newStatus) async {
+  Future<void> _review(BuildContext context, WidgetRef ref, String newStatus) async {
     final ctrl = TextEditingController();
     final ok = await showModalBottomSheet<bool>(
       context: context,
@@ -248,29 +270,34 @@ class _RequestCard extends StatelessWidget {
     );
     if (ok != true) return;
 
-    final idx = MockData.allAbsenceRequests.indexWhere((r) => r.id == request.id);
-    if (idx >= 0) {
-      final old = MockData.allAbsenceRequests[idx];
-      MockData.allAbsenceRequests[idx] = AbsenceRequest(
-        id: old.id, studentId: old.studentId, studentName: old.studentName,
-        className: old.className, startDate: old.startDate, endDate: old.endDate,
-        reasonType: old.reasonType, reasonText: old.reasonText,
-        status: newStatus,
-        reviewNote: ctrl.text.trim().isEmpty ? null : ctrl.text.trim(),
-        reviewedBy: 'Direktor', createdAt: old.createdAt,
-      );
-    }
-    onAction();
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(t('requests.statusChanged')),
-        backgroundColor: AppColors.emerald,
-      ));
+    // MUHIM (2026-09-25 audit): avval bu yerda `MockData.allAbsenceRequests` ro'yxati
+    // qo'lda o'zgartirilardi — ya'ni "tasdiqlandi" deb ko'rsatilsa ham serverga HECH
+    // NARSA yuborilmasdi. Endi yagona yo'l: `DirectorRepository.reviewAbsenceRequest`
+    // (`POST /api/absence-requests/{id}/review`).
+    final note = ctrl.text.trim();
+    try {
+      await ref
+          .read(directorRepositoryProvider)
+          .reviewAbsenceRequest(request.id, newStatus, note.isEmpty ? null : note);
+      ref.invalidate(directorAbsenceRequestsProvider(schoolId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(t('requests.statusChanged')),
+          backgroundColor: AppColors.emerald,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(apiErrorMessage(e, fallback: 'Saqlab bo\'lmadi')),
+          backgroundColor: AppColors.red,
+        ));
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: AppDecorations.card(),
@@ -336,7 +363,7 @@ class _RequestCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => _review(context, 'REJECTED'),
+                    onPressed: () => _review(context, ref, 'REJECTED'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.red,
                       side: BorderSide(color: AppColors.red.withOpacity(0.4)),
@@ -348,7 +375,7 @@ class _RequestCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _review(context, 'APPROVED'),
+                    onPressed: () => _review(context, ref, 'APPROVED'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
@@ -373,72 +400,106 @@ class _XabarlarList extends ConsumerStatefulWidget {
 }
 
 class _XabarlarListState extends ConsumerState<_XabarlarList> {
-  final _allMessages = MockData.studentMessages(1) + MockData.studentMessages(3);
-
+  /// MUHIM (2026-09-25 audit): avval bu ro'yxat `MockData.studentMessages(1) +
+  /// MockData.studentMessages(3)` edi — ya'ni ikkita qattiq kodlangan o'quvchining soxta
+  /// suhbati. Backendda butun maktab bo'yicha xabar tasmasi endpointi YO'Q (xabarlar
+  /// faqat o'quvchi bo'yicha: `/api/students/{id}/messages`), shuning uchun bu tab endi
+  /// mavjud `/api/notifications` tizim bildirishnomalarini ko'rsatadi.
   @override
   Widget build(BuildContext context) {
     ref.watch(themeModeProvider);
-    if (_allMessages.isEmpty) {
-      return Center(child: Text(t('detail.noMessages'), style: TextStyle(color: AppColors.textFaint)));
+    final async = ref.watch(notificationsProvider);
+
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => AppErrorState(
+        message: apiErrorMessage(e, fallback: 'Bildirishnomalarni yuklab bo\'lmadi'),
+        onRetry: () => ref.invalidate(notificationsProvider),
+      ),
+      data: (page) => _buildList(page.items),
+    );
+  }
+
+  Widget _buildList(List<AppNotification> items) {
+    if (items.isEmpty) {
+      return Center(
+          child: Text('Bildirishnoma yo\'q',
+              style: TextStyle(color: AppColors.textFaint)));
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: _allMessages.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, i) {
-        final msg = _allMessages[i];
-        final isStaff = msg.senderType == 'STAFF';
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: AppDecorations.card(),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: isStaff ? AppColors.emerald.withOpacity(0.12) : AppColors.cyan.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(notificationsProvider),
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, i) {
+          final n = items[i];
+          final color = switch (n.level) {
+            'ERROR' => AppColors.red,
+            'WARNING' => AppColors.amber,
+            'SUCCESS' => AppColors.emerald,
+            _ => AppColors.cyan,
+          };
+          final icon = switch (n.type) {
+            'ATTENDANCE' => Icons.how_to_reg_rounded,
+            'DEVICE_STATUS' => Icons.router_rounded,
+            'ALERT' => Icons.warning_amber_rounded,
+            'USER_ACTION' => Icons.person_rounded,
+            _ => Icons.info_outline_rounded,
+          };
+          return Container(
+            padding: const EdgeInsets.all(14),
+            decoration: AppDecorations.card(),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, size: 18, color: color),
                 ),
-                child: Icon(
-                  isStaff ? Icons.person_rounded : Icons.family_restroom_rounded,
-                  size: 18,
-                  color: isStaff ? AppColors.emerald : AppColors.cyan,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          msg.senderName,
-                          style: TextStyle(
-                            color: isStaff ? AppColors.emerald : AppColors.cyan,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13.5,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              n.title,
+                              style: TextStyle(
+                                color: color,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.5,
+                              ),
+                            ),
                           ),
-                        ),
-                        Text(
-                          _fmtTime(msg.createdAt),
-                          style: TextStyle(color: AppColors.textFaint, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(msg.text, style: TextStyle(color: AppColors.textPrimary, fontSize: 13.5, height: 1.35)),
-                  ],
+                          const SizedBox(width: 8),
+                          Text(
+                            _fmtTime(n.createdAt),
+                            style: TextStyle(color: AppColors.textFaint, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(n.message,
+                          style: TextStyle(
+                              color: AppColors.textPrimary, fontSize: 13.5, height: 1.35)),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

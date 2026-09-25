@@ -5,9 +5,17 @@ import '../../core/providers.dart';
 import '../../core/token_storage.dart';
 import '../../core/mock_data.dart';
 
-/// Demo/test rejimi — haqiqiy backend ulanmasdan ishlaydi.
-/// APK build vaqtida --dart-define=DEMO_MODE=false bilan o'chirish mumkin.
-const bool kDemoMode = bool.fromEnvironment('DEMO_MODE', defaultValue: true);
+/// Demo/test rejimi — haqiqiy backend ulanmasdan, soxta (MockData) ma'lumot bilan ishlaydi.
+///
+/// STANDART QIYMAT `false` — ilova doim haqiqiy serverga ulanadi. Namoyish uchun
+/// `--dart-define=DEMO_MODE=true` bilan qurish mumkin (Dockerfile: `--build-arg DEMO_MODE=true`).
+///
+/// MUHIM (2026-09-25 audit): avval standart qiymat `true` edi va `mobile/Dockerfile` bu
+/// define'ni umuman bermasdi — natijada qurilgan HAR BIR APK demo rejimda chiqqan:
+/// login paytida parol tekshirilmagan (`MockData.directorProfile` qaytarilgan) va hamma
+/// ekran soxta ma'lumot ko'rsatgan. Standart qiymat `false` bo'lishi shart — aks holda
+/// `--dart-define`ni unutish jimgina yana soxta APK beradi.
+const bool kDemoMode = bool.fromEnvironment('DEMO_MODE', defaultValue: false);
 
 enum AppPersona { none, director, guardian }
 

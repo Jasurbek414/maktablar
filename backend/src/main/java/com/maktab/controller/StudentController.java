@@ -117,6 +117,16 @@ public class StudentController {
             else if (scope.size() == 1) students = studentRepository.findBySchoolId(scope.get(0));
             else students = studentRepository.findBySchoolIdIn(scope);
         }
+        // SINF darajasidagi ko'lam (2026-09-25): TEACHER faqat o'zi sinf rahbari bo'lgan
+        // sinflarning o'quvchilarini ko'radi — avval u o'z maktabidagi BARCHA o'quvchini
+        // ko'rardi. Boshqa rollar uchun allowedClassIds null (cheklov yo'q), xulq o'zgarmaydi.
+        List<Long> classScope = currentUserService.allowedClassIds(user);
+        if (classScope != null) {
+            Set<Long> allowed = new HashSet<>(classScope);
+            students = students.stream()
+                .filter(s -> s.getClassId() != null && allowed.contains(s.getClassId()))
+                .collect(Collectors.toList());
+        }
         Map<Long, String> classNames = classNamesFor(students);
         return students.stream().map(s -> toMap(s, classNames.get(s.getClassId()))).collect(Collectors.toList());
     }

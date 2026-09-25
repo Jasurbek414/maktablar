@@ -38,6 +38,7 @@ public class ClassAttendanceService {
     @Autowired private StudentRepository studentRepo;
     @Autowired private AttendanceRepository attendanceRepo;
     @Autowired private UserRepository userRepo;
+    @Autowired private com.maktab.repository.AbsenceRequestRepository absenceRepo;
 
     /** Shu kunda kirish qayd etilgan o'quvchilar id'lari. */
     public Set<Long> presentStudentIds(SchoolClass sc, LocalDate day) {
@@ -83,16 +84,25 @@ public class ClassAttendanceService {
             }
         }
 
+        // Tasdiqlangan ruxsat so'rovi bor o'quvchilar (2026-09-25) — ular "kelmagan" emas,
+        // "SABABLI". Bitta so'rovda olinadi, har bir o'quvchi uchun alohida emas.
+        Set<Long> excused = excusedStudentIds(classIds, day);
+
         return students.stream()
             .sorted(Comparator.comparing(s -> s.getFullName() == null ? "" : s.getFullName()))
             .map(s -> {
                 OffsetDateTime in = firstIn.get(s.getId());
                 OffsetDateTime out = lastOut.get(s.getId());
+                boolean isExcused = excused.contains(s.getId());
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("studentId", s.getId());
                 m.put("fullName", s.getFullName());
                 m.put("photoUrl", s.getPhotoUrl());
+                // `present` MA'NOSI O'ZGARMAYDI (veb panel va Excel shunga tayanadi):
+                // faqat haqiqatan kirish qayd etilgan bo'lsa true.
                 m.put("present", in != null);
+                m.put("excused", isExcused);
+                m.put("status", in != null ? "KELDI" : (isExcused ? "SABABLI" : "KELMADI"));
                 m.put("inTime", in != null ? in.atZoneSameInstant(TASHKENT).format(HM) : null);
                 m.put("outTime", out != null ? out.atZoneSameInstant(TASHKENT).format(HM) : null);
                 m.put("temperature", temperature.get(s.getId()));
@@ -101,6 +111,20 @@ public class ClassAttendanceService {
                 return m;
             })
             .collect(Collectors.toList());
+    }
+
+    /**
+     * Berilgan kunga TASDIQLANGAN ruxsati bor o'quvchilar.
+     *
+     * MUHIM: "kelmaganlarga xabar" oqimi bu ro'yxatni ATAYLAB hisobga olmaydi —
+     * {@link #absentStudents} o'zgarmagan. Sababi: ota-ona allaqachon bolasi
+     * kelmasligini bildirgan bo'lsa ham, davomat jadvalida holat ko'rinishi kerak,
+     * lekin unga qayta "bolangiz kelmadi" xabarini yuborish mantiqsiz — bu qaror
+     * {@code BroadcastController}da alohida ko'rib chiqiladi.
+     */
+    Set<Long> excusedStudentIds(Set<Long> studentIds, LocalDate day) {
+        if (studentIds == null || studentIds.isEmpty()) return Set.of();
+        return new HashSet<>(absenceRepo.findApprovedStudentIdsOn(new ArrayList<>(studentIds), day));
     }
 
     /** Telegram'i ulangan va bildirishnomani o'chirmagan vasiylar — xabar aynan shularga ketadi. */

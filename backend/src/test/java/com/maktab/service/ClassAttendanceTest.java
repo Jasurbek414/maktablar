@@ -34,6 +34,7 @@ class ClassAttendanceTest {
     private ClassAttendanceService service;
     private StudentRepository studentRepo;
     private AttendanceRepository attendanceRepo;
+    private AbsenceRequestRepository absenceRepo;
     private SchoolClass sc;
     private Student present, absentWithTg, absentNoTg;
 
@@ -66,11 +67,16 @@ class ClassAttendanceTest {
         studentRepo = mock(StudentRepository.class);
         attendanceRepo = mock(AttendanceRepository.class);
         UserRepository userRepo = mock(UserRepository.class);
+        absenceRepo = mock(AbsenceRequestRepository.class);
+        // Standart holat: hech kimda tasdiqlangan ruxsat yo'q — mavjud testlar
+        // avvalgidek ishlashi uchun (KELDI/KELMADI).
+        when(absenceRepo.findApprovedStudentIdsOn(anyList(), any())).thenReturn(List.of());
 
         service = new ClassAttendanceService();
         ReflectionTestUtils.setField(service, "studentRepo", studentRepo);
         ReflectionTestUtils.setField(service, "attendanceRepo", attendanceRepo);
         ReflectionTestUtils.setField(service, "userRepo", userRepo);
+        ReflectionTestUtils.setField(service, "absenceRepo", absenceRepo);
 
         School school = new School();
         school.setId(2L);
@@ -114,6 +120,47 @@ class ClassAttendanceTest {
             "bildirishnomasi o'chirilgan vasiy hisobga olinmaydi");
         assertEquals(0L, ((Number) rows.get(1).get("guardiansReachable")).longValue(),
             "Telegram'i yo'q vasiy hisobga olinmaydi");
+    }
+
+    /**
+     * Tasdiqlangan ruxsat so'rovi bo'lgan o'quvchi "KELMADI" emas, "SABABLI" bo'ladi
+     * (2026-09-25). `present` kalitining ma'nosi O'ZGARMAYDI — u faqat haqiqiy kirish
+     * qayd etilganini bildiradi, veb panel va Excel shunga tayanadi.
+     */
+    @Test
+    void approvedAbsenceMarksStudentExcused() {
+        // Vali (id=2) uchun tasdiqlangan ruxsat bor
+        when(absenceRepo.findApprovedStudentIdsOn(anyList(), eq(DAY))).thenReturn(List.of(2L));
+
+        List<Map<String, Object>> rows = service.rows(sc, DAY);
+        Map<String, Object> ali = rows.get(0);    // keldi
+        Map<String, Object> salim = rows.get(1);  // kelmadi, ruxsatsiz
+        Map<String, Object> vali = rows.get(2);   // kelmadi, LEKIN ruxsati bor
+
+        assertEquals("KELDI", ali.get("status"));
+        assertEquals(false, ali.get("excused"));
+
+        assertEquals("KELMADI", salim.get("status"));
+        assertEquals(false, salim.get("excused"));
+
+        assertEquals("SABABLI", vali.get("status"));
+        assertEquals(true, vali.get("excused"));
+        assertEquals(false, vali.get("present"),
+            "ruxsat bo'lsa ham 'present' true bo'lib ketmasligi kerak");
+    }
+
+    /**
+     * Ruxsat so'rovi kelmaganlar RO'YXATINI o'zgartirmaydi — `absentStudents` va
+     * `presentStudentIds` xulqi avvalgidek qoladi (BroadcastController shu ro'yxatga
+     * tayanadi, uning qarori alohida ko'rib chiqiladi).
+     */
+    @Test
+    void approvedAbsenceDoesNotChangeAbsentList() {
+        when(absenceRepo.findApprovedStudentIdsOn(anyList(), eq(DAY))).thenReturn(List.of(2L));
+
+        assertEquals(List.of("Salimov Salim", "Valiyev Vali"),
+            service.absentStudents(sc, DAY).stream().map(Student::getFullName).toList());
+        assertEquals(Set.of(1L), service.presentStudentIds(sc, DAY));
     }
 
     @Test

@@ -1,12 +1,10 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/api_client.dart';
 import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../auth/auth_controller.dart';
-import 'absence_requests_screen.dart';
 import 'attendance_report_screen.dart';
 import 'director_repository.dart';
 import 'notifications_screen.dart';

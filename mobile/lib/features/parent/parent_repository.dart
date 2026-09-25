@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../models/models.dart';
@@ -96,3 +97,46 @@ class ParentRepository {
 }
 
 final parentRepositoryProvider = Provider<ParentRepository>((ref) => ParentRepository(ref));
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Ekranlar uchun umumiy providerlar.
+//
+// MUHIM (2026-09-25 audit): `parent_dashboard_tab.dart`, `parent_home_screen.dart` va
+// `parent_notifications_screen.dart` avval bu ma'lumotlarni `ParentRepository`ni butunlay
+// chetlab o'tib `MockData`dan o'qirdi — ya'ni `DEMO_MODE=false` bilan qurilgan APK'da ham
+// ota-ona soxta farzandlarni, soxta arizalarni va soxta xabarlarni ko'rardi.
+// ══════════════════════════════════════════════════════════════════════════════
+
+final parentChildrenProvider = FutureProvider<List<Student>>(
+  (ref) => ref.read(parentRepositoryProvider).children(),
+);
+
+/// Ota-onaning barcha ruxsat so'rovlari.
+final parentAbsenceRequestsProvider = FutureProvider<List<AbsenceRequest>>((ref) async {
+  try {
+    return await ref.read(parentRepositoryProvider).absenceRequests();
+  } on DioException catch (e) {
+    // `/api/guardian-app/absence-requests` backendda hali qurilmagan (2-bosqich) —
+    // 404 ni "hali so'rov yo'q" deb qaraymiz, boshqa HAR QANDAY xato ko'rinadi.
+    if (e.response?.statusCode == 404) return const [];
+    rethrow;
+  }
+});
+
+/// Pastki navigatsiyadagi nishon (badge) uchun — ko'rib chiqilmagan so'rovlar soni.
+final parentPendingRequestCountProvider = FutureProvider<int>((ref) async {
+  final list = await ref.watch(parentAbsenceRequestsProvider.future);
+  return list.where((r) => r.status == 'PENDING').length;
+});
+
+/// Barcha farzandlar bo'yicha xabarlar, eng yangisi birinchi.
+final parentAllMessagesProvider = FutureProvider<List<ChatMessage>>((ref) async {
+  final repo = ref.read(parentRepositoryProvider);
+  final children = await ref.watch(parentChildrenProvider.future);
+  final all = <ChatMessage>[];
+  for (final child in children) {
+    all.addAll(await repo.messages(child.id));
+  }
+  all.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return all;
+});

@@ -95,17 +95,30 @@ public class V1ReportsController {
             @RequestParam(required = false) String start_date,
             @RequestParam(required = false) String end_date,
             @RequestParam(required = false) Long school,
-            @RequestParam(required = false) Long schoolId) {
+            @RequestParam(required = false) Long schoolId,
+            @RequestParam(required = false) Long classId) {
         User user = currentUserService.requireUser(authHeader);
         Long sid = school != null ? school : schoolId;
         List<Long> scope = currentUserService.resolveSchoolScope(user, sid);
         LocalDate end = end_date != null ? LocalDate.parse(end_date) : LocalDate.now();
         LocalDate start = start_date != null ? LocalDate.parse(start_date) : end.minusDays(6);
 
+        // Ixtiyoriy sinf filtri (2026-09-25, mobil hisobot ekrani uchun). Sinf chaqiruvchining
+        // ko'lamidagi maktabga tegishli bo'lishi SHART — aks holda boshqa maktab sinfining
+        // davomat statistikasini olish mumkin bo'lib qolardi.
+        if (classId != null) {
+            SchoolClass sc = classRepo.findById(classId).orElse(null);
+            if (sc == null || sc.getSchool() == null) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, i18n.msg("error.class.not_found"));
+            }
+            currentUserService.assertCanAccessSchool(user, sc.getSchool().getId());
+        }
+
         Map<String, Object> daily = new LinkedHashMap<>();
         long totalPresent = 0, totalAbsent = 0, totalAll = 0;
         for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-            Map<String, Object> stats = dayStats(d, scope);
+            Map<String, Object> stats = dayStats(d, scope, classId);
             daily.put(d.toString(), stats);
             totalPresent += (long) stats.get("present");
             totalAbsent += (long) stats.get("absent");
@@ -263,6 +276,16 @@ public class V1ReportsController {
     // schoolIds == null -> cheklovsiz (faqat SUPERADMIN, filtrsiz); .isEmpty() -> ko'lam bo'sh.
 
     private Map<String, Object> dayStats(LocalDate day, List<Long> schoolIds) {
+        return dayStats(day, schoolIds, null);
+    }
+
+    /**
+     * classId berilgan bo'lsa hisob FAQAT shu sinf o'quvchilari bo'yicha olinadi
+     * (mobil ilovadagi hisobot ekranidagi "sinf" filtri uchun, 2026-09-25 qo'shildi).
+     * Sinfning chaqiruvchi ko'lamiga tegishli ekanligi CHAQIRUVCHIDA tekshiriladi —
+     * bu yordamchi metod ruxsatni o'zi tekshirmaydi.
+     */
+    private Map<String, Object> dayStats(LocalDate day, List<Long> schoolIds, Long classId) {
         OffsetDateTime from = day.atStartOfDay().atOffset(ZoneOffset.ofHours(5));
         OffsetDateTime to = day.plusDays(1).atStartOfDay().atOffset(ZoneOffset.ofHours(5));
 
@@ -277,6 +300,12 @@ public class V1ReportsController {
         } else {
             students = studentRepo.findBySchoolIdIn(schoolIds);
             events = attendanceRepo.findBySchoolsAndDateRange(schoolIds, from, to);
+        }
+
+        if (classId != null) {
+            // Hodisalar ro'yxatini qisqartirish shart emas — quyida faqat shu sinf
+            // o'quvchilarining id'lari bilan solishtiriladi.
+            students = studentRepo.findByClassId(classId);
         }
 
         Set<Long> presentStudentIds = events.stream()

@@ -47,6 +47,7 @@ public class GuardianAppController {
     @Autowired private PersonNoteRepository noteRepo;
     @Autowired private MessageRepository messageRepo;
     @Autowired private SchoolClassRepository classRepo;
+    @Autowired private com.maktab.repository.AbsenceRequestRepository absenceRepo;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtUtil jwtUtil;
     @Autowired private I18nService i18n;
@@ -200,6 +201,120 @@ public class GuardianAppController {
         m.setText(text);
         messageRepo.save(m);
         return ResponseEntity.ok(toMessageMap(m));
+    }
+
+    // ── Ruxsat so'rovlari (2026-09-25) ──
+    //
+    // Ilovadagi ekranlar (`submit_absence_screen.dart`, `my_requests_tab.dart`) 2026-08 dan
+    // beri tayyor edi, lekin serverda bu funksiya umuman yo'q edi. Xodim tomoni —
+    // AbsenceRequestController; bu yerda faqat ota-ona ko'radigan/yaratadigan qism.
+
+    /** Maksimal ruxsat muddati — tasodifan yillik so'rov yuborilishining oldini oladi. */
+    static final int MAX_ABSENCE_DAYS = 30;
+
+    @GetMapping("/absence-requests")
+    public ResponseEntity<?> myAbsenceRequests(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Guardian guardian = resolveGuardian(authHeader);
+        if (guardian == null) return unauthorized();
+
+        List<Long> childIds = studentRepo.findByGuardianId(guardian.getId())
+                .stream().map(Student::getId).collect(Collectors.toList());
+        if (childIds.isEmpty()) return ResponseEntity.ok(List.of());
+
+        List<com.maktab.model.AbsenceRequest> list =
+                absenceRepo.findByStudentIdInOrderByCreatedAtDesc(childIds);
+        return ResponseEntity.ok(toAbsenceMaps(list));
+    }
+
+    @PostMapping("/absence-requests")
+    public ResponseEntity<?> createAbsenceRequest(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body) {
+        Guardian guardian = resolveGuardian(authHeader);
+        if (guardian == null) return unauthorized();
+
+        Long studentId = body.get("studentId") != null
+                ? Long.valueOf(body.get("studentId").toString()) : null;
+        if (studentId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.student.not_found")));
+        }
+        // Bola xavfsizligi: faqat O'Z farzandiga so'rov berish mumkin.
+        ResponseEntity<?> ownErr = assertOwnChild(guardian, studentId);
+        if (ownErr != null) return ownErr;
+
+        java.time.LocalDate start;
+        java.time.LocalDate end;
+        try {
+            start = java.time.LocalDate.parse(String.valueOf(body.get("startDate")));
+            end = java.time.LocalDate.parse(String.valueOf(body.get("endDate")));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.absence.invalid_date")));
+        }
+        if (end.isBefore(start)) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.absence.end_before_start")));
+        }
+        java.time.LocalDate today = java.time.LocalDate.now(
+                com.maktab.service.ClassAttendanceService.TASHKENT);
+        if (start.isBefore(today)) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.absence.past_date")));
+        }
+        if (start.plusDays(MAX_ABSENCE_DAYS - 1L).isBefore(end)) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.absence.too_long")));
+        }
+
+        com.maktab.model.AbsenceRequest.ReasonType reason = parseReason(body.get("reasonType"));
+        if (reason == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.absence.reason_required")));
+        }
+
+        Student student = studentRepo.findById(studentId).orElse(null);
+        if (student == null || student.getSchool() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.student.not_found")));
+        }
+
+        com.maktab.model.AbsenceRequest r = new com.maktab.model.AbsenceRequest();
+        r.setStudentId(studentId);
+        r.setSchoolId(student.getSchool().getId());
+        r.setClassId(student.getClassId());
+        r.setStartDate(start);
+        r.setEndDate(end);
+        r.setReasonType(reason);
+        Object rawText = body.get("reasonText");
+        String text = rawText != null ? rawText.toString().trim() : null;
+        r.setReasonText(text == null || text.isEmpty() ? null : text);
+        r.setStatus(com.maktab.model.AbsenceRequest.Status.PENDING);
+        r.setCreatedByGuardianId(guardian.getId());
+        absenceRepo.save(r);
+
+        return ResponseEntity.ok(toAbsenceMaps(List.of(r)).get(0));
+    }
+
+    static com.maktab.model.AbsenceRequest.ReasonType parseReason(Object raw) {
+        if (raw == null) return null;
+        try {
+            return com.maktab.model.AbsenceRequest.ReasonType
+                    .valueOf(raw.toString().trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** AbsenceRequestController bilan BIR XIL javob shakli — ilova ikkalasini ham o'qiydi. */
+    private List<Map<String, Object>> toAbsenceMaps(List<com.maktab.model.AbsenceRequest> list) {
+        if (list.isEmpty()) return List.of();
+        Map<Long, Student> students = studentRepo.findAllById(
+                list.stream().map(com.maktab.model.AbsenceRequest::getStudentId)
+                    .collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(Student::getId, s -> s));
+        Map<Long, String> classNames = classRepo.findAllById(
+                list.stream().map(com.maktab.model.AbsenceRequest::getClassId)
+                    .filter(java.util.Objects::nonNull).collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(SchoolClass::getId, SchoolClass::getName));
+        return list.stream()
+                .map(r -> AbsenceRequestController.toMap(r, students.get(r.getStudentId()),
+                        classNames.get(r.getClassId())))
+                .collect(Collectors.toList());
     }
 
     // ── Yordamchilar ──

@@ -1,12 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
-import '../../core/mock_data.dart';
-import '../../core/providers.dart';
 import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
-import '../auth/auth_controller.dart';
+import 'director_repository.dart';
 
 class AbsenceRequestsScreen extends ConsumerStatefulWidget {
   const AbsenceRequestsScreen({super.key, required this.schoolId});
@@ -34,10 +33,23 @@ class _AbsenceRequestsScreenState extends ConsumerState<AbsenceRequestsScreen> {
       _error = null;
     });
     try {
-      await Future.delayed(const Duration(milliseconds: 200));
-      final list = kDemoMode ? MockData.allAbsenceRequests : await _fetchFromApi();
+      // MUHIM (2026-09-25 audit): avval bu ekran `MockData.allAbsenceRequests`ni to'g'ridan-
+      // to'g'ri o'qir va o'zining alohida `_fetchFromApi()` nusxasiga ega edi (u
+      // `DirectorRepository`dan BOSHQA endpointga — `PATCH /{id}`ga — murojaat qilardi).
+      // Endi yagona manba: `DirectorRepository` (demo rejimni ham o'zi hal qiladi).
+      final list = await ref
+          .read(directorRepositoryProvider)
+          .absenceRequests(widget.schoolId);
       setState(() {
         _requests = list;
+        _isLoading = false;
+      });
+    } on DioException catch (e) {
+      // `/api/absence-requests` backendda hali qurilmagan (2-bosqich) — 404 "hali
+      // so'rov yo'q" degani, boshqa HAR QANDAY xato ko'rinadi.
+      setState(() {
+        _requests = e.response?.statusCode == 404 ? const <AbsenceRequest>[] : null;
+        _error = e.response?.statusCode == 404 ? null : apiErrorMessage(e);
         _isLoading = false;
       });
     } catch (e) {
@@ -46,11 +58,6 @@ class _AbsenceRequestsScreenState extends ConsumerState<AbsenceRequestsScreen> {
         _isLoading = false;
       });
     }
-  }
-
-  Future<List<AbsenceRequest>> _fetchFromApi() async {
-    final res = await ref.read(apiClientProvider).get('/api/absence-requests', query: {'schoolId': widget.schoolId});
-    return (res.data as List).map((e) => AbsenceRequest.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<void> _updateStatus(int id, String status) async {
@@ -120,25 +127,15 @@ class _AbsenceRequestsScreenState extends ConsumerState<AbsenceRequestsScreen> {
     if (confirm != true) return;
 
     try {
-      if (kDemoMode) {
-        final idx = MockData.allAbsenceRequests.indexWhere((r) => r.id == id);
-        if (idx >= 0) {
-          final old = MockData.allAbsenceRequests[idx];
-          MockData.allAbsenceRequests[idx] = AbsenceRequest(
-            id: old.id, studentId: old.studentId, studentName: old.studentName,
-            className: old.className, startDate: old.startDate, endDate: old.endDate,
-            reasonType: old.reasonType, reasonText: old.reasonText,
-            status: status,
-            reviewNote: noteController.text.trim().isEmpty ? null : noteController.text.trim(),
-            reviewedBy: 'Direktor', createdAt: old.createdAt,
-          );
-        }
-      } else {
-        await ref.read(apiClientProvider).patch('/api/absence-requests/$id', data: {
-          'status': status,
-          if (noteController.text.trim().isNotEmpty) 'reviewNote': noteController.text.trim(),
-        });
-      }
+      final note = noteController.text.trim();
+      // Yagona yo'l — repozitoriy (`POST /api/absence-requests/{id}/review`). Demo
+      // rejimda MockData'ni yangilash ham shu yerda, ekranda emas.
+      await ref
+          .read(directorRepositoryProvider)
+          .reviewAbsenceRequest(id, status, note.isEmpty ? null : note);
+
+      // Nishon (badge) va boshqa ekranlar ham yangilansin.
+      ref.invalidate(directorAbsenceRequestsProvider(widget.schoolId));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

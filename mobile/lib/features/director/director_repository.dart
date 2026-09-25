@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../models/models.dart';
@@ -125,6 +126,31 @@ class DirectorRepository {
     return (res.data as List).map((e) => AbsenceRequest.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Sana oralig'i bo'yicha davomat hisoboti — `GET /api/v1/reports/weekly/`.
+  ///
+  /// Bu endpoint backendda ALLAQACHON bor edi (`V1ReportsController#weekly`), lekin mobil
+  /// ilova undan foydalanmasdi: hisobot ekrani qattiq kodlangan sonlarni ko'rsatardi
+  /// (`avgPresent = 432`, `barData = [415, 428, ...]`). `classId` ixtiyoriy filtri
+  /// 2026-09-25 da qo'shildi.
+  Future<RangeReport> rangeReport({
+    required int schoolId,
+    required DateTime from,
+    required DateTime to,
+    int? classId,
+  }) async {
+    if (kDemoMode) return RangeReport.empty;
+    final res = await _ref.read(apiClientProvider).get('/api/v1/reports/weekly/', query: {
+      'schoolId': schoolId,
+      'start_date': _ymd(from),
+      'end_date': _ymd(to),
+      if (classId != null) 'classId': classId,
+    });
+    return RangeReport.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  static String _ymd(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
   Future<void> reviewAbsenceRequest(int id, String status, String? note) async {
     if (kDemoMode) {
       final index = MockData.allAbsenceRequests.indexWhere((r) => r.id == id);
@@ -147,4 +173,97 @@ class DirectorRepository {
   }
 }
 
+/// `GET /api/v1/reports/weekly/` javobidagi bitta kun.
+class ReportDay {
+  const ReportDay({
+    required this.date,
+    required this.total,
+    required this.present,
+    required this.absent,
+    required this.rate,
+  });
+
+  final DateTime date;
+  final int total;
+  final int present;
+  final int absent;
+  final double rate;
+}
+
+/// Sana oralig'i bo'yicha davomat hisoboti.
+class RangeReport {
+  const RangeReport({
+    required this.days,
+    required this.present,
+    required this.absent,
+    required this.rate,
+  });
+
+  final List<ReportDay> days;
+  final int present;
+  final int absent;
+  final double rate;
+
+  static const empty = RangeReport(days: [], present: 0, absent: 0, rate: 0);
+
+  bool get isEmpty => days.isEmpty;
+
+  factory RangeReport.fromJson(Map<String, dynamic> j) {
+    final daily = (j['daily'] as Map?) ?? const {};
+    final days = daily.entries.map((e) {
+      final v = (e.value as Map?) ?? const {};
+      return ReportDay(
+        date: DateTime.parse(e.key as String),
+        total: (v['total'] as num?)?.toInt() ?? 0,
+        present: (v['present'] as num?)?.toInt() ?? 0,
+        absent: (v['absent'] as num?)?.toInt() ?? 0,
+        rate: (v['attendance_rate'] as num?)?.toDouble() ?? 0,
+      );
+    }).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    final overall = (j['overall'] as Map?) ?? const {};
+    return RangeReport(
+      days: days,
+      present: (overall['present'] as num?)?.toInt() ?? 0,
+      absent: (overall['absent'] as num?)?.toInt() ?? 0,
+      rate: (overall['attendance_rate'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
 final directorRepositoryProvider = Provider<DirectorRepository>((ref) => DirectorRepository(ref));
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Ekranlar uchun umumiy providerlar.
+//
+// MUHIM (2026-09-25 audit): `director_attendance_tab.dart`, `notifications_screen.dart` va
+// `attendance_report_screen.dart` avval bu ma'lumotlarni `DirectorRepository`ni chetlab
+// o'tib `MockData`dan o'qirdi — ya'ni `DEMO_MODE=false` bilan qurilgan APK'da ham soxta
+// arizalar va soxta "eng ko'p qoldirganlar" ro'yxati ko'rinardi.
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Maktab bo'yicha ruxsat so'rovlari.
+final directorAbsenceRequestsProvider =
+    FutureProvider.family<List<AbsenceRequest>, int>((ref, schoolId) async {
+  try {
+    return await ref.read(directorRepositoryProvider).absenceRequests(schoolId);
+  } on DioException catch (e) {
+    // `/api/absence-requests` backendda hali qurilmagan (2-bosqich) — 404 ni "hali
+    // so'rov yo'q" deb qaraymiz, boshqa HAR QANDAY xato ko'rinadi.
+    if (e.response?.statusCode == 404) return const [];
+    rethrow;
+  }
+});
+
+/// Nishon (badge) uchun — ko'rib chiqilmagan so'rovlar soni.
+final directorPendingRequestCountProvider =
+    FutureProvider.family<int, int>((ref, schoolId) async {
+  final list = await ref.watch(directorAbsenceRequestsProvider(schoolId).future);
+  return list.where((r) => r.status == 'PENDING').length;
+});
+
+/// Maktab sinflari (hisobot ekranidagi sinf tanlash ro'yxati uchun).
+final directorClassesProvider =
+    FutureProvider.family<List<SchoolClassRoom>, int>((ref, schoolId) =>
+        ref.read(directorRepositoryProvider).classes(schoolId));

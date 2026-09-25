@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/mock_data.dart';
+import '../../core/api_client.dart';
 import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/error_state.dart';
+import 'parent_repository.dart';
 
 class ParentNotificationsScreen extends ConsumerStatefulWidget {
   const ParentNotificationsScreen({super.key});
@@ -36,7 +38,7 @@ class _ParentNotificationsScreenState
     ref.watch(localeProvider);
 
     final pendingCount =
-        MockData.absenceRequests.where((r) => r.status == 'PENDING').length;
+        ref.watch(parentPendingRequestCountProvider).valueOrNull ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -87,19 +89,30 @@ class _ArizaStatusList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(themeModeProvider);
-    final requests = MockData.absenceRequests;
+    final async = ref.watch(parentAbsenceRequestsProvider);
 
-    if (requests.isEmpty) {
-      return Center(
-          child: Text(t('requests.empty'),
-              style: TextStyle(color: AppColors.textFaint)));
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      itemCount: requests.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, i) => _RequestStatusCard(request: requests[i]),
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => AppErrorState(
+        message: apiErrorMessage(e, fallback: 'Arizalarni yuklab bo\'lmadi'),
+        onRetry: () => ref.invalidate(parentAbsenceRequestsProvider),
+      ),
+      data: (requests) {
+        if (requests.isEmpty) {
+          return Center(
+              child: Text(t('requests.empty'),
+                  style: TextStyle(color: AppColors.textFaint)));
+        }
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(parentAbsenceRequestsProvider),
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            itemCount: requests.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, i) => _RequestStatusCard(request: requests[i]),
+          ),
+        );
+      },
     );
   }
 }
@@ -210,20 +223,28 @@ class _XabarlarList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(themeModeProvider);
+    final async = ref.watch(parentAllMessagesProvider);
 
-    final msgs = [
-      ...MockData.studentMessages(MockData.parentChildren.first.id),
-      if (MockData.parentChildren.length > 1)
-        ...MockData.studentMessages(MockData.parentChildren[1].id),
-    ];
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => AppErrorState(
+        message: apiErrorMessage(e, fallback: 'Xabarlarni yuklab bo\'lmadi'),
+        onRetry: () => ref.invalidate(parentAllMessagesProvider),
+      ),
+      data: (msgs) => _buildList(msgs, ref),
+    );
+  }
 
+  Widget _buildList(List<ChatMessage> msgs, WidgetRef ref) {
     if (msgs.isEmpty) {
       return Center(
           child: Text(t('detail.noMessages'),
               style: TextStyle(color: AppColors.textFaint)));
     }
 
-    return ListView.separated(
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(parentAllMessagesProvider),
+      child: ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       itemCount: msgs.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -269,6 +290,7 @@ class _XabarlarList extends ConsumerWidget {
           ]),
         );
       },
+      ),
     );
   }
 

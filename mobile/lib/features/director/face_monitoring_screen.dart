@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -7,7 +6,6 @@ import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import 'director_repository.dart';
-import 'student_detail_screen.dart';
 
 class FaceMonitoringScreen extends ConsumerStatefulWidget {
   const FaceMonitoringScreen({super.key, required this.schoolId});

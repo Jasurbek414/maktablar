@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/mock_data.dart';
 import '../../l10n/l10n.dart';
 import '../../theme/app_theme.dart';
 import '../auth/auth_controller.dart';
@@ -8,6 +7,7 @@ import 'children_tab.dart';
 import 'my_requests_tab.dart';
 import 'parent_dashboard_tab.dart';
 import 'parent_profile_tab.dart';
+import 'parent_repository.dart';
 
 class ParentHomeScreen extends ConsumerStatefulWidget {
   const ParentHomeScreen({super.key});
@@ -25,7 +25,9 @@ class _ParentHomeScreenState extends ConsumerState<ParentHomeScreen> {
     ref.watch(themeModeProvider);
     ref.watch(localeProvider);
 
-    final pendingCount = MockData.absenceRequests.where((r) => r.status == 'PENDING').length;
+    // Nishon (badge) soni — serverdan. Endpoint hali yo'q bo'lsa provider 0 qaytaradi,
+    // ya'ni nishon ko'rinmaydi (avvalgidek soxta son CHIQMAYDI).
+    final pendingCount = ref.watch(parentPendingRequestCountProvider).valueOrNull ?? 0;
 
     final tabs = [
       ParentDashboardTab(profile: profile),

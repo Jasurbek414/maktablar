@@ -50,6 +50,13 @@ public class SchoolClassController {
         } else {
             list = classRepo.findBySchoolIdIn(scope);
         }
+        // SINF darajasidagi ko'lam (2026-09-25): TEACHER faqat o'zi sinf rahbari bo'lgan
+        // sinflarni ko'radi. Boshqa rollar uchun allowedClassIds null qaytaradi (cheklov yo'q).
+        List<Long> classScope = currentUserService.allowedClassIds(user);
+        if (classScope != null) {
+            Set<Long> allowed = new HashSet<>(classScope);
+            list = list.stream().filter(c -> allowed.contains(c.getId())).collect(Collectors.toList());
+        }
         return list.stream().map(this::toMap).collect(Collectors.toList());
     }
 
@@ -139,8 +146,11 @@ public class SchoolClassController {
         User user = currentUserService.requireUser(authHeader);
         SchoolClass sc = classRepo.findById(id).orElse(null);
         if (sc == null) return ResponseEntity.notFound().build();
-        Long schoolId = sc.getSchool() != null ? sc.getSchool().getId() : null;
-        if (!currentUserService.canAccessSchool(user, schoolId)) {
+        // SINF darajasidagi tekshiruv (2026-09-25): avval faqat MAKTAB tekshirilardi, ya'ni
+        // o'qituvchi o'z maktabidagi ISTALGAN sinfning davomat jadvalini ko'ra va Excel
+        // qilib yuklab ola olardi. canAccessClass TEACHER uchun qo'shimcha ravishda
+        // sinf rahbari ekanligini talab qiladi; boshqa rollar uchun xulq o'zgarmaydi.
+        if (!currentUserService.canAccessClass(user, sc)) {
             return ResponseEntity.status(403).body(Map.of("error", i18n.msg("error.class.access_denied")));
         }
         LocalDate day;
@@ -172,8 +182,11 @@ public class SchoolClassController {
         User user = currentUserService.requireUser(authHeader);
         SchoolClass sc = classRepo.findById(id).orElse(null);
         if (sc == null) return ResponseEntity.notFound().build();
-        Long schoolId = sc.getSchool() != null ? sc.getSchool().getId() : null;
-        if (!currentUserService.canAccessSchool(user, schoolId)) {
+        // SINF darajasidagi tekshiruv (2026-09-25): avval faqat MAKTAB tekshirilardi, ya'ni
+        // o'qituvchi o'z maktabidagi ISTALGAN sinfning davomat jadvalini ko'ra va Excel
+        // qilib yuklab ola olardi. canAccessClass TEACHER uchun qo'shimcha ravishda
+        // sinf rahbari ekanligini talab qiladi; boshqa rollar uchun xulq o'zgarmaydi.
+        if (!currentUserService.canAccessClass(user, sc)) {
             return ResponseEntity.status(403).body(Map.of("error", i18n.msg("error.class.access_denied")));
         }
         LocalDate day;

@@ -1,5 +1,34 @@
 # VPN va Mikrotik router arxitekturasi
 
+## 🔑 2026-09-25: "terminal OFFLINE" ning HAQIQIY sababi — IP to'qnashuvi
+
+Uzoq vaqt "VPN beqaror" deb hisoblangan muammoning asosiy qismi **VPN bilan bog'liq emas edi**.
+
+**Aniqlangani:** maktab LAN'ida DHCP diapazoni `192.168.88.10–254` bo'lib, Face ID terminal ham,
+ofisdagi kompyuter ham **dinamik** ijara olardi. Ular vaqti-vaqti bilan manzil almashib qolardi:
+- `192.168.88.253` — platforma terminal deb biladigan manzil
+- 09-25 da o'sha manzilni **kompyuter** (MAC `30:24:A9:9B:04:FC`) egallagan edi
+- Terminal esa (MAC `88:DE:39:40:C8:B4`) `192.168.88.254` ga ko'chgan
+
+Natijada: `ping 10.30.2.253` **ishlardi** (kompyuter javob berardi), lekin HTTPS 443 javobsiz —
+chunki kompyuterda ISAPI yo'q. Bu "VPN beqaror" kabi ko'rinardi.
+
+**Hal qilindi:**
+1. Mikrotik'da ikkala ijara ham **static** qilindi (`/ip/dhcp-server/lease/make-static`) —
+   qurilmalar hozirgi manzilida qoladi va boshqa hech qachon almashmaydi.
+2. Platformada terminal IP `192.168.88.253` → `192.168.88.254` ga tuzatildi.
+3. Tasdiq: terminal ONLINE, 4/4 so'rov `HTTP 401` (tirik).
+
+**Saboq:** yangi maktab ulanganda Face ID terminal va kameralarga **albatta static DHCP ijara**
+(yoki qurilmada statik IP) berilsin. Aks holda manzil ko'chib, platforma boshqa qurilmaga
+murojaat qila boshlaydi. Tekshirish: `/ip/dhcp-server/lease` da `dynamic=false` bo'lishi shart.
+
+**Diagnostika qoidasi:** "ping o'tadi, lekin port javobsiz" → avval ARP jadvalini ko'ring
+(`/ip/arp`), MAC kutilgan qurilmaniki ekanini tasdiqlang. VPN'ni ayblashdan oldin shu.
+
+---
+
+
 > Oxirgi yangilanish: **2026-09-19 kech**. Hammasi jonli tekshiruv natijasi, taxmin emas.
 > `wireguard-server/README.md` dagi port/CGNAT ma'lumotlari eskirgan — to'g'risi shu fayl.
 

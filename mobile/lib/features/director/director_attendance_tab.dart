@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/mock_data.dart';
+import '../../core/api_client.dart';
 import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
@@ -61,7 +61,43 @@ class _DirectorAttendanceTabState extends ConsumerState<DirectorAttendanceTab> {
             FutureBuilder<AttendanceOverview>(
               future: _overviewFuture,
               builder: (context, snap) {
-                final ov = snap.data ?? MockData.attendanceOverview;
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: AppDecorations.card(),
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                }
+                // MUHIM (2026-09-25 audit): avval bu yerda `snap.data ?? MockData.attendanceOverview`
+                // turardi — server javob bermasa ekran JIMGINA soxta raqamlarni ko'rsatardi va
+                // "ishlayotgandek" ko'rinardi. Endi xato halol aytiladi.
+                if (snap.hasError || snap.data == null) {
+                  return Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: AppDecorations.card(),
+                    child: Column(
+                      children: [
+                        Icon(Icons.cloud_off_rounded, size: 32, color: AppColors.textMuted),
+                        const SizedBox(height: 10),
+                        Text(
+                          snap.error != null
+                              ? apiErrorMessage(snap.error!,
+                                  fallback: 'Davomat ma\'lumotini yuklab bo\'lmadi')
+                              : 'Davomat ma\'lumotini yuklab bo\'lmadi',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: _reload,
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('Qayta urinish'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                final ov = snap.data!;
                 final percent = ov.totalStudents > 0
                     ? ((ov.presentToday / ov.totalStudents) * 100).round()
                     : 0;
@@ -108,7 +144,8 @@ class _DirectorAttendanceTabState extends ConsumerState<DirectorAttendanceTab> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '450 o\'quvchidan ${ov.presentToday} nafari maktabda',
+                                  // Avval "450" qattiq kodlangan edi — haqiqiy songa almashtirildi.
+                                  '${ov.totalStudents} o\'quvchidan ${ov.presentToday} nafari maktabda',
                                   style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                                 ),
                               ],
@@ -183,7 +220,10 @@ class _DirectorAttendanceTabState extends ConsumerState<DirectorAttendanceTab> {
               title: t('requests.title'),
               subtitle: 'Ota-onalarning qoldirish arizalari',
               color: AppColors.purple,
-              badge: MockData.allAbsenceRequests.where((r) => r.status == 'PENDING').length,
+              badge: ref
+                      .watch(directorPendingRequestCountProvider(widget.schoolId))
+                      .valueOrNull ??
+                  0,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => AbsenceRequestsScreen(schoolId: widget.schoolId)),
               ),

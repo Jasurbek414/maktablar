@@ -41,6 +41,7 @@ public class CurrentUserService {
     @Autowired private JwtUtil jwtUtil;
     @Autowired private SchoolRepository schoolRepository;
     @Autowired private DistrictRepository districtRepository;
+    @Autowired private com.maktab.repository.SchoolClassRepository schoolClassRepository;
     @Autowired private I18nService i18n;
 
     /**
@@ -312,6 +313,50 @@ public class CurrentUserService {
         }
         // DIRECTOR/MUDIR/TEACHER — client filtriga ishonilmaydi, doim o'z maktabi
         return user.getSchoolId();
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // SINF darajasidagi ko'lam (2026-09-25 qo'shildi).
+    //
+    // Sabab: TEACHER roli maktab darajasida FAQAT O'QISH huquqiga ega edi, lekin bu
+    // "o'z maktabidagi BARCHA sinflarni ko'rish" degani — mobil ilovada o'qituvchi
+    // direktor bilan aynan bir xil ko'rinishni olardi. Endi o'qituvchi faqat o'zi
+    // SINF RAHBARI bo'lgan sinf(lar)ni ko'radi (SchoolClass.teacherId).
+    //
+    // MUHIM: bu maktab darajasidagi mavjud tekshiruvlarni ALMASHTIRMAYDI, ustiga
+    // qo'shiladi — chaqiruvchi avval canAccessSchool/assertCanWriteSchoolData'ni, keyin
+    // kerak bo'lsa assertCanAccessClass'ni ishlatadi.
+    // ══════════════════════════════════════════════════════════════════
+
+    /**
+     * Foydalanuvchi ko'ra oladigan sinflar ro'yxati.
+     *  - TEACHER: faqat o'zi sinf rahbari bo'lgan sinflar (bitta ham bo'lmasa bo'sh ro'yxat).
+     *  - Qolganlar: {@code null} — "sinf darajasida cheklov yo'q" (ular baribir maktab
+     *    darajasida cheklangan). Bo'sh ro'yxat bilan farqlanadi, chaqiruvchi buni
+     *    alohida tekshirishi shart.
+     */
+    public List<Long> allowedClassIds(User user) {
+        if (user == null) return Collections.emptyList();
+        if (user.getRole() != User.Role.TEACHER) return null;
+        return schoolClassRepository.findByTeacherId(user.getId())
+                .stream().map(com.maktab.model.SchoolClass::getId).collect(Collectors.toList());
+    }
+
+    /** {@link #allowedClassIds} ning boolean varianti. */
+    public boolean canAccessClass(User user, com.maktab.model.SchoolClass sc) {
+        if (user == null || sc == null) return false;
+        Long schoolId = sc.getSchool() != null ? sc.getSchool().getId() : null;
+        if (!canAccessSchool(user, schoolId)) return false;
+        if (user.getRole() != User.Role.TEACHER) return true;
+        // O'qituvchi — faqat o'zi rahbar bo'lgan sinf.
+        return sc.getTeacherId() != null && sc.getTeacherId().equals(user.getId());
+    }
+
+    /** canAccessClass'ning "throw qiluvchi" varianti — controller'larda bitta qatorli tekshiruv uchun. */
+    public void assertCanAccessClass(User user, com.maktab.model.SchoolClass sc) {
+        if (!canAccessClass(user, sc)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, i18n.msg("error.class.access_denied"));
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
