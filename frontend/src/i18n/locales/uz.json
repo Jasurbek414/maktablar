@@ -66,6 +66,7 @@
   "sidebar": {
     "main": "Asosiy",
     "dashboard": "Dashboard",
+    "faceId": "Face ID",
     "provinces": "Viloyatlar",
     "districts": "Tumanlar",
     "schools": "Maktablar",

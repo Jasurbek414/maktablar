@@ -14,6 +14,7 @@ import Attendance from './pages/Attendance';
 import Users from './pages/Users';
 import Classes from './pages/Classes';
 import Devices from './pages/Devices';
+import FaceIdPage from './pages/FaceId';
 import Cameras from './pages/Cameras';
 import CameraAnalysis from './pages/CameraAnalysis';
 import AiAnalysis from './pages/AiAnalysis';
@@ -417,7 +418,10 @@ export default function App() {
               <Route path="/classes" element={
                 <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'REGION_DIRECTOR', 'DISTRICT_DIRECTOR', 'DIRECTOR']}><Classes user={user} /></Gate>
               } />
-              <Route path="/devices" element={
+                            <Route path="/face-id" element={
+                <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR']}><FaceIdPage user={user} /></Gate>
+              } />
+<Route path="/devices" element={
                 <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR']}><Devices user={user} /></Gate>
               } />
               <Route path="/cameras" element={
@@ -443,4 +447,5 @@ export default function App() {
     </Router>
   );
 }
+
 

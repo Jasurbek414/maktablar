@@ -61,7 +61,35 @@ public class FaceTerminalController {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", e.getMessage()));
     }
 
-    /** Maktabdagi terminallar ro'yxati (masalan o'quvchilarni sinxron qilish oynasi uchun) */
+    private Map<String, Object> toTerminalMap(FaceTerminal t) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", t.getId());
+        m.put("name", t.getName());
+        m.put("ipAddress", t.getIpAddress());
+        m.put("port", t.getPort() != null ? t.getPort() : (Boolean.TRUE.equals(t.getUseHttps()) ? 443 : 80));
+        m.put("useHttps", Boolean.TRUE.equals(t.getUseHttps()));
+        m.put("brand", t.getBrand());
+        m.put("model", t.getModel());
+        m.put("serialNumber", t.getSerialNumber());
+        m.put("macAddress", t.getMacAddress());
+        m.put("status", t.getStatus() != null ? t.getStatus().name() : "OFFLINE");
+        m.put("direction", t.getDirection() != null ? t.getDirection().name() : "ENTRANCE");
+        m.put("userCount", t.getUserCount());
+        m.put("registeredFaces", t.getRegisteredFaces());
+        m.put("schoolId", t.getSchoolId());
+        m.put("routerId", t.getRouterId());
+        m.put("roomId", t.getRoomId());
+        m.put("deviceUsername", t.getDeviceUsername());
+        m.put("hasDevicePassword", t.getDevicePassword() != null && !t.getDevicePassword().isBlank());
+        m.put("firmwareVersion", t.getFirmwareVersion());
+        m.put("notes", t.getNotes());
+        m.put("lastSeen", t.getLastSeen() != null ? t.getLastSeen().toString() : null);
+        m.put("lastEventAt", t.getLastEventAt() != null ? t.getLastEventAt().toString() : null);
+        m.put("lastError", t.getLastError());
+        return m;
+    }
+
+    /** Maktabdagi terminallar ro'yxati */
     @GetMapping
     public ResponseEntity<?> listTerminals(@RequestParam(required = false) Long schoolId,
                                            @RequestHeader(value = "Authorization", required = false) String auth) {
@@ -72,20 +100,59 @@ public class FaceTerminalController {
         }
         currentUserService.assertCanAccessSchool(user, targetSchoolId);
         List<FaceTerminal> list = terminalRepo.findBySchoolId(targetSchoolId);
-        List<Map<String, Object>> result = list.stream().map(t -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", t.getId());
-            m.put("name", t.getName());
-            m.put("ipAddress", t.getIpAddress());
-            m.put("brand", t.getBrand());
-            m.put("status", t.getStatus() != null ? t.getStatus().name() : "OFFLINE");
-            m.put("direction", t.getDirection() != null ? t.getDirection().name() : null);
-            m.put("userCount", t.getUserCount());
-            m.put("registeredFaces", t.getRegisteredFaces());
-            m.put("schoolId", t.getSchoolId());
-            return m;
-        }).collect(Collectors.toList());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(list.stream().map(this::toTerminalMap).collect(Collectors.toList()));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getTerminal(@PathVariable Long id, @RequestHeader(value = "Authorization", required = false) String auth) {
+        FaceTerminal t = loadForRead(id, auth);
+        return ResponseEntity.ok(toTerminalMap(t));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateTerminal(@PathVariable Long id,
+                                            @RequestHeader(value = "Authorization", required = false) String auth,
+                                            @RequestBody Map<String, Object> body) {
+        User user = currentUserService.requireUser(auth);
+        FaceTerminal t = loadForWrite(id, user);
+        if (body.containsKey("name") && body.get("name") != null) t.setName((String) body.get("name"));
+        if (body.containsKey("serialNumber")) t.setSerialNumber((String) body.get("serialNumber"));
+        if (body.containsKey("brand")) t.setBrand((String) body.get("brand"));
+        if (body.containsKey("model")) t.setModel((String) body.get("model"));
+        if (body.containsKey("macAddress")) t.setMacAddress((String) body.get("macAddress"));
+        if (body.containsKey("direction") && body.get("direction") != null) {
+            t.setDirection(FaceTerminal.Direction.valueOf(body.get("direction").toString()));
+        }
+        if (body.containsKey("ipAddress")) t.setIpAddress((String) body.get("ipAddress"));
+        if (body.containsKey("port") && body.get("port") != null && !body.get("port").toString().isBlank()) {
+            t.setPort(Integer.parseInt(body.get("port").toString()));
+        }
+        if (body.containsKey("useHttps")) {
+            t.setUseHttps(body.get("useHttps") != null && Boolean.parseBoolean(body.get("useHttps").toString()));
+        }
+        if (body.containsKey("deviceUsername")) t.setDeviceUsername((String) body.get("deviceUsername"));
+        if (body.containsKey("devicePassword") && body.get("devicePassword") != null && !body.get("devicePassword").toString().isBlank()) {
+            t.setDevicePassword((String) body.get("devicePassword"));
+        }
+        if (body.containsKey("firmwareVersion")) t.setFirmwareVersion((String) body.get("firmwareVersion"));
+        if (body.containsKey("status") && body.get("status") != null) {
+            t.setStatus(FaceTerminal.TerminalStatus.valueOf(body.get("status").toString()));
+        }
+        if (body.containsKey("notes")) t.setNotes((String) body.get("notes"));
+        if (body.containsKey("roomId")) {
+            Object r = body.get("roomId");
+            t.setRoomId(r != null && !r.toString().isBlank() ? Long.valueOf(r.toString()) : null);
+        }
+        terminalRepo.save(t);
+        return ResponseEntity.ok(toTerminalMap(t));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteTerminal(@PathVariable Long id, @RequestHeader(value = "Authorization", required = false) String auth) {
+        User user = currentUserService.requireUser(auth);
+        FaceTerminal t = loadForWrite(id, user);
+        terminalRepo.deleteById(t.getId());
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     /**

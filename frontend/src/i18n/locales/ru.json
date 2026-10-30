@@ -66,6 +66,7 @@
   "sidebar": {
     "main": "Основное",
     "dashboard": "Панель управления",
+    "faceId": "Face ID",
     "provinces": "Области",
     "districts": "Районы",
     "schools": "Школы",
