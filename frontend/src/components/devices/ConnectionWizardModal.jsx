@@ -265,10 +265,10 @@ export default function ConnectionWizardModal({ router, onClose, onAddTerminal }
                 <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Webhook qabul qilish manzili (Destination URL):</p>
                 <div className="p-3 rounded-xl bg-black/30 border border-white/[0.06] flex items-center justify-between">
                   <div className="min-w-0 pr-2">
-                    <p className="text-xs font-mono font-bold text-white truncate">http://62.169.27.106:8085/api/public/devices/webhook</p>
+                    <p className="text-xs font-mono font-bold text-emerald-400 truncate">https://maktab.ecos.uz/api/public/devices/webhook</p>
                   </div>
                   <button
-                    onClick={() => copy('http://62.169.27.106:8085/api/public/devices/webhook', 'hook')}
+                    onClick={() => copy('https://maktab.ecos.uz/api/public/devices/webhook', 'hook')}
                     className="px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-xs text-slate-300 flex items-center gap-1 shrink-0"
                   >
                     <I d={copiedKey === 'hook' ? ICON.check : ICON.copy} c="w-3.5 h-3.5" />
@@ -280,8 +280,8 @@ export default function ConnectionWizardModal({ router, onClose, onAddTerminal }
               <div className="space-y-2 text-xs text-slate-300 bg-black/20 p-3.5 rounded-xl border border-white/[0.04]">
                 <p className="font-semibold text-white">Hikvision Web UI da sozlash:</p>
                 <p className="text-slate-400">1. Brauzerda terminalning IP manziliga kiring.</p>
-                <p className="text-slate-400">2. <span className="text-white">Configuration → Network → Advanced Settings → HTTP Listening</span> menyusini oching.</p>
-                <p className="text-slate-400">3. Destination IP ga <span className="text-purple-300 font-mono">62.169.27.106</span>, Port ga <span className="text-purple-300 font-mono">8085</span> yoki <span className="text-purple-300 font-mono">8095</span> ni kiriting.</p>
+                <p className="text-slate-400">2. <span className="text-white">Configuration → Network → Advanced Settings → HTTP Listening</span> (yoki Alarm Server) menyusini oching.</p>
+                <p className="text-slate-400">3. Host Name / Destination IP ga <span className="text-emerald-400 font-mono">maktab.ecos.uz</span> (yoki <span className="text-slate-300 font-mono">62.169.27.106</span>), Port ga <span className="text-emerald-400 font-mono">443</span> (HTTPS) yoki <span className="text-slate-300 font-mono">8085</span>, URL ga <span className="text-emerald-400 font-mono">/api/public/devices/webhook</span> ni kiriting.</p>
               </div>
             </div>
           )}
