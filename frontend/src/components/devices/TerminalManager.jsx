@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../services/api';
 import ConfirmModal from '../ConfirmModal';
+import TerminalLivePlayer from './TerminalLivePlayer';
 
 const I = ({ d, c = 'w-5 h-5' }) => (<svg className={c} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={d} /></svg>);
 const ICON = {
@@ -15,6 +16,22 @@ const ICON = {
 
 const btn = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed';
 const input = 'px-3 py-2 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40';
+
+function PhotoModal({ src, title, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="relative max-w-lg w-full bg-[#0d1a14] border border-white/[0.1] rounded-2xl overflow-hidden p-4 space-y-3" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-white truncate">{title || "O'tish surati"}</p>
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"><I d={ICON.close} c="w-5 h-5" /></button>
+        </div>
+        <div className="aspect-square w-full rounded-xl overflow-hidden bg-black flex items-center justify-center border border-white/5">
+          <img src={src} alt="" className="w-full h-full object-contain" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Row({ label, value, mono }) {
   return (
@@ -87,22 +104,6 @@ function StatusTab({ terminal, canWrite, t }) {
         </>}
       </div>
 
-      {unmatched.length > 0 && (
-        <div className="rounded-lg bg-amber-500/[0.05] border border-amber-500/15 p-3 space-y-2">
-          <div className="flex items-center gap-2"><I d={ICON.warning} c="w-3.5 h-3.5 text-amber-400 shrink-0" /><p className="text-[11px] font-semibold text-amber-400">{t('devices.manage.unmatchedTitle')}</p></div>
-          <p className="text-[10px] text-slate-500">{t('devices.manage.unmatchedHint')}</p>
-          <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
-            {unmatched.map(u => (
-              <div key={u.id} className="flex items-center justify-between gap-2 text-[10px] text-slate-400 bg-black/20 rounded px-2 py-1">
-                <span className="font-mono truncate">{u.employeeNo || '—'}</span>
-                <span className="text-slate-600 shrink-0">{u.reason === 'AMBIGUOUS_STUDENT' ? t('devices.manage.unmatchedReasonAmbiguous') : t('devices.manage.unmatchedReasonUnknown')}</span>
-                <span className="text-slate-600 shrink-0">{new Date(u.timestamp).toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <ConfirmModal
         open={confirmReboot}
         onCancel={() => setConfirmReboot(false)}
@@ -110,6 +111,345 @@ function StatusTab({ terminal, canWrite, t }) {
         title={t('devices.manage.rebootConfirmTitle')}
         message={t('devices.manage.rebootConfirmMessage')}
       />
+    </div>
+  );
+}
+
+function CameraTab({ terminal, canWrite, t }) {
+  const [opening, setOpening] = useState(false);
+  const [doorNotice, setDoorNotice] = useState('');
+
+  const openDoor = async () => {
+    setOpening(true); setDoorNotice('');
+    try {
+      await api.post(`/api/terminals/${terminal.id}/door`, { cmd: 'open' });
+      setDoorNotice("Eshik ochildi");
+      setTimeout(() => setDoorNotice(''), 3000);
+    } catch (e) {
+      setDoorNotice("Xato: " + e.message);
+    }
+    setOpening(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[13px] font-semibold text-white">Jonli kamera ko'rinishi</p>
+          <p className="text-[11px] text-slate-500">Terminal kamerasidan to'g'ridan-to'g'ri olingan jonli tasvir</p>
+        </div>
+        {canWrite && (
+          <button
+            onClick={openDoor}
+            disabled={opening}
+            className={`${btn} text-white bg-emerald-600 hover:bg-emerald-500`}
+          >
+            <I d={ICON.door} c="w-4 h-4" />
+            <span>{opening ? 'Ochilmoqda...' : 'Eshikni ochish'}</span>
+          </button>
+        )}
+      </div>
+      {doorNotice && (
+        <p className={`text-[12px] ${doorNotice.startsWith('Xato') ? 'text-red-400' : 'text-emerald-400'}`}>
+          {doorNotice}
+        </p>
+      )}
+      <TerminalLivePlayer terminalId={terminal.id} t={t} />
+    </div>
+  );
+}
+
+function EventsTab({ terminal, canWrite, t }) {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [photo, setPhoto] = useState(null);
+  const [search, setSearch] = useState('');
+  const [direction, setDirection] = useState('ALL');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [from, setFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().slice(0, 10);
+  });
+  const [to, setTo] = useState(todayStr);
+
+  const toLocal = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const [bfFrom, setBfFrom] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return toLocal(d); });
+  const [bfTo, setBfTo] = useState(() => toLocal(new Date()));
+  const [bfResult, setBfResult] = useState(null);
+  const [bfBusy, setBfBusy] = useState(false);
+  const [unmatched, setUnmatched] = useState([]);
+
+  const setPreset = (days) => {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    setFrom(d.toISOString().slice(0, 10));
+    setTo(todayStr);
+  };
+
+  const loadEvents = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
+    else setRefreshing(true);
+    setError('');
+    try {
+      const data = await api.get(`/api/terminals/${terminal.id}/events?from=${from}&to=${to}`);
+      setEvents(data || []);
+    } catch (e) {
+      setError(e.message);
+    }
+    setLoading(false);
+    setRefreshing(false);
+  }, [terminal.id, from, to]);
+
+  useEffect(() => {
+    loadEvents();
+    const interval = setInterval(() => loadEvents(true), 10000);
+    return () => clearInterval(interval);
+  }, [loadEvents]);
+
+  const loadUnmatched = useCallback(async () => {
+    try {
+      const data = await api.get(`/api/terminals/${terminal.id}/unmatched-events`);
+      setUnmatched(data || []);
+    } catch {}
+  }, [terminal.id]);
+
+  useEffect(() => {
+    if (showAdvanced) loadUnmatched();
+  }, [showAdvanced, loadUnmatched]);
+
+  const runBackfill = async () => {
+    setBfBusy(true); setBfResult(null); setError('');
+    try {
+      const res = await api.post(`/api/terminals/${terminal.id}/events/backfill`, {
+        from: new Date(bfFrom).toISOString(),
+        to: new Date(bfTo).toISOString(),
+      });
+      setBfResult(res);
+      loadEvents(true);
+    } catch (e) {
+      setError(e.message);
+    }
+    setBfBusy(false);
+  };
+
+  const needle = search.trim().toLowerCase();
+  const filteredEvents = events.filter(e => {
+    if (direction !== 'ALL' && e.direction !== direction) return false;
+    if (!needle) return true;
+    const st = e.student || {};
+    return (st.fullName || '').toLowerCase().includes(needle) ||
+           (st.code || '').toLowerCase().includes(needle) ||
+           (st.className || '').toLowerCase().includes(needle);
+  });
+
+  const stats = {
+    total: events.length,
+    in: events.filter(e => e.direction === 'IN').length,
+    out: events.filter(e => e.direction === 'OUT').length,
+    today: events.filter(e => e.time && e.time.startsWith(todayStr)).length,
+  };
+
+  return (
+    <div className="space-y-4">
+      {photo && <PhotoModal src={photo.src} title={photo.title} onClose={() => setPhoto(null)} />}
+
+      {/* Stats Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="rounded-xl bg-black/25 border border-white/[0.06] p-3">
+          <p className="text-[10px] uppercase tracking-wider text-slate-500">Jami o'tishlar</p>
+          <p className="text-xl font-bold text-white mt-1 tabular-nums">{stats.total}</p>
+        </div>
+        <div className="rounded-xl bg-cyan-500/[0.07] border border-cyan-500/20 p-3">
+          <p className="text-[10px] uppercase tracking-wider text-cyan-400">Kirishlar (IN)</p>
+          <p className="text-xl font-bold text-cyan-300 mt-1 tabular-nums">{stats.in}</p>
+        </div>
+        <div className="rounded-xl bg-amber-500/[0.07] border border-amber-500/20 p-3">
+          <p className="text-[10px] uppercase tracking-wider text-amber-400">Chiqishlar (OUT)</p>
+          <p className="text-xl font-bold text-amber-300 mt-1 tabular-nums">{stats.out}</p>
+        </div>
+        <div className="rounded-xl bg-emerald-500/[0.07] border border-emerald-500/20 p-3">
+          <p className="text-[10px] uppercase tracking-wider text-emerald-400">Bugun</p>
+          <p className="text-xl font-bold text-emerald-300 mt-1 tabular-nums">{stats.today}</p>
+        </div>
+      </div>
+
+      {/* Date filter & Quick presets */}
+      <div className="rounded-xl bg-black/20 border border-white/[0.04] p-3 space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] text-slate-400">Oraliq:</span>
+            <input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)}
+              className="px-2 py-1 rounded bg-black/40 border border-white/10 text-[12px] text-white focus:outline-none focus:border-emerald-500/50" />
+            <span className="text-slate-500 text-xs">—</span>
+            <input type="date" value={to} min={from} max={todayStr} onChange={e => setTo(e.target.value)}
+              className="px-2 py-1 rounded bg-black/40 border border-white/10 text-[12px] text-white focus:outline-none focus:border-emerald-500/50" />
+            <div className="flex items-center gap-1 ml-1">
+              <button onClick={() => setPreset(0)} className={`px-2 py-1 rounded text-[11px] ${from === todayStr && to === todayStr ? 'bg-emerald-500/20 text-emerald-300 font-semibold' : 'bg-white/[0.03] text-slate-400 hover:text-white'}`}>Bugun</button>
+              <button onClick={() => setPreset(3)} className="px-2 py-1 rounded text-[11px] bg-white/[0.03] text-slate-400 hover:text-white">3 kun</button>
+              <button onClick={() => setPreset(7)} className="px-2 py-1 rounded text-[11px] bg-white/[0.03] text-slate-400 hover:text-white">7 kun</button>
+              <button onClick={() => setPreset(30)} className="px-2 py-1 rounded text-[11px] bg-white/[0.03] text-slate-400 hover:text-white">30 kun</button>
+            </div>
+          </div>
+          <button onClick={() => loadEvents()} disabled={refreshing || loading}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-[11px] text-slate-300 transition-all">
+            <I d={ICON.refresh} c={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>Yangilash</span>
+          </button>
+        </div>
+
+        {/* Search & Direction */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/[0.04]">
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="O'quvchi ismi, sinfi yoki ID..."
+            className="flex-1 min-w-[180px] px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-[12px] text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50"
+          />
+          <div className="flex items-center gap-1 bg-black/30 p-0.5 rounded-lg border border-white/[0.04]">
+            <button onClick={() => setDirection('ALL')} className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${direction === 'ALL' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-500 hover:text-white'}`}>Barchasi</button>
+            <button onClick={() => setDirection('IN')} className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${direction === 'IN' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-500 hover:text-white'}`}>Kirish</button>
+            <button onClick={() => setDirection('OUT')} className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${direction === 'OUT' ? 'bg-amber-500/20 text-amber-300' : 'text-slate-500 hover:text-white'}`}>Chiqish</button>
+          </div>
+        </div>
+      </div>
+
+      {error && <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-2.5 text-xs text-red-300">{error}</div>}
+
+      {/* Events Table */}
+      {loading ? (
+        <div className="flex items-center justify-center gap-2 py-10 text-xs text-slate-500">
+          <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <span>Voqealar yuklanmoqda...</span>
+        </div>
+      ) : filteredEvents.length === 0 ? (
+        <div className="text-center py-8 rounded-xl bg-white/[0.01] border border-dashed border-white/[0.06]">
+          <p className="text-xs text-slate-500">Ushbu oraliqda o'tish voqealari topilmadi</p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-white/[0.06] overflow-hidden max-h-96 overflow-y-auto">
+          <table className="w-full text-left text-[12px] border-collapse">
+            <thead className="bg-[#0b1610] text-[10px] uppercase tracking-wider text-slate-400 sticky top-0 border-b border-white/[0.06]">
+              <tr>
+                <th className="py-2.5 px-3 font-semibold">Vaqt</th>
+                <th className="py-2.5 px-3 font-semibold">O'quvchi</th>
+                <th className="py-2.5 px-3 font-semibold">Yo'nalish</th>
+                <th className="py-2.5 px-3 font-semibold">Usul</th>
+                <th className="py-2.5 px-3 font-semibold text-right">Surat</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {filteredEvents.map(ev => {
+                const st = ev.student || {};
+                const timeStr = ev.time ? new Date(ev.time).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' }) : '—';
+                const isEntrance = ev.direction === 'IN';
+                return (
+                  <tr key={ev.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-2.5 px-3 text-slate-300 font-mono tabular-nums text-[11px] whitespace-nowrap">{timeStr}</td>
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-[11px] shrink-0 overflow-hidden border border-emerald-500/20">
+                          {st.photoUrl ? (
+                            <img src={st.photoUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            st.fullName ? st.fullName.charAt(0) : '?'
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-white truncate max-w-[160px]">{st.fullName || "Noma'lum o'quvchi"}</p>
+                          <p className="text-[10px] text-slate-500 truncate">{[st.className ? `${st.className} sinf` : null, st.code ? `ID: ${st.code}` : null].filter(Boolean).join(' · ')}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${isEntrance ? 'bg-cyan-500/15 text-cyan-300' : 'bg-amber-500/15 text-amber-300'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isEntrance ? 'bg-cyan-400' : 'bg-amber-400'}`} />
+                        {isEntrance ? 'KIRISH' : 'CHIQISH'}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 text-[10px] font-medium">Face ID</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      {ev.hasPhoto && ev.photoUrl ? (
+                        <button
+                          onClick={() => setPhoto({ src: ev.photoUrl, title: `${st.fullName || "O'quvchi"} · ${timeStr}` })}
+                          className="px-2 py-0.5 rounded text-[11px] text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-all font-medium"
+                        >
+                          Surat
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-slate-600">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Advanced Tools Accordion */}
+      <div className="rounded-xl border border-white/[0.04] bg-black/10 overflow-hidden">
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="w-full flex items-center justify-between px-4 py-2.5 text-[11px] font-medium text-slate-400 hover:text-white transition-colors"
+        >
+          <span>Qo'shimcha vositalar (Tarixni qayta tiklash & Moslanmagan voqealar)</span>
+          <span className="text-slate-600">{showAdvanced ? '▲ Yashirish' : '▼ Ko\'rish'}</span>
+        </button>
+
+        {showAdvanced && (
+          <div className="p-4 space-y-4 border-t border-white/[0.04] bg-black/20">
+            {/* Backfill tool */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold text-slate-300">Qurilma xotirasidan qayta o'qish (Backfill)</p>
+              <p className="text-[10px] text-slate-500">{t('devices.manage.eventsHint')}</p>
+              {canWrite && (
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                  <label className="text-[10px] text-slate-500">
+                    {t('devices.manage.from')}
+                    <input type="datetime-local" value={bfFrom} onChange={e => setBfFrom(e.target.value)} className={`${input} w-full mt-0.5 text-xs`} />
+                  </label>
+                  <label className="text-[10px] text-slate-500">
+                    {t('devices.manage.to')}
+                    <input type="datetime-local" value={bfTo} onChange={e => setBfTo(e.target.value)} className={`${input} w-full mt-0.5 text-xs`} />
+                  </label>
+                  <button onClick={runBackfill} disabled={bfBusy} className={`${btn} text-white bg-emerald-600 hover:bg-emerald-500 text-xs h-[38px]`}>
+                    {bfBusy ? t('devices.manage.backfillRunning') : t('devices.manage.backfill')}
+                  </button>
+                </div>
+              )}
+              {bfResult && <p className="text-[11px] text-emerald-400">{t('devices.manage.backfillResult', { read: bfResult.read, recorded: bfResult.recorded })}</p>}
+            </div>
+
+            {/* Unmatched events */}
+            <div className="pt-3 border-t border-white/[0.04] space-y-2">
+              <p className="text-[11px] font-semibold text-amber-400">{t('devices.manage.unmatchedTitle')}</p>
+              <p className="text-[10px] text-slate-500">{t('devices.manage.unmatchedHint')}</p>
+              {unmatched.length === 0 ? (
+                <p className="text-[11px] text-slate-600 italic">{t('devices.manage.unmatchedEmpty')}</p>
+              ) : (
+                <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                  {unmatched.map(u => (
+                    <div key={u.id} className="flex items-center justify-between gap-2 text-[10px] text-slate-400 bg-black/30 rounded px-2.5 py-1.5 border border-white/[0.02]">
+                      <span className="font-mono text-emerald-400 truncate">{u.employeeNo || '—'}</span>
+                      <span className="text-slate-500">{u.reason === 'AMBIGUOUS_STUDENT' ? t('devices.manage.unmatchedReasonAmbiguous') : t('devices.manage.unmatchedReasonUnknown')}</span>
+                      <span className="text-slate-600 shrink-0 font-mono">{new Date(u.timestamp).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -153,9 +493,19 @@ function UsersTab({ terminal, canWrite, t }) {
         <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
           {rows.map(u => (
             <div key={u.employeeNo} className="flex items-center gap-3 rounded-lg bg-white/[0.02] border border-white/[0.04] px-3 py-2">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-emerald-500/20">
+                {u.photoUrl ? (
+                  <img src={u.photoUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (u.studentName || u.deviceName || '?').charAt(0)
+                )}
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] text-slate-200 truncate">{u.studentName || u.deviceName || '—'}</p>
-                <p className="text-[10px] text-slate-600 font-mono">{u.employeeNo}</p>
+                <p className="text-[12px] font-medium text-slate-200 truncate">{u.studentName || u.deviceName || '—'}</p>
+                <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                  <span className="font-mono">ID: {u.employeeNo}</span>
+                  {u.className && <span>· {u.className} sinf</span>}
+                </div>
               </div>
               <span className={`text-[10px] px-2 py-0.5 rounded-full ${u.faces > 0 ? 'bg-pink-500/10 text-pink-400' : 'bg-white/[0.04] text-slate-500'}`}>{u.faces > 0 ? t('devices.manage.hasFace') : t('devices.manage.noFace')}</span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full ${u.matched ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>{u.matched ? t('devices.manage.matched') : t('devices.manage.stranger')}</span>
@@ -228,41 +578,16 @@ function FacesTab({ terminal, canWrite, t }) {
   );
 }
 
-function EventsTab({ terminal, canWrite, t }) {
-  const toLocal = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  const [from, setFrom] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return toLocal(d); });
-  const [to, setTo] = useState(() => toLocal(new Date()));
-  const [result, setResult] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const run = async () => {
-    setBusy(true); setError(''); setResult(null);
-    try { setResult(await api.post(`/api/terminals/${terminal.id}/events/backfill`, { from: new Date(from).toISOString(), to: new Date(to).toISOString() })); }
-    catch (e) { setError(e.message); }
-    setBusy(false);
-  };
-
-  return (
-    <div className="space-y-4">
-      <p className="text-[12px] text-slate-400 leading-relaxed">{t('devices.manage.eventsHint')}</p>
-      {canWrite ? <>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <label className="text-[11px] text-slate-500">{t('devices.manage.from')}<input type="datetime-local" value={from} onChange={e => setFrom(e.target.value)} className={`${input} w-full mt-1`} /></label>
-          <label className="text-[11px] text-slate-500">{t('devices.manage.to')}<input type="datetime-local" value={to} onChange={e => setTo(e.target.value)} className={`${input} w-full mt-1`} /></label>
-        </div>
-        <button onClick={run} disabled={busy} className={`${btn} text-white bg-emerald-600 hover:bg-emerald-500`}>{busy ? t('devices.manage.backfillRunning') : t('devices.manage.backfill')}</button>
-      </> : <p className="text-[11px] text-slate-600">{t('devices.manage.readOnly')}</p>}
-      {error && <p className="text-[12px] text-red-400">{error}</p>}
-      {result && <p className="text-[12px] text-emerald-400">{t('devices.manage.backfillResult', { read: result.read, recorded: result.recorded })}</p>}
-    </div>
-  );
-}
-
 /** Face ID terminalini masofadan boshqarish oynasi (backend: /api/terminals/{id}/...). */
 export default function TerminalManager({ terminal, canWrite, onClose, t }) {
   const [tab, setTab] = useState('status');
-  const tabs = [['status', t('devices.manage.tabStatus')], ['users', t('devices.manage.tabUsers')], ['faces', t('devices.manage.tabFaces')], ['events', t('devices.manage.tabEvents')]];
+  const tabs = [
+    ['status', t('devices.manage.tabStatus')],
+    ['camera', t('devices.manage.tabCamera') || 'Kamera (Jonli)'],
+    ['events', t('devices.manage.tabEvents')],
+    ['faces', t('devices.manage.tabFaces')],
+    ['users', t('devices.manage.tabUsers')]
+  ];
   const supported = (terminal.brand || '').trim().toLowerCase() === 'hikvision';
 
   return (
@@ -287,13 +612,14 @@ export default function TerminalManager({ terminal, canWrite, onClose, t }) {
           ) : <>
             <div className="flex gap-1 rounded-xl bg-black/20 p-1">
               {tabs.map(([id, label]) => (
-                <button key={id} onClick={() => setTab(id)} className={`flex-1 px-3 py-2 rounded-lg text-[12px] font-medium transition-all ${tab === id ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-500 hover:text-slate-300'}`}>{label}</button>
+                <button key={id} onClick={() => setTab(id)} className={`flex-1 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all ${tab === id ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-500 hover:text-slate-300'}`}>{label}</button>
               ))}
             </div>
             {tab === 'status' && <StatusTab terminal={terminal} canWrite={canWrite} t={t} />}
-            {tab === 'users' && <UsersTab terminal={terminal} canWrite={canWrite} t={t} />}
-            {tab === 'faces' && <FacesTab terminal={terminal} canWrite={canWrite} t={t} />}
+            {tab === 'camera' && <CameraTab terminal={terminal} canWrite={canWrite} t={t} />}
             {tab === 'events' && <EventsTab terminal={terminal} canWrite={canWrite} t={t} />}
+            {tab === 'faces' && <FacesTab terminal={terminal} canWrite={canWrite} t={t} />}
+            {tab === 'users' && <UsersTab terminal={terminal} canWrite={canWrite} t={t} />}
           </>}
         </div>
       </div>

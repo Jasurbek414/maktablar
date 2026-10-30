@@ -15,6 +15,8 @@ public interface FaceTerminalRepository extends JpaRepository<FaceTerminal, Long
     List<FaceTerminal> findBySchoolIdIn(List<Long> schoolIds);
     List<FaceTerminal> findByStatus(FaceTerminal.TerminalStatus status);
     Optional<FaceTerminal> findBySerialNumber(String serialNumber);
+    Optional<FaceTerminal> findByIpAddress(String ipAddress);
+    Optional<FaceTerminal> findByMacAddress(String macAddress);
     long countByRouterId(Long routerId);
     long countByRouterIdAndDirection(Long routerId, FaceTerminal.Direction direction);
 

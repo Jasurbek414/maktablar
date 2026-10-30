@@ -281,12 +281,13 @@
       "transportLabel": "Тип подключения",
       "transportWireguard": "WireGuard (рекомендуется)",
       "transportOpenvpn": "OpenVPN (резервный)",
-      "transportHint": "WireGuard быстрый и лёгкий (UDP). Если интернет школы не пропускает UDP или роутер больше 3 минут не становится ONLINE — выберите OpenVPN (TCP 443, проходит почти через любую сеть).",
+      "transportSstp": "SSTP (как HTTPS)",
+      "transportHint": "WireGuard быстрый и лёгкий (UDP). Если интернет школы не пропускает UDP или роутер больше 3 минут не становится ONLINE — выберите OpenVPN (TCP 443). Если провайдер блокирует и OpenVPN — выберите SSTP (внутри TLS, выглядит как обычный HTTPS).",
       "switchConfirmTitle": "Сменить тип подключения?",
       "switchConfirmNote": "Пока новый скрипт не вставлен в роутер, связь со школой будет прервана. Скрипт сам удалит старое подключение.",
       "switchConfirmBtn": "Да, сменить",
       "switchError": "Не удалось сменить тип подключения",
-      "ovpnLogin": "Логин OpenVPN:"
+      "ovpnLogin": "Логин VPN:"
     },
     "assign": {
       "title": "Привязать к школе",
@@ -328,9 +329,10 @@
     },
     "manage": {
       "tabStatus": "Состояние",
-      "tabUsers": "На устройстве",
-      "tabFaces": "Лица",
+      "tabCamera": "Камера (Live)",
       "tabEvents": "События",
+      "tabFaces": "Лица",
+      "tabUsers": "На устройстве",
       "connecting": "Подключение к терминалу...",
       "model": "Модель",
       "serial": "Серийный номер",

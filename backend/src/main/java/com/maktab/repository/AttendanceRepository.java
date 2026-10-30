@@ -64,4 +64,13 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     @org.springframework.transaction.annotation.Transactional
     @Query("DELETE FROM Attendance a WHERE a.id IN :ids")
     int deleteByIdIn(@Param("ids") List<Long> ids);
+
+    @Query("SELECT a FROM Attendance a JOIN FETCH a.student s " +
+           "WHERE ((:serial <> '' AND a.deviceSerial = :serial) OR a.syncKey LIKE :syncKeyPrefix) " +
+           "AND a.timestamp >= :from AND a.timestamp < :to " +
+           "ORDER BY a.timestamp DESC")
+    List<Attendance> findByTerminalEvents(@Param("serial") String serial,
+                                         @Param("syncKeyPrefix") String syncKeyPrefix,
+                                         @Param("from") OffsetDateTime from,
+                                         @Param("to") OffsetDateTime to);
 }

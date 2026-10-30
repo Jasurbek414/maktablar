@@ -39,7 +39,10 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Ochiq endpointlar
+                // /error yopiq bo'lsa har qanday 4xx/5xx 401 ga aylanadi va frontend foydalanuvchini tizimdan chiqaradi
+                .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/public/devices/**").permitAll() // Face ID terminal webhook va voqealar
                 .requestMatchers("/api/v1/auth/**").permitAll() // /spd (frontend A) auth kontrakti
                 // MUHIM (2026-09-18): mini-PC/ISUP davridan qolgan /api/attendance (POST /,
                 // /sync, /students, /offline-data, /heartbeat) permitAll qoidalari olib
@@ -68,6 +71,7 @@ public class SecurityConfig {
                 // OpenVPN zaxira transporti (2026-09-19) — xuddi shu hub, xuddi shu X-Wg-Sync-Key.
                 .requestMatchers(HttpMethod.GET, "/api/internal/ovpn-clients").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/internal/ovpn-status").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/internal/sstp-clients").permitAll()
                 // Telegram bot (bot.py) — X-Bot-Key bilan o'z ichida autentifikatsiya qiladi
                 // (BotConfigController), token'ni panel'dan olish uchun.
                 .requestMatchers(HttpMethod.GET, "/api/internal/bot-config/token").permitAll()

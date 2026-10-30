@@ -52,10 +52,119 @@ public class FaceTerminalController {
     @Autowired private FaceSyncService syncService;
     @Autowired private HikvisionFaceTerminalDriver hikvisionDriver;
     @Autowired private UnmatchedFaceEventRepository unmatchedRepo;
+    @Autowired private com.maktab.repository.AttendanceRepository attendanceRepo;
+    @Autowired private com.maktab.repository.SchoolClassRepository classRepo;
+    @Autowired private TerminalLiveView liveView;
 
     @ExceptionHandler(TerminalException.class)
     public ResponseEntity<?> onTerminalError(TerminalException e) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", e.getMessage()));
+    }
+
+    /** Maktabdagi terminallar ro'yxati (masalan o'quvchilarni sinxron qilish oynasi uchun) */
+    @GetMapping
+    public ResponseEntity<?> listTerminals(@RequestParam(required = false) Long schoolId,
+                                           @RequestHeader(value = "Authorization", required = false) String auth) {
+        User user = currentUserService.requireUser(auth);
+        Long targetSchoolId = schoolId != null ? schoolId : user.getSchoolId();
+        if (targetSchoolId == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        currentUserService.assertCanAccessSchool(user, targetSchoolId);
+        List<FaceTerminal> list = terminalRepo.findBySchoolId(targetSchoolId);
+        List<Map<String, Object>> result = list.stream().map(t -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.getId());
+            m.put("name", t.getName());
+            m.put("ipAddress", t.getIpAddress());
+            m.put("brand", t.getBrand());
+            m.put("status", t.getStatus() != null ? t.getStatus().name() : "OFFLINE");
+            m.put("direction", t.getDirection() != null ? t.getDirection().name() : null);
+            m.put("userCount", t.getUserCount());
+            m.put("registeredFaces", t.getRegisteredFaces());
+            m.put("schoolId", t.getSchoolId());
+            return m;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Butun sinf yoki tanlangan o'quvchilarning yuzini maktabning barcha (yoki tanlangan) terminallariga ommaviy yuklash
+     */
+    @PostMapping("/sync-all")
+    public ResponseEntity<?> syncAllTerminals(@RequestHeader(value = "Authorization", required = false) String auth,
+                                             @RequestBody Map<String, Object> body) {
+        User user = currentUserService.requireUser(auth);
+        Long schoolId = body.get("schoolId") != null ? Long.valueOf(body.get("schoolId").toString()) : user.getSchoolId();
+        if (schoolId == null) return ResponseEntity.badRequest().body(Map.of("error", "Maktab aniqlanmadi"));
+        currentUserService.assertCanWriteSchoolData(user, schoolId);
+
+        List<FaceTerminal> terminals;
+        Object singleTermId = body.get("terminalId");
+        if (singleTermId != null && !singleTermId.toString().isBlank() && !singleTermId.toString().equals("all")) {
+            Long tid = Long.valueOf(singleTermId.toString());
+            FaceTerminal t = terminalRepo.findById(tid).orElse(null);
+            if (t == null || !schoolId.equals(t.getSchoolId())) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Tanlangan terminal topilmadi"));
+            }
+            terminals = List.of(t);
+        } else {
+            terminals = terminalRepo.findBySchoolId(schoolId);
+        }
+
+        if (terminals.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.student.no_terminals")));
+        }
+
+        List<Student> students;
+        Object ids = body.get("studentIds");
+        Object classIdObj = body.get("classId");
+        if (ids instanceof List<?> list && !list.isEmpty()) {
+            Set<Long> wanted = list.stream().map(o -> Long.valueOf(o.toString())).collect(Collectors.toSet());
+            students = studentRepo.findBySchoolId(schoolId).stream()
+                .filter(s -> wanted.contains(s.getId()))
+                .filter(s -> s.getFaceId() != null && !s.getFaceId().isBlank()
+                    && s.getPhotoUrl() != null && !s.getPhotoUrl().isBlank())
+                .collect(Collectors.toList());
+        } else if (classIdObj != null) {
+            Long cId = Long.valueOf(classIdObj.toString());
+            students = studentRepo.findBySchoolId(schoolId).stream()
+                .filter(s -> cId.equals(s.getClassId()))
+                .filter(s -> s.getFaceId() != null && !s.getFaceId().isBlank()
+                    && s.getPhotoUrl() != null && !s.getPhotoUrl().isBlank())
+                .collect(Collectors.toList());
+        } else {
+            students = studentRepo.findBySchoolId(schoolId).stream()
+                .filter(s -> s.getFaceId() != null && !s.getFaceId().isBlank()
+                    && s.getPhotoUrl() != null && !s.getPhotoUrl().isBlank())
+                .collect(Collectors.toList());
+        }
+
+        if (students.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Rasmi va Face ID si bor o'quvchilar topilmadi (avval rasmlarni yuklang)"));
+        }
+
+        List<Map<String, Object>> startedJobs = new ArrayList<>();
+        List<String> skipped = new ArrayList<>();
+
+        for (FaceTerminal t : terminals) {
+            Optional<FaceSyncService.Job> job = syncService.start(t, students);
+            if (job.isPresent()) {
+                Map<String, Object> jm = job.get().toMap();
+                jm.put("terminalName", t.getName());
+                jm.put("terminalIp", t.getIpAddress());
+                startedJobs.add(jm);
+            } else {
+                skipped.add(t.getName() + " (band yoki sinxronizatsiya ketmoqda)");
+            }
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "totalStudents", students.size(),
+            "terminalsCount", terminals.size(),
+            "jobs", startedJobs,
+            "skipped", skipped
+        ));
     }
 
     // ─── Holat ───────────────────────────────────────────────────────────────────
@@ -177,6 +286,8 @@ public class FaceTerminalController {
             Student s = byEmployeeNo.get(u.employeeNo());
             m.put("studentId", s != null ? s.getId() : null);
             m.put("studentName", s != null ? s.getFullName() : null);
+            m.put("photoUrl", s != null ? s.getPhotoUrl() : null);
+            m.put("classId", s != null ? s.getClassId() : null);
             m.put("matched", s != null);
             return m;
         }).collect(Collectors.toList());
@@ -208,6 +319,10 @@ public class FaceTerminalController {
         requireHikvision(t);
         Student s = loadSchoolStudent(t, studentId);
         syncService.pushOne(t, s);
+        s.setSyncStatus("SYNCED");
+        s.setSyncError(null);
+        s.setSyncedAt(java.time.OffsetDateTime.now());
+        studentRepo.save(s);
         return ResponseEntity.ok(Map.of("status", "ok", "employeeNo", FaceIdMapping.toEmployeeNo(s.getFaceId())));
     }
 
@@ -301,6 +416,208 @@ public class FaceTerminalController {
         FaceTerminalMonitor.PollResult r = monitor.backfill(t, from, to);
         log.info("AUDIT backfill: terminal={} {}..{} o'qildi={} yozildi={} user={}", t.getId(), from, to, r.read(), r.recorded(), user.getId());
         return ResponseEntity.ok(Map.of("read", r.read(), "recorded", r.recorded()));
+    }
+
+    // ─── Jonli kuzatuv ───────────────────────────────────────────────────────────
+
+    static final Set<User.Role> LIVE_VIEW_ROLES = Set.of(User.Role.SUPERADMIN, User.Role.ADMIN, User.Role.DIRECTOR);
+
+    @GetMapping("/{id}/live-frame")
+    public ResponseEntity<?> liveFrame(@PathVariable Long id, @RequestHeader(value = "Authorization", required = false) String auth) {
+        User user = currentUserService.requireUser(auth);
+        if (!LIVE_VIEW_ROLES.contains(user.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, i18n.msg("error.terminal.live_view_forbidden"));
+        }
+        FaceTerminal t = load(id);
+        currentUserService.assertCanAccessSchool(user, schoolIdOf(t));
+        requireHikvision(t);
+        liveView.audit(t, user.getId(), user.getUsername());
+        TerminalLiveView.Frame frame = liveView.frame(t);
+        return ResponseEntity.ok()
+            .contentType(org.springframework.http.MediaType.IMAGE_JPEG)
+            .header("Cache-Control", "no-store")
+            .header("X-Frame-Taken-At", Long.toString(frame.takenAtMillis()))
+            .body(frame.jpeg());
+    }
+
+    // ─── Aloqani tekshirish (Test Connection) ─────────────────────────────────────
+
+    @PostMapping("/test-connection")
+    public ResponseEntity<?> testConnection(@RequestHeader(value = "Authorization", required = false) String auth,
+                                            @RequestBody Map<String, Object> body) {
+        currentUserService.requireUser(auth);
+        String ip = (String) body.get("ipAddress");
+        if (ip == null || ip.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", "IP manzil kiritilishi shart"));
+        }
+        int port = body.get("port") != null && !body.get("port").toString().isBlank()
+            ? Integer.parseInt(body.get("port").toString())
+            : (Boolean.TRUE.equals(body.get("useHttps")) ? 443 : 80);
+        boolean useHttps = Boolean.TRUE.equals(body.get("useHttps"));
+        String username = (String) body.get("deviceUsername");
+        String password = (String) body.get("devicePassword");
+
+        if ((password == null || password.isBlank()) && body.get("terminalId") != null) {
+            try {
+                FaceTerminal existing = terminalRepo.findById(Long.valueOf(body.get("terminalId").toString())).orElse(null);
+                if (existing != null) {
+                    if (username == null || username.isBlank()) username = existing.getDeviceUsername();
+                    password = existing.getDevicePassword();
+                }
+            } catch (Exception ignored) {}
+        }
+
+        try {
+            String scheme = useHttps ? "https" : "http";
+            String baseUrl = scheme + "://" + ip + ":" + port;
+            HikvisionIsapiClient client = new HikvisionIsapiClient(baseUrl, username, password);
+            HikvisionIsapiClient.DeviceInfo info = client.deviceInfo();
+            HikvisionIsapiClient.UserCounts counts = null;
+            try { counts = client.userCounts(); } catch (Exception ignored) {}
+
+            Map<String, Object> res = new LinkedHashMap<>();
+            res.put("ok", true);
+            res.put("model", info.model() != null ? info.model() : "");
+            res.put("serialNumber", info.serialNumber() != null ? info.serialNumber() : "");
+            res.put("firmwareVersion", info.firmwareVersion() != null ? info.firmwareVersion() : "");
+            res.put("macAddress", info.macAddress() != null ? info.macAddress() : "");
+            res.put("users", counts != null ? counts.users() : 0);
+            res.put("usersWithFace", counts != null ? counts.usersWithFace() : 0);
+            res.put("message", "Aloqa muvaffaqiyatli o'rnatildi!");
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of(
+                "ok", false,
+                "error", "Aloqa xatosi: " + (e.getMessage() != null ? e.getMessage() : e.toString())
+            ));
+        }
+    }
+
+    // ─── To'g'ridan-to'g'ri terminal qo'shish ──────────────────────────────────────
+
+    @PostMapping
+    public ResponseEntity<?> createTerminalDirect(@RequestHeader(value = "Authorization", required = false) String auth,
+                                                  @RequestBody Map<String, Object> body) {
+        User user = currentUserService.requireUser(auth);
+        Long schoolId = body.get("schoolId") != null && !body.get("schoolId").toString().isBlank()
+            ? Long.valueOf(body.get("schoolId").toString())
+            : user.getSchoolId();
+        if (schoolId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Maktab aniqlanmadi"));
+        }
+        currentUserService.assertCanWriteSchoolData(user, schoolId);
+
+        FaceTerminal t = new FaceTerminal();
+        if (body.get("routerId") != null && !body.get("routerId").toString().isBlank()) {
+            t.setRouterId(Long.valueOf(body.get("routerId").toString()));
+        }
+        t.setSchoolId(schoolId);
+        t.setName((String) body.getOrDefault("name", "Face ID Terminal"));
+        t.setSerialNumber((String) body.get("serialNumber"));
+        t.setBrand((String) body.getOrDefault("brand", "Hikvision"));
+        t.setModel((String) body.getOrDefault("model", ""));
+        t.setMacAddress((String) body.get("macAddress"));
+        t.setDirection(FaceTerminal.Direction.valueOf(body.getOrDefault("direction", "ENTRANCE").toString()));
+        t.setStatus(FaceTerminal.TerminalStatus.OFFLINE);
+        t.setIpAddress((String) body.get("ipAddress"));
+        if (body.get("port") != null && !body.get("port").toString().isBlank()) {
+            t.setPort(Integer.valueOf(body.get("port").toString()));
+        }
+        t.setUseHttps(body.get("useHttps") != null && Boolean.parseBoolean(body.get("useHttps").toString()));
+        t.setDeviceUsername((String) body.get("deviceUsername"));
+        t.setDevicePassword((String) body.get("devicePassword"));
+        t.setFirmwareVersion((String) body.get("firmwareVersion"));
+        t.setNotes((String) body.get("notes"));
+        t.setCreatedAt(java.time.LocalDateTime.now());
+        t.setRegisteredFaces(0);
+
+        terminalRepo.save(t);
+        return ResponseEntity.ok(Map.of(
+            "id", t.getId(),
+            "name", t.getName(),
+            "serialNumber", t.getSerialNumber() != null ? t.getSerialNumber() : "",
+            "ipAddress", t.getIpAddress() != null ? t.getIpAddress() : "",
+            "status", t.getStatus().name()
+        ));
+    }
+
+    // ─── Face ID Voqealari (Events) ──────────────────────────────────────────────
+
+    @GetMapping("/{id}/events")
+    public ResponseEntity<?> terminalEvents(@PathVariable Long id,
+                                            @RequestParam(required = false) String from,
+                                            @RequestParam(required = false) String to,
+                                            @RequestParam(defaultValue = "150") int limit,
+                                            @RequestHeader(value = "Authorization", required = false) String auth) {
+        FaceTerminal t = loadForRead(id, auth);
+        OffsetDateTime fromDt;
+        OffsetDateTime toDt;
+        try {
+            fromDt = from != null && !from.isBlank() ? parseFilterDateTime(from, true) : OffsetDateTime.now().minusDays(7);
+            toDt = to != null && !to.isBlank() ? parseFilterDateTime(to, false) : OffsetDateTime.now().plusDays(1);
+        } catch (Exception e) {
+            fromDt = OffsetDateTime.now().minusDays(7);
+            toDt = OffsetDateTime.now().plusDays(1);
+        }
+
+        String serial = t.getSerialNumber();
+        String syncPrefix = "hik-" + t.getId() + "-%";
+        List<com.maktab.model.Attendance> list = attendanceRepo.findByTerminalEvents(serial != null ? serial : "", syncPrefix, fromDt, toDt);
+        if (list.size() > limit) {
+            list = list.subList(0, limit);
+        }
+
+        Map<Long, String> classNames = new HashMap<>();
+        Long schoolId = schoolIdOf(t);
+        if (schoolId != null) {
+            try {
+                for (com.maktab.model.SchoolClass sc : classRepo.findBySchoolId(schoolId)) {
+                    classNames.put(sc.getId(), sc.getName());
+                }
+            } catch (Exception ignored) {}
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (com.maktab.model.Attendance a : list) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", a.getId());
+            m.put("time", a.getTimestamp() != null ? a.getTimestamp().toString() : null);
+            m.put("direction", a.getType() != null ? a.getType().name() : "IN");
+            m.put("source", "FACE");
+            m.put("terminalId", t.getId());
+            m.put("terminalName", t.getName());
+            m.put("photoUrl", a.getPhotoPath());
+            m.put("hasPhoto", a.getPhotoPath() != null && !a.getPhotoPath().isBlank());
+
+            Student s = a.getStudent();
+            if (s != null) {
+                Map<String, Object> sm = new LinkedHashMap<>();
+                sm.put("id", s.getId());
+                sm.put("code", s.getFaceId());
+                sm.put("fullName", s.getFullName());
+                sm.put("photoUrl", s.getPhotoUrl());
+                if (s.getClassId() != null) {
+                    sm.put("className", classNames.getOrDefault(s.getClassId(), null));
+                }
+                m.put("student", sm);
+            }
+            result.add(m);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    private OffsetDateTime parseFilterDateTime(String text, boolean startOfDay) {
+        text = text.trim();
+        if (text.length() == 10) {
+            java.time.LocalDate ld = java.time.LocalDate.parse(text);
+            return startOfDay ? ld.atStartOfDay().atOffset(java.time.ZoneOffset.ofHours(5))
+                              : ld.plusDays(1).atStartOfDay().atOffset(java.time.ZoneOffset.ofHours(5));
+        }
+        if (text.contains("T") && !text.contains("+") && !text.endsWith("Z")) {
+            java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(text);
+            return ldt.atOffset(java.time.ZoneOffset.ofHours(5));
+        }
+        return OffsetDateTime.parse(text);
     }
 
     // ─── Yordamchilar ────────────────────────────────────────────────────────────

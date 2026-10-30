@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 import TerminalManager from '../components/devices/TerminalManager';
 import DiscoveryPanel from '../components/devices/DiscoveryPanel';
+import ConnectionWizardModal from '../components/devices/ConnectionWizardModal';
 
 // Backend CurrentUserService#canWriteSchoolData bilan bir xil — boshqaruv tugmalarini ko'rsatish uchun
 // (asl tekshiruv baribir backendda).
@@ -70,7 +71,9 @@ function ConnectionPanel({ router, t, canWrite, onChanged }) {
   const [switching, setSwitching] = useState(false);
 
   const transport = router.transport || 'WIREGUARD';
-  const isOvpn = transport === 'OPENVPN';
+  // OpenVPN va SSTP — ikkalasi ham routerN login/paroli bilan, WireGuard .conf'i yo'q
+  const isOvpn = transport !== 'WIREGUARD';
+  const transportLabel = { WIREGUARD: 'devices.network.transportWireguard', OPENVPN: 'devices.network.transportOpenvpn', SSTP: 'devices.network.transportSstp' };
 
   // Transport almashganda boshqa transport uchun olingan skript ko'rsatilib qolmasligi kerak
   useEffect(() => { setScript(null); setShowScript(false); setPendingTransport(null); }, [router.id, transport]);
@@ -126,11 +129,11 @@ function ConnectionPanel({ router, t, canWrite, onChanged }) {
       <div className="rounded-lg bg-black/20 px-3 py-2.5 space-y-2">
         <p className="text-[9px] text-slate-600 uppercase tracking-wider">{t('devices.network.transportLabel')}</p>
         <div className="flex flex-wrap gap-1.5">
-          {['WIREGUARD', 'OPENVPN'].map(tp => (
+          {['WIREGUARD', 'OPENVPN', 'SSTP'].map(tp => (
             <button key={tp} disabled={!canWrite || switching}
               onClick={() => tp !== transport && setPendingTransport(tp)}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all disabled:cursor-not-allowed ${tp === transport ? 'bg-blue-600 text-white' : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] disabled:opacity-50'}`}>
-              {tp === 'WIREGUARD' ? t('devices.network.transportWireguard') : t('devices.network.transportOpenvpn')}
+              {t(transportLabel[tp])}
             </button>
           ))}
         </div>
@@ -243,6 +246,9 @@ export default function Devices({ user }) {
   const [lanHostsError, setLanHostsError] = useState('');
   const [editingTerminalId, setEditingTerminalId] = useState(null);
   const [manageTerminal, setManageTerminal] = useState(null);
+  const [showWizard, setShowWizard] = useState(false);
+  const [testingConn, setTestingConn] = useState(false);
+  const [connTestResult, setConnTestResult] = useState(null);
   const [showCreateCreds, setShowCreateCreds] = useState(false);
   const [credForm, setCredForm] = useState({ schoolId: '', name: '', vpnIp: '', lanSubnet: '' });
   const [credProv, setCredProv] = useState('');
@@ -289,7 +295,42 @@ export default function Devices({ user }) {
     return (a.schoolName || '').localeCompare(b.schoolName || '', 'uz');
   });
 
-  const resetTermForm = () => setTermForm({ name: '', direction: 'ENTRANCE', roomId: '', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', useHttps: false, deviceUsername: '', devicePassword: '', notes: '' });
+  const resetTermForm = () => {
+    setTermForm({ name: '', direction: 'ENTRANCE', roomId: '', serialNumber: '', brand: '', model: '', macAddress: '', ipAddress: '', port: '', useHttps: false, deviceUsername: '', devicePassword: '', notes: '' });
+    setConnTestResult(null);
+  };
+
+  const testConnection = async () => {
+    if (!termForm.ipAddress) {
+      setConnTestResult({ ok: false, error: "IP manzil kiritilishi shart" });
+      return;
+    }
+    setTestingConn(true);
+    setConnTestResult(null);
+    try {
+      const res = await api.post('/api/terminals/test-connection', {
+        ipAddress: termForm.ipAddress,
+        port: termForm.port,
+        useHttps: termForm.useHttps,
+        deviceUsername: termForm.deviceUsername,
+        devicePassword: termForm.devicePassword,
+        terminalId: editingTerminalId,
+      });
+      setConnTestResult(res);
+      if (res.ok) {
+        setTermForm(prev => ({
+          ...prev,
+          model: prev.model || res.model || '',
+          serialNumber: prev.serialNumber || res.serialNumber || '',
+          macAddress: prev.macAddress || res.macAddress || '',
+          brand: prev.brand || 'Hikvision',
+        }));
+      }
+    } catch (e) {
+      setConnTestResult({ ok: false, error: e.message });
+    }
+    setTestingConn(false);
+  };
 
   const startAddTerminal = () => { setEditingTerminalId(null); resetTermForm(); setShowTermForm(true); setLanHosts(null); setLanHostsError(''); };
   // Qidiruvda topilgan qurilmadan: forma to'ldirilib ochiladi, foydalanuvchi nom/yo'nalishni tekshirib saqlaydi
@@ -534,7 +575,17 @@ export default function Devices({ user }) {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-semibold text-slate-200">{t('devices.detail.terminalsTitle')}</h4>
-              <button onClick={toggleTermForm} className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-all">{t('devices.detail.addTerminalBtn')}</button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowWizard(true)}
+                  className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all flex items-center gap-1.5"
+                >
+                  <I d={ICONS.terminals} c="w-3.5 h-3.5" />
+                  <span>Face ID Ulash Ustasi</span>
+                </button>
+                <button onClick={toggleTermForm} className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-all">{t('devices.detail.addTerminalBtn')}</button>
+              </div>
             </div>
 
             {showTermForm && <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-4 mb-3 space-y-3">
@@ -588,10 +639,39 @@ export default function Devices({ user }) {
                 {t('devices.form.useHttps')}
               </label>
               <input value={termForm.notes} onChange={e=>setTermForm({...termForm,notes:e.target.value})} placeholder={t('devices.form.notes')} className="w-full px-3 py-2.5 rounded-lg bg-black/30 border border-white/[0.06] text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/40"/>
-              <div className="flex justify-end gap-2">
-                <button onClick={()=>{setShowTermForm(false);setEditingTerminalId(null);}} className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-300">{t('common.cancel')}</button>
-                <button onClick={saveTerminal} className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/20">{editingTerminalId ? t('common.update') : t('common.save')}</button>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={testConnection}
+                  disabled={testingConn || !termForm.ipAddress}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <I d={testingConn ? ICONS.refresh : ICONS.pulse} c={`w-3.5 h-3.5 ${testingConn ? 'animate-spin' : ''}`} />
+                  <span>{testingConn ? 'Tekshirilmoqda...' : 'Aloqani tekshirish'}</span>
+                </button>
+
+                <div className="flex justify-end gap-2">
+                  <button onClick={()=>{setShowTermForm(false);setEditingTerminalId(null);setConnTestResult(null);}} className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-300">{t('common.cancel')}</button>
+                  <button onClick={saveTerminal} className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/20">{editingTerminalId ? t('common.update') : t('common.save')}</button>
+                </div>
               </div>
+
+              {connTestResult && (
+                <div className={`rounded-lg p-2.5 text-xs flex items-start gap-2 ${connTestResult.ok ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300' : 'bg-red-500/10 border border-red-500/20 text-red-300'}`}>
+                  <I d={connTestResult.ok ? ICONS.check : ICONS.warning} c="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">{connTestResult.ok ? connTestResult.message : 'Ulanish amalga oshmadi'}</p>
+                    {connTestResult.ok ? (
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Model: <span className="text-white font-medium">{connTestResult.model}</span> · Serial: <span className="text-white font-mono">{connTestResult.serialNumber}</span> · FW: <span className="text-white">{connTestResult.firmwareVersion}</span>
+                      </p>
+                    ) : (
+                      <p className="text-[11px] opacity-80 mt-0.5">{connTestResult.error}</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>}
 
             {(detail.terminals||[]).length === 0 ? (
@@ -641,6 +721,7 @@ export default function Devices({ user }) {
     </div>}
 
     {manageTerminal && <TerminalManager terminal={manageTerminal} canWrite={canWriteDevices} t={t} onClose={()=>setManageTerminal(null)} />}
+    {showWizard && <ConnectionWizardModal router={detail} onClose={() => setShowWizard(false)} onAddTerminal={startAddDiscovered} />}
 
     {/* Assign Modal */}
     {assignForm && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={()=>setAssignForm(null)}>

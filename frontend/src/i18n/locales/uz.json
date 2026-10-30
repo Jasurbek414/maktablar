@@ -281,12 +281,13 @@
       "transportLabel": "Ulanish turi",
       "transportWireguard": "WireGuard (tavsiya)",
       "transportOpenvpn": "OpenVPN (zaxira)",
-      "transportHint": "WireGuard tez va yengil (UDP). Maktab interneti UDP'ni o'tkazmasa yoki router 3 daqiqadan ko'p ONLINE bo'lmasa — OpenVPN'ni tanlang (TCP 443, deyarli har qanday tarmoqdan o'tadi).",
+      "transportSstp": "SSTP (HTTPS kabi)",
+      "transportHint": "WireGuard tez va yengil (UDP). Maktab interneti UDP'ni o'tkazmasa yoki router 3 daqiqadan ko'p ONLINE bo'lmasa — OpenVPN'ni tanlang (TCP 443). Provayder OpenVPN'ni ham to'ssa — SSTP'ni tanlang (TLS ichida, oddiy HTTPS kabi ko'rinadi).",
       "switchConfirmTitle": "Ulanish turini almashtirasizmi?",
       "switchConfirmNote": "Yangi skriptni routerga qo'ymaguningizcha maktab bilan aloqa uziladi. Skript eski ulanishni o'zi olib tashlaydi.",
       "switchConfirmBtn": "Ha, almashtirish",
       "switchError": "Ulanish turini o'zgartirib bo'lmadi",
-      "ovpnLogin": "OpenVPN login:"
+      "ovpnLogin": "VPN login:"
     },
     "assign": {
       "title": "Maktabga biriktirish",
@@ -328,9 +329,10 @@
     },
     "manage": {
       "tabStatus": "Holat",
-      "tabUsers": "Qurilmadagilar",
-      "tabFaces": "Yuzlar",
+      "tabCamera": "Kamera (Jonli)",
       "tabEvents": "Voqealar",
+      "tabFaces": "Yuzlar",
+      "tabUsers": "Qurilmadagilar",
       "connecting": "Terminalga ulanmoqda...",
       "model": "Model",
       "serial": "Seriya raqami",
