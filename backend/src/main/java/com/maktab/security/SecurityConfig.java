@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/devices/**").permitAll() // Face ID terminal webhook va voqealar
+                .requestMatchers("/api/events/**").permitAll() // Face ID terminal ISUP listening / webhook
                 .requestMatchers("/api/v1/auth/**").permitAll() // /spd (frontend A) auth kontrakti
                 // MUHIM (2026-09-18): mini-PC/ISUP davridan qolgan /api/attendance (POST /,
                 // /sync, /students, /offline-data, /heartbeat) permitAll qoidalari olib
