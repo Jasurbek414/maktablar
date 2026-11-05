@@ -22,6 +22,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findByClassId(Long classId);
     long countBySchoolId(Long schoolId);
     long countByClassId(Long classId);
+    long countByClassIdAndSyncStatus(Long classId, String syncStatus);
 
     // /guardians/telegram/{id}/stats va Student<->Guardian ManyToMany orqali
     // vasiyning barcha farzandlarini topish uchun (bot.py kontrakti).

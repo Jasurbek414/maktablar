@@ -29,6 +29,15 @@ public class Student {
     @Column
     private String photoUrl;
 
+    @Column(name = "sync_status")
+    private String syncStatus; // 'SYNCED', 'FAILED', 'PENDING', 'NO_PHOTO'
+
+    @Column(name = "sync_error")
+    private String syncError;
+
+    @Column(name = "synced_at")
+    private java.time.OffsetDateTime syncedAt;
+
     // MUHIM (2026-09-15 audit): avval LAZY edi. NotificationService#notifyGuardians va
     // #createAttendanceNotification @Async (alohida thread)da ishlaydi — u yerda Hibernate
     // sessiyasi allaqachon yopilgan bo'ladi, shu sabab student.getSchool().getName()

@@ -35,6 +35,7 @@ class RouterOsScriptTest {
 
         controller = new RouterController();
         ReflectionTestUtils.setField(controller, "ovpnPort", "443");
+        ReflectionTestUtils.setField(controller, "sstpPort", "4443");
         ReflectionTestUtils.setField(controller, "vpn", vpn);
         ReflectionTestUtils.setField(controller, "wgServerPublicKey", "HUBKEYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=");
         ReflectionTestUtils.setField(controller, "wgServerEndpoint", "vpn.example.uz");
@@ -161,6 +162,46 @@ class RouterOsScriptTest {
         assertFalse(s.contains("ROUTERKEY"));
     }
 
+    private MikrotikRouter sstpRouter() {
+        MikrotikRouter r = ovpnRouter();
+        r.setTransport(MikrotikRouter.Transport.SSTP);
+        return r;
+    }
+
+    @Test
+    void sstpScriptConfiguresClientRouteAndNetmap() {
+        String s = script(sstpRouter());
+
+        assertTrue(s.contains(":local vpnIf \"sstp-maktab\""), s);
+        assertTrue(s.contains("/interface sstp-client add name=$vpnIf connect-to=vpn.example.uz port=4443"
+            + " user=\"router4\" password=\"TestPass23456789abcdefgh\" authentication=mschap2"), s);
+        assertTrue(s.contains("pfs=yes ciphers=aes256-gcm-sha384"), "hub TLS'i bilan mos shifr bo'lishi shart");
+        assertTrue(s.contains("verify-server-certificate=no comment=$tag disabled=yes\n"), "klient o'chiq holda sozlanadi");
+        int enable = s.lastIndexOf("/interface sstp-client set [find where name=$vpnIf] disabled=no");
+        assertTrue(enable > s.lastIndexOf("/ip firewall filter add"), "barcha sozlamadan keyin yoqiladi");
+        assertTrue(enable > s.lastIndexOf("/ip firewall nat add"));
+        assertTrue(s.contains("/ip route add dst-address=10.20.0.254/32 gateway=$vpnIf comment=$tag"));
+        assertTrue(s.contains("chain=dstnat in-interface=$vpnIf dst-address=10.30.2.0/24 action=netmap to-addresses=192.168.88.0/24"));
+        // bitta router — bitta VPN: WireGuard ham, OpenVPN ham olib tashlanadi
+        assertTrue(s.contains("/interface wireguard remove [find where name=\"wg-maktab\"]"));
+        assertTrue(s.contains("/interface ovpn-client remove [find where name=\"ovpn-maktab\"]"));
+        assertTrue(s.indexOf("/interface ovpn-client remove") < s.indexOf("/interface sstp-client add"));
+        assertFalse(s.contains("/interface ovpn-client add"));
+        assertFalse(s.contains("ROUTERKEY"));
+        assertTrue(s.chars().allMatch(c -> c < 128), "faqat ASCII");
+        assertEquals(s.chars().filter(c -> c == '{').count(), s.chars().filter(c -> c == '}').count());
+
+        // boshqa transportlar SSTP klientini olib tashlaydi
+        assertTrue(script(ovpnRouter()).contains("/interface sstp-client remove [find where name=\"sstp-maktab\"]"));
+        assertTrue(script(router("10.20.0.2/32", "192.168.88.0/24", "1-maktab"))
+            .contains("/interface sstp-client remove [find where name=\"sstp-maktab\"]"));
+
+        MikrotikRouter fresh = router("10.20.0.2/32", null, "1-maktab");
+        RouterController.applyTransport(fresh, MikrotikRouter.Transport.SSTP);
+        assertNotNull(fresh.getOvpnPassword(), "SSTP uchun ham parol yaratiladi");
+        assertEquals(MikrotikRouter.Transport.SSTP, RouterController.parseTransport("sstp"));
+    }
+
     @Test
     void oneRouterOneVpn() {
         // 2026-09-19: bir xil IP ikki interfeysda turgani 1 soatlik uzilishga sabab bo'lgan —
@@ -241,11 +282,13 @@ class RouterOsScriptTest {
         ReflectionTestUtils.setField(controller, "wgServerEndpoint", env("HUB_ENDPOINT", ""));
         ReflectionTestUtils.setField(controller, "wgServerPort", env("HUB_PORT", "51820"));
         ReflectionTestUtils.setField(controller, "ovpnPort", env("OVPN_PORT", "443"));
+        ReflectionTestUtils.setField(controller, "sstpPort", env("SSTP_PORT", "4443"));
         MikrotikRouter r = router(env("ROUTER_VPN_IP", "10.20.0.2/32"), env("ROUTER_LAN", "192.168.88.0/24"), "1-maktab");
         r.setId(Long.valueOf(env("ROUTER_ID", "4")));
         r.setWgPrivateKey(env("ROUTER_PRIVATE_KEY", ""));
-        if ("OPENVPN".equalsIgnoreCase(env("ROUTER_TRANSPORT", ""))) {
-            r.setTransport(MikrotikRouter.Transport.OPENVPN);
+        MikrotikRouter.Transport t = RouterController.parseTransport(env("ROUTER_TRANSPORT", ""));
+        if (t != null && t.usesPassword()) {
+            r.setTransport(t);
             r.setOvpnPassword(env("ROUTER_OVPN_PASSWORD", ""));
         }
         String s = script(r);

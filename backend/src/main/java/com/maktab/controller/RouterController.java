@@ -63,12 +63,14 @@ public class RouterController {
     @Value("${app.wireguard.subnet-base:10.20.0}") private String wgSubnetBase;
     @Value("${app.wireguard.allowed-ips:10.20.0.0/24}") private String wgAllowedIps;
     @Value("${app.openvpn.port:443}") private String ovpnPort;
+    @Value("${app.sstp.port:4443}") private String sstpPort;
 
     @Autowired(required = false) private com.maktab.service.DeviceAlertService alerts;
 
     static final String SCRIPT_TAG = "maktab_davomad";
     static final String WG_IF = "wg-maktab";
     static final String OVPN_IF = "ovpn-maktab";
+    static final String SSTP_IF = "sstp-maktab";
 
     private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
     private static final String PW_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
@@ -90,7 +92,7 @@ public class RouterController {
      * aks holda transport qayta tanlanganda routerdagi eski skript ishlamay qolardi). */
     static void applyTransport(MikrotikRouter r, MikrotikRouter.Transport t) {
         r.setTransport(t);
-        if (t == MikrotikRouter.Transport.OPENVPN && (r.getOvpnPassword() == null || r.getOvpnPassword().isBlank())) {
+        if (t.usesPassword() && (r.getOvpnPassword() == null || r.getOvpnPassword().isBlank())) {
             r.setOvpnPassword(newOvpnPassword());
         }
     }
@@ -157,8 +159,11 @@ public class RouterController {
      *    interfeysda turgani sabab bo'lgan). RouterOS 7 majburiy (WireGuard faqat v7 da).
      */
     private String buildRouterOsScript(MikrotikRouter r) {
-        final boolean ovpn = r.effectiveTransport() == MikrotikRouter.Transport.OPENVPN;
-        final String iface = ovpn ? OVPN_IF : WG_IF;
+        final MikrotikRouter.Transport transport = r.effectiveTransport();
+        final boolean sstp = transport == MikrotikRouter.Transport.SSTP;
+        final boolean ovpn = transport == MikrotikRouter.Transport.OPENVPN || sstp;
+        final String iface = sstp ? SSTP_IF : ovpn ? OVPN_IF : WG_IF;
+        final String clientMenu = sstp ? "/interface sstp-client" : "/interface ovpn-client";
         final String tag = SCRIPT_TAG;
         String lan = vpn.lanSubnet(r);
         String lanNetwork = lan.substring(0, lan.indexOf('/'));
@@ -173,7 +178,8 @@ public class RouterController {
 
         StringBuilder sb = new StringBuilder();
         sb.append("# maktab_davomad - ").append(schoolName).append(" (router #").append(r.getId()).append(")\n");
-        sb.append("# Ulanish turi: ").append(ovpn ? "OpenVPN (TCP " + ovpnPort + ")" : "WireGuard (UDP " + wgServerPort + ")")
+        sb.append("# Ulanish turi: ").append(sstp ? "SSTP (TLS, TCP " + sstpPort + ")"
+                : ovpn ? "OpenVPN (TCP " + ovpnPort + ")" : "WireGuard (UDP " + wgServerPort + ")")
           .append(". RouterOS 7 kerak.\n");
         sb.append("# WinBox > New Terminal oynasiga TO'LIQ nusxalab qo'ying. Qayta qo'yish xavfsiz.\n");
         if (!wgServerConfigured()) {
@@ -198,21 +204,36 @@ public class RouterController {
             sb.append("# 1. Eski WireGuard ulanishi (bo'lsa) olib tashlanadi - bitta router, bitta VPN\n");
             sb.append("/ip address remove [find where interface=\"").append(WG_IF).append("\"]\n");
             sb.append("/interface wireguard peers remove [find where interface=\"").append(WG_IF).append("\"]\n");
-            sb.append("/interface wireguard remove [find where name=\"").append(WG_IF).append("\"]\n\n");
+            sb.append("/interface wireguard remove [find where name=\"").append(WG_IF).append("\"]\n");
+            if (sstp) {
+                sb.append("/interface ovpn-client remove [find where name=\"").append(OVPN_IF).append("\"]\n\n");
+            } else {
+                sb.append("/interface sstp-client remove [find where name=\"").append(SSTP_IF).append("\"]\n\n");
+            }
 
-            String ovpnArgs = " connect-to=" + hubHost + " port=" + ovpnPort + " protocol=tcp mode=ip"
-                + " user=\"" + r.ovpnUsername() + "\" password=\"" + r.getOvpnPassword() + "\""
-                + " cipher=aes256-gcm auth=sha1 add-default-route=no use-peer-dns=no verify-server-certificate=no"
-                + " comment=$tag disabled=yes";
+            String ovpnArgs = sstp
+                ? " connect-to=" + hubHost + " port=" + sstpPort
+                    + " user=\"" + r.ovpnUsername() + "\" password=\"" + r.getOvpnPassword() + "\""
+                    // pfs/ciphers: RouterOS standarti (pfs=no, aes256-sha) hub'dagi Python 3.12 TLS'i bilan
+                    // umumiy shifr topmaydi -> "internal error (6)" (2026-10-03 jonli routerda tasdiqlangan)
+                    + " authentication=mschap2 profile=default-encryption pfs=yes ciphers=aes256-gcm-sha384"
+                    + " add-default-route=no verify-server-certificate=no"
+                    + " comment=$tag disabled=yes"
+                : " connect-to=" + hubHost + " port=" + ovpnPort + " protocol=tcp mode=ip"
+                    + " user=\"" + r.ovpnUsername() + "\" password=\"" + r.getOvpnPassword() + "\""
+                    + " cipher=aes256-gcm auth=sha1 add-default-route=no use-peer-dns=no verify-server-certificate=no"
+                    + " comment=$tag disabled=yes";
             // 2026-09-19 (RouterOS 7.18.2, jonli routerda 2 marta): klient yaratilgan zahoti ulana
             // boshlasa, qolgan sozlamalar (marshrut, NAT, firewall) qo'shilayotgan paytda birinchi
             // ulanish "using encoding" bosqichida osilib qolardi; o'chirib-yoqish darhol tuzatardi.
             // Shu sabab klient o'chiq holda sozlanadi va skript OXIRIDA yoqiladi.
-            sb.append("# 2. OpenVPN ulanishi (TCP - UDP'ni bloklaydigan tarmoqlardan ham o'tadi); oxirida yoqiladi\n");
-            sb.append(":if ([:len [/interface ovpn-client find where name=$vpnIf]] = 0) do={\n");
-            sb.append("  /interface ovpn-client add name=$vpnIf").append(ovpnArgs).append("\n");
+            sb.append(sstp
+                ? "# 2. SSTP ulanishi (TLS ichida - oddiy HTTPS kabi ko'rinadi); oxirida yoqiladi\n"
+                : "# 2. OpenVPN ulanishi (TCP - UDP'ni bloklaydigan tarmoqlardan ham o'tadi); oxirida yoqiladi\n");
+            sb.append(":if ([:len [").append(clientMenu).append(" find where name=$vpnIf]] = 0) do={\n");
+            sb.append("  ").append(clientMenu).append(" add name=$vpnIf").append(ovpnArgs).append("\n");
             sb.append("} else={\n");
-            sb.append("  /interface ovpn-client set [find where name=$vpnIf]").append(ovpnArgs).append("\n");
+            sb.append("  ").append(clientMenu).append(" set [find where name=$vpnIf]").append(ovpnArgs).append("\n");
             sb.append("}\n\n");
 
             sb.append("# 3. Server gateway'iga (").append(gw).append(") javoblar tunnel orqali qaytadi\n");
@@ -221,6 +242,7 @@ public class RouterController {
         } else {
             sb.append("# 1. Eski OpenVPN ulanishi (bo'lsa) olib tashlanadi - bitta router, bitta VPN\n");
             sb.append("/interface ovpn-client remove [find where name=\"").append(OVPN_IF).append("\"]\n");
+            sb.append("/interface sstp-client remove [find where name=\"").append(SSTP_IF).append("\"]\n");
             sb.append("/ip route remove [find where comment=$tag]\n\n");
 
             // 2026-09-19: router 8 da ofis routeri (ikki qavat NAT) bitta manba portga eski NAT yozuvini
@@ -298,8 +320,8 @@ public class RouterController {
         }
 
         if (ovpn) {
-            sb.append("# OpenVPN faqat hamma sozlama tayyor bo'lgach yoqiladi (yuqoridagi izohga qarang)\n");
-            sb.append("/interface ovpn-client set [find where name=$vpnIf] disabled=no\n\n");
+            sb.append("# VPN klient faqat hamma sozlama tayyor bo'lgach yoqiladi (yuqoridagi izohga qarang)\n");
+            sb.append(clientMenu).append(" set [find where name=$vpnIf] disabled=no\n\n");
         }
 
         sb.append(":put \"").append(tag).append(": sozlash tugadi. 1 daqiqa ichida panelda router ONLINE bo'lishi kerak.\"\n");
@@ -421,9 +443,9 @@ public class RouterController {
         // MUHIM (2026-09-18 audit): getWgConfig bilan bir xil sabab — skript ham maxfiy
         // wgPrivateKey/ovpnPassword'ni o'z ichiga oladi, shuning uchun YOZISH darajasi talab qilinadi.
         currentUserService.assertCanWriteSchoolData(caller, router.getSchool().getId());
-        if (router.effectiveTransport() == MikrotikRouter.Transport.OPENVPN
+        if (router.effectiveTransport().usesPassword()
                 && (router.getOvpnPassword() == null || router.getOvpnPassword().isBlank())) {
-            applyTransport(router, MikrotikRouter.Transport.OPENVPN); // qo'lda o'zgartirilgan qator uchun
+            applyTransport(router, router.effectiveTransport()); // qo'lda o'zgartirilgan qator uchun
             routerRepo.save(router);
         }
         return ResponseEntity.ok(Map.of(
@@ -681,6 +703,18 @@ public class RouterController {
             .map(this::toTerminalMap).collect(Collectors.toList()));
     }
 
+    private static Integer parsePort(Object raw) {
+        if (raw == null || raw.toString().isBlank()) return null;
+        try {
+            int port = Integer.parseInt(raw.toString().trim());
+            if (port < 1 || port > 65535) throw new NumberFormatException();
+            return port;
+        } catch (NumberFormatException e) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST, "Port 1-65535 oralig'ida bo'lishi kerak");
+        }
+    }
+
     @PostMapping("/{routerId}/terminals")
     public ResponseEntity<?> addTerminal(@PathVariable Long routerId,
                                           @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -704,7 +738,7 @@ public class RouterController {
             body.getOrDefault("direction", "ENTRANCE").toString()));
         t.setStatus(FaceTerminal.TerminalStatus.OFFLINE);
         t.setIpAddress((String) body.get("ipAddress"));
-        t.setPort(body.get("port") != null ? Integer.parseInt(body.get("port").toString()) : null);
+        t.setPort(parsePort(body.get("port")));
         t.setUseHttps(body.get("useHttps") != null && Boolean.parseBoolean(body.get("useHttps").toString()));
         t.setDeviceUsername((String) body.get("deviceUsername"));
         t.setDevicePassword((String) body.get("devicePassword"));
@@ -728,11 +762,12 @@ public class RouterController {
             currentUserService.assertCanWriteSchoolData(caller, terminalSchoolId(t));
             if (body.containsKey("name")) t.setName((String) body.get("name"));
             if (body.containsKey("serialNumber")) t.setSerialNumber((String) body.get("serialNumber"));
+            if (body.containsKey("brand")) t.setBrand((String) body.get("brand"));
             if (body.containsKey("model")) t.setModel((String) body.get("model"));
             if (body.containsKey("direction"))
                 t.setDirection(FaceTerminal.Direction.valueOf(body.get("direction").toString()));
             if (body.containsKey("ipAddress")) t.setIpAddress((String) body.get("ipAddress"));
-            if (body.containsKey("port")) t.setPort(body.get("port") != null ? Integer.parseInt(body.get("port").toString()) : null);
+            if (body.containsKey("port")) t.setPort(parsePort(body.get("port")));
             if (body.containsKey("useHttps")) t.setUseHttps(body.get("useHttps") != null && Boolean.parseBoolean(body.get("useHttps").toString()));
             if (body.containsKey("deviceUsername")) t.setDeviceUsername((String) body.get("deviceUsername"));
             if (body.containsKey("devicePassword") && body.get("devicePassword") != null && !body.get("devicePassword").toString().isBlank()) {

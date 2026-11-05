@@ -105,7 +105,11 @@ public class MikrotikRouter {
         ONLINE, OFFLINE
     }
 
+    /** SSTP (2026-10-03): TLS ichida, oddiy HTTPS kabi ko'rinadi — OpenVPN'ni ham DPI bilan to'sadigan
+     * provayderlar uchun. Login/parol OpenVPN bilan bir xil (ovpnUsername/ovpnPassword). */
     public enum Transport {
-        WIREGUARD, OPENVPN
+        WIREGUARD, OPENVPN, SSTP;
+
+        public boolean usesPassword() { return this != WIREGUARD; }
     }
 }

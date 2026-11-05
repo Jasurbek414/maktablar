@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 import ClassAttendanceModal from '../components/classes/ClassAttendanceModal';
+import { LATIN_SECTIONS, UZBEK_EXTRA_SECTIONS, CYRILLIC_SECTIONS, ALL_SECTIONS } from '../utils/classSections';
 
 export default function Classes({ user }) {
   const { t } = useTranslation();
@@ -22,6 +23,7 @@ export default function Classes({ user }) {
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
+  const [customSection, setCustomSection] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState('');
   const [detailClass, setDetailClass] = useState(null); // bosilgan sinf — davomat oynasi
@@ -78,8 +80,8 @@ export default function Classes({ user }) {
     try { setClasses(await api.get(`/api/classes?schoolId=${selSchool}`)); } catch {}
   };
 
-  const openAdd = () => { setEditing(null); setForm({ schoolId: selSchool, grade: '', section: '', name: '', teacherId: null }); setModal(true); };
-  const openEdit = (c) => { setEditing(c); setForm({ ...c }); setModal(true); };
+  const openAdd = () => { setEditing(null); setForm({ schoolId: selSchool, grade: '', section: '', name: '', teacherId: null }); setCustomSection(false); setModal(true); };
+  const openEdit = (c) => { setEditing(c); setForm({ ...c }); setCustomSection(Boolean(c.section && !ALL_SECTIONS.includes(c.section))); setModal(true); };
   const save = async () => {
     if (!form.grade || !form.section) { alert(t('classes.validation.fieldsRequired')); return; }
     try {
@@ -183,7 +185,24 @@ export default function Classes({ user }) {
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 <div className="relative">
                   <div className="flex items-center justify-between mb-3">
-                    <div className={`px-3 py-1.5 rounded-lg text-sm font-bold ${gradeColors[c.grade] || 'bg-slate-500/10 text-slate-400'}`}>{c.name}</div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className={`px-2.5 py-1 rounded-lg text-sm font-bold ${gradeColors[c.grade] || 'bg-slate-500/10 text-slate-400'}`}>{c.name}</div>
+                      {c.syncSyncedCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-medium border border-emerald-500/25" title={`${c.syncSyncedCount} ta o'quvchi Face ID terminalga yuklangan`}>
+                          ✓ {c.syncSyncedCount} ta terminalda
+                        </span>
+                      )}
+                      {c.syncFailedCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-500/20 text-red-300 text-[10px] font-bold border border-red-500/30 animate-pulse" title={`${c.syncFailedCount} ta o'quvchi terminalga yuklanmagan!`}>
+                          ⚠️ {c.syncFailedCount} ta xato
+                        </span>
+                      )}
+                      {c.syncPendingCount > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 text-[10px] font-medium border border-amber-500/25" title={`${c.syncPendingCount} ta yangi o'quvchi kutilmoqda`}>
+                          ⏳ {c.syncPendingCount} ta yangi
+                        </span>
+                      )}
+                    </div>
                     <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={e => { e.stopPropagation(); openEdit(c); }} className="p-1 rounded-lg text-slate-600 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
@@ -231,11 +250,53 @@ export default function Classes({ user }) {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase">{t('classes.modal.sectionLabel')}</label>
-                <select className={selectCls + ' mt-1.5'} value={form.section || ''} onChange={e => setForm({ ...form, section: e.target.value })}>
-                  <option value="">{t('common.select')}</option>
-                  {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-400 uppercase">{t('classes.modal.sectionLabel')}</label>
+                  <button
+                    type="button"
+                    onClick={() => setCustomSection(prev => !prev)}
+                    className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors"
+                  >
+                    {customSection ? "Ro'yxatdan tanlash" : "Qo'lda kiritish"}
+                  </button>
+                </div>
+                {customSection ? (
+                  <input
+                    className={inputCls + ' mt-1.5'}
+                    value={form.section || ''}
+                    onChange={e => setForm({ ...form, section: e.target.value.toUpperCase() })}
+                    placeholder="Masalan: A, B, Sh, 1..."
+                    maxLength={10}
+                    autoFocus
+                  />
+                ) : (
+                  <select
+                    className={selectCls + ' mt-1.5'}
+                    value={form.section || ''}
+                    onChange={e => {
+                      if (e.target.value === '__CUSTOM__') {
+                        setCustomSection(true);
+                      } else {
+                        setForm({ ...form, section: e.target.value });
+                      }
+                    }}
+                  >
+                    <option value="">{t('common.select')}</option>
+                    {form.section && !ALL_SECTIONS.includes(form.section) && (
+                      <option value={form.section}>{form.section}</option>
+                    )}
+                    <optgroup label="Lotin alifbosi (A — Z)">
+                      {LATIN_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </optgroup>
+                    <optgroup label="O'zbek lotin (O', G', Sh, Ch)">
+                      {UZBEK_EXTRA_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </optgroup>
+                    <optgroup label="Kirill / Rus sinflari (А — Я)">
+                      {CYRILLIC_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </optgroup>
+                    <option value="__CUSTOM__">✍️ Boshqa (qo'lda yozish)...</option>
+                  </select>
+                )}
               </div>
             </div>
             <div className="mb-4">

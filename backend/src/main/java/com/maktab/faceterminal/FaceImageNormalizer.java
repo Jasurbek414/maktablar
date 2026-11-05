@@ -45,21 +45,28 @@ public final class FaceImageNormalizer {
         }
 
         // Avval sifat pasaytiriladi; yetmasa (katta, mayda detalli foto) o'lcham ham bosqichma-bosqich
-        // kichraytiriladi — lekin yuz aniqlanishi uchun MIN_FALLBACK_SIDE'dan pastga tushilmaydi.
+        // kichraytiriladi — yuz aniqlanishi uchun MIN_FALLBACK_SIDE (240px)'gacha xavfsiz tushiriladi.
         int longSide = Math.min(MAX_SIDE, Math.max(src.getWidth(), src.getHeight()));
         while (true) {
             BufferedImage rgb = toRgb(src, longSide);
-            for (float quality = 0.9f; quality >= 0.45f; quality -= 0.15f) {
+            for (float quality = 0.9f; quality >= 0.35f; quality -= 0.15f) {
                 byte[] out = encodeJpeg(rgb, quality);
                 if (out.length <= MAX_BYTES) return out;
             }
-            if (longSide <= MIN_FALLBACK_SIDE) break;
+            if (longSide <= MIN_FALLBACK_SIDE) {
+                // Oxirgi urinish: eng past sifat (0.25f - 0.20f)
+                for (float quality = 0.25f; quality >= 0.15f; quality -= 0.05f) {
+                    byte[] out = encodeJpeg(rgb, quality);
+                    if (out.length <= MAX_BYTES) return out;
+                }
+                break;
+            }
             longSide = Math.max(MIN_FALLBACK_SIDE, (int) (longSide * 0.75));
         }
         throw new TerminalException("O'quvchi rasmini " + (MAX_BYTES / 1024) + " KB dan kichraytirib bo'lmadi");
     }
 
-    static final int MIN_FALLBACK_SIDE = 480;
+    static final int MIN_FALLBACK_SIDE = 240;
 
     /** Uzun tomoni longSide bo'lgan RGB nusxa (kattalashtirilmaydi). PNG shaffofligi/CMYK qurilmada rad etiladi. */
     private static BufferedImage toRgb(BufferedImage src, int longSide) {

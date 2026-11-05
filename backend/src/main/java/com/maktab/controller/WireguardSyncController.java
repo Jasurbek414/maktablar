@@ -184,7 +184,36 @@ public class WireguardSyncController {
         return ResponseEntity.ok(clients);
     }
 
-    /** Hub OpenVPN status faylidagi ulangan common-name'lar — routerning haqiqiy heartbeat'i. */
+    /**
+     * SSTP routerlar (2026-10-03). MS-CHAPv2 xesh emas, ochiq parolni talab qiladi — shu sabab
+     * parol o'zi uzatiladi; hub uni faqat 0600 huquqli chap-secrets fayliga yozadi. Endpoint
+     * boshqa internal endpointlar kabi X-Wg-Sync-Key bilan himoyalangan.
+     */
+    @GetMapping("/sstp-clients")
+    public ResponseEntity<?> sstpClients(@RequestHeader(value = "X-Wg-Sync-Key", required = false) String syncKey) {
+        if (!isValidSyncKey(syncKey)) {
+            return ResponseEntity.status(401).body(Map.of("error", "invalid sync key"));
+        }
+        List<Map<String, Object>> clients = new ArrayList<>();
+        for (MikrotikRouter r : routerRepo.findAll()) {
+            if (r.effectiveTransport() != MikrotikRouter.Transport.SSTP) continue;
+            if (r.getOvpnPassword() == null || r.getOvpnPassword().isBlank()
+                    || r.getVpnIp() == null || r.getVpnIp().isBlank()) continue;
+            try {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("routerId", r.getId());
+                m.put("cn", r.ovpnUsername());
+                m.put("password", r.getOvpnPassword());
+                m.put("mappedSubnet", vpn.mappedSubnet(r));
+                clients.add(m);
+            } catch (IllegalStateException e) {
+                log.warn("sstp-clients: router {} o'tkazib yuborildi: {}", r.getId(), e.getMessage());
+            }
+        }
+        return ResponseEntity.ok(clients);
+    }
+
+    /** Hub'dagi ulangan OpenVPN/SSTP loginlari — routerning haqiqiy heartbeat'i. */
     @PostMapping("/ovpn-status")
     public ResponseEntity<?> ovpnStatus(@RequestHeader(value = "X-Wg-Sync-Key", required = false) String syncKey,
                                         @RequestBody(required = false) List<String> connected) {
@@ -198,7 +227,7 @@ public class WireguardSyncController {
         LocalDateTime now = LocalDateTime.now();
         int updated = 0;
         for (MikrotikRouter r : routerRepo.findAll()) {
-            if (r.effectiveTransport() != MikrotikRouter.Transport.OPENVPN || !cns.contains(r.ovpnUsername())) continue;
+            if (!r.effectiveTransport().usesPassword() || !cns.contains(r.ovpnUsername())) continue;
             boolean wasOnline = r.getStatus() == MikrotikRouter.RouterStatus.ONLINE;
             boolean firstConnection = r.getLastHeartbeat() == null;
             // Har 15s yozmaslik uchun: OFFLINE chegarasi 3 daqiqa, 60s aniqlik yetarli

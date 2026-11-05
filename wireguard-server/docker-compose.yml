@@ -45,13 +45,19 @@ services:
       OVPN_ENABLED: ${OVPN_ENABLED:-1}
       OVPN_PORT: ${OVPN_PORT:-443}
       OVPN_NETWORK: ${OVPN_NETWORK:-10.21.0.0}
-    # OpenVPN tun0 yaratishi uchun
+      # SSTP (2026-10-03) — TLS ichida; OpenVPN'ni ham to'sadigan provayderlar uchun.
+      # Backend'dagi SSTP_PORT bilan bir xil bo'lishi shart. Hostda ppp_generic moduli kerak.
+      SSTP_ENABLED: ${SSTP_ENABLED:-1}
+      SSTP_PORT: ${SSTP_PORT:-4443}
+    # OpenVPN tun0, SSTP (pppd) esa ppp interfeyslarini yaratishi uchun
     devices:
       - /dev/net/tun:/dev/net/tun
+      - /dev/ppp:/dev/ppp
     ports:
       - "${WG_LISTEN_PORT:-51820}:${WG_LISTEN_PORT:-51820}/udp"
       # 443/udp (WireGuard) va 443/tcp (OpenVPN) bir-biriga xalaqit bermaydi — protokol boshqa.
       - "${OVPN_PORT:-443}:${OVPN_PORT:-443}/tcp"
+      - "${SSTP_PORT:-4443}:${SSTP_PORT:-4443}/tcp"
     volumes:
       - wg-data:/etc/wireguard
       # ca.crt, server.crt, server.key, dh.pem — faqat serverda (repoda .gitignore'da).

@@ -224,6 +224,12 @@ public class SchoolClassController {
         // Count students in this class
         long count = studentRepo.countByClassId(sc.getId());
         m.put("studentCount", count);
+        long failedCount = studentRepo.countByClassIdAndSyncStatus(sc.getId(), "FAILED");
+        m.put("syncFailedCount", failedCount);
+        long pendingCount = studentRepo.countByClassIdAndSyncStatus(sc.getId(), "PENDING");
+        m.put("syncPendingCount", pendingCount);
+        long syncedCount = studentRepo.countByClassIdAndSyncStatus(sc.getId(), "SYNCED");
+        m.put("syncSyncedCount", syncedCount);
         return m;
     }
 }

@@ -140,6 +140,62 @@ class DeviceAlertServiceTest {
         verify(notifications, never()).createDeviceNotification(anyString(), any(), anyBoolean());
     }
 
+    // ─── 2026-10-08: davom etayotgan uzilish va router/terminal poygasi ─────────
+
+    @Test
+    void silencedOutageIsReportedOnceItLastsSustained() {
+        java.time.Instant t0 = java.time.Instant.now();
+        service.clock = () -> t0;
+
+        service.routerOffline(router);          // xabar
+        service.routerOnline(router, false);    // xabar
+        advance(java.time.Duration.ofMinutes(5));
+        service.routerOffline(router);          // COOLDOWN ichida — hozircha jim
+        service.checkSustainedOutages();        // hali 30 daqiqa o'tmagan
+        verify(notifications, after(300).times(2)).sendAdminAlert(anyList(), anyString());
+
+        advance(DeviceAlertService.SUSTAINED.plusMinutes(1));
+        service.checkSustainedOutages();        // uzilish davom etyapti — endi xabar
+        service.checkSustainedOutages();        // faqat bir marta
+        verify(notifications, timeout(2000)).sendAdminAlert(anyList(), contains("daqiqadan beri yo'q"));
+        verify(notifications, after(300).times(3)).sendAdminAlert(anyList(), anyString());
+
+        service.routerOnline(router, false);    // e'lon qilingan uzilish tiklandi — xabar
+        verify(notifications, timeout(2000).times(2)).sendAdminAlert(anyList(), contains("aloqa tiklandi"));
+    }
+
+    @Test
+    void silencedOutageThatRecoversBeforeSustainedStaysSilent() {
+        java.time.Instant t0 = java.time.Instant.now();
+        service.clock = () -> t0;
+
+        service.routerOffline(router);
+        service.routerOnline(router, false);
+        advance(java.time.Duration.ofMinutes(5));
+        service.routerOffline(router);          // jim
+        advance(java.time.Duration.ofMinutes(10));
+        service.routerOnline(router, false);    // tiklandi — e'lon qilinmagan, jim
+        advance(DeviceAlertService.SUSTAINED);
+        service.checkSustainedOutages();
+
+        verify(notifications, after(400).times(2)).sendAdminAlert(anyList(), anyString());
+    }
+
+    @Test
+    void terminalAlertSuppressedWhenRouterHeartbeatIsStale() {
+        // router hali ONLINE deb belgilangan, lekin aloqasi 3 daqiqa oldin to'xtagan
+        router.setLastHeartbeat(java.time.LocalDateTime.now().minusMinutes(3));
+        service.terminalOffline(terminal, "connect timed out");
+        verify(notifications, after(300).never()).sendAdminAlert(anyList(), anyString());
+    }
+
+    @Test
+    void terminalAlertSentWhenRouterHeartbeatIsFresh() {
+        router.setLastHeartbeat(java.time.LocalDateTime.now().minusSeconds(30));
+        service.terminalOffline(terminal, "connect timed out");
+        verify(notifications, timeout(2000)).sendAdminAlert(anyList(), contains("javob bermayapti"));
+    }
+
     @Test
     void withoutChatIdsOnlyPanelNotification() {
         when(botConfig.adminAlertChatIds()).thenReturn(List.of());

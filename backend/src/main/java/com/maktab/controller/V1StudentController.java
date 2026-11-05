@@ -227,6 +227,8 @@ public class V1StudentController {
             Files.copy(upload.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
             String url = "/api/files/" + filename;
             student.setPhotoUrl(url);
+            student.setSyncStatus("PENDING");
+            student.setSyncError(null);
             studentRepo.save(student);
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("photo_url", url);
@@ -278,10 +280,17 @@ public class V1StudentController {
             return ResponseEntity.badRequest().body(Map.of("detail", i18n.msg("error.student.no_terminals")));
         }
         if (outcome.allSuccess()) {
+            student.setSyncStatus("SYNCED");
+            student.setSyncError(null);
+            student.setSyncedAt(java.time.OffsetDateTime.now());
+            studentRepo.save(student);
             return ResponseEntity.ok(Map.of(
                 "message", i18n.msg("success.student.face_pushed", outcome.successCount, outcome.totalCount)
             ));
         }
+        student.setSyncStatus("FAILED");
+        student.setSyncError(String.join("; ", outcome.errors));
+        studentRepo.save(student);
         if (outcome.anySuccess()) {
             return ResponseEntity.status(207).body(Map.of(
                 "message", i18n.msg("success.student.face_pushed_partial", outcome.successCount, outcome.totalCount),

@@ -166,6 +166,9 @@ public class StudentController {
         m.put("schoolName", s.getSchool().getName());
         m.put("classId", s.getClassId());
         m.put("className", className);
+        m.put("syncStatus", s.getSyncStatus() != null ? s.getSyncStatus() : (s.getPhotoUrl() != null && !s.getPhotoUrl().isBlank() ? "PENDING" : "NO_PHOTO"));
+        m.put("syncError", s.getSyncError());
+        m.put("syncedAt", s.getSyncedAt() != null ? s.getSyncedAt().toString() : null);
         return m;
     }
 
@@ -352,6 +355,11 @@ public class StudentController {
         if (body.containsKey("classId") && body.get("classId") != null) {
             s.setClassId(Long.valueOf(body.get("classId").toString()));
         }
+        if (s.getPhotoUrl() != null && !s.getPhotoUrl().isBlank()) {
+            s.setSyncStatus("PENDING");
+        } else {
+            s.setSyncStatus("NO_PHOTO");
+        }
         Student saved = studentRepository.save(s);
 
         Map<String, Object> result = new HashMap<>();
@@ -501,23 +509,55 @@ public class StudentController {
                     i18n.msg("error.student.import.too_many_rows", String.valueOf(MAX_IMPORT_ROWS))));
             }
 
+            // Ustunlarni aniqlash (sarlavhadan moslashuvchan qidirish — № yoki T/r ustuni bo'lsa ham ishlaydi)
+            int nameCol = 0;
+            int birthCol = 1;
+            int classCol = 2;
+            Row headerRow = sheet.getRow(0);
+            if (headerRow != null) {
+                int detName = -1, detBirth = -1, detClass = -1;
+                for (int c = 0; c < headerRow.getLastCellNum(); c++) {
+                    String val = cellToString(headerRow.getCell(c)).trim().toLowerCase();
+                    if (val.isEmpty()) continue;
+                    if (detName == -1 && (val.contains("f.i.sh") || val.contains("fish") || val.contains("ism") || val.contains("fio") || val.contains("fullname") || val.contains("name") || val.contains("familiya"))) {
+                        detName = c;
+                    } else if (detBirth == -1 && (val.contains("sana") || val.contains("tug'ilgan") || val.contains("tugilgan") || val.contains("birth") || val.contains("date") || val.contains("рожд"))) {
+                        detBirth = c;
+                    } else if (detClass == -1 && (val.contains("sinf") || val.contains("class") || val.contains("класс"))) {
+                        detClass = c;
+                    }
+                }
+                if (detName != -1) {
+                    nameCol = detName;
+                    if (detBirth != -1) birthCol = detBirth;
+                    if (detClass != -1) classCol = detClass;
+                } else {
+                    String firstCell = cellToString(headerRow.getCell(0)).trim().toLowerCase();
+                    if (firstCell.equals("№") || firstCell.equals("t/r") || firstCell.equals("tr") || firstCell.equals("#") || firstCell.equals("no")) {
+                        nameCol = 1;
+                        birthCol = 2;
+                        classCol = 3;
+                    }
+                }
+            }
+
             for (int r = 1; r <= lastRow; r++) {
                 Row row = sheet.getRow(r);
                 byte[] photo = photoByRow.get(r);
-                if ((row == null || isRowBlank(row)) && photo == null) continue;
+                if ((row == null || isRowBlank(row, nameCol, birthCol, classCol)) && photo == null) continue;
                 totalRows++;
                 int excelRowNum = r + 1; // Excel'dagi qator raqami (1-indeksli, sarlavha = 1)
                 Path writtenPhoto = null;
 
                 try {
-                    String fullName = cellToString(cellAt(row, 0)).trim().replaceAll("\\s+", " ");
+                    String fullName = cellToString(cellAt(row, nameCol)).trim().replaceAll("\\s+", " ");
                     if (fullName.isEmpty()) {
                         errors.add(Map.of("row", excelRowNum, "message", i18n.msg("error.student.import.name_required")));
                         continue;
                     }
 
                     LocalDate birthDate = null;
-                    Cell birthCell = cellAt(row, 1);
+                    Cell birthCell = cellAt(row, birthCol);
                     if (birthCell != null && birthCell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(birthCell)) {
                         birthDate = birthCell.getLocalDateTimeCellValue().toLocalDate();
                     } else {
@@ -532,7 +572,7 @@ public class StudentController {
                     }
 
                     Long resolvedClassId = classId;
-                    String className = cellToString(cellAt(row, 2)).trim();
+                    String className = cellToString(cellAt(row, classCol)).trim();
                     if (!className.isEmpty()) {
                         Long found = classByName.get(normalizeClassName(className));
                         if (found == null) {
@@ -589,6 +629,11 @@ public class StudentController {
                         }
                     }
 
+                    if (s.getPhotoUrl() != null && !s.getPhotoUrl().isBlank()) {
+                        s.setSyncStatus("PENDING");
+                    } else {
+                        s.setSyncStatus("NO_PHOTO");
+                    }
                     studentRepository.save(s);
                     existingKeys.add(key);
                     created++;
@@ -631,10 +676,11 @@ public class StudentController {
         }
     }
 
-    private boolean isRowBlank(Row row) {
-        for (int c = 0; c < 3; c++) {
-            if (!cellToString(row.getCell(c)).trim().isEmpty()) return false;
-        }
+    private boolean isRowBlank(Row row, int nameCol, int birthCol, int classCol) {
+        if (row == null) return true;
+        if (!cellToString(cellAt(row, nameCol)).trim().isEmpty()) return false;
+        if (!cellToString(cellAt(row, birthCol)).trim().isEmpty()) return false;
+        if (!cellToString(cellAt(row, classCol)).trim().isEmpty()) return false;
         return true;
     }
 
@@ -661,9 +707,17 @@ public class StudentController {
     };
 
     private LocalDate parseBirthDate(String raw) {
+        if (raw == null) return null;
+        raw = raw.trim().replaceAll("[.,;]+$", "").trim();
         for (java.time.format.DateTimeFormatter f : BIRTH_DATE_FORMATS) {
             try { return LocalDate.parse(raw, f); } catch (Exception ignored) { }
         }
+        try {
+            double d = Double.parseDouble(raw);
+            if (d > 1000 && d < 100000) {
+                return DateUtil.getLocalDateTime(d).toLocalDate();
+            }
+        } catch (Exception ignored) { }
         return null;
     }
 
@@ -706,7 +760,18 @@ public class StudentController {
         currentUserService.assertCanWriteSchoolData(user, currentSchoolId);
 
         if (body.containsKey("fullName")) s.setFullName((String) body.get("fullName"));
-        if (body.containsKey("photoUrl")) s.setPhotoUrl((String) body.get("photoUrl"));
+        if (body.containsKey("photoUrl")) {
+            String newPhoto = (String) body.get("photoUrl");
+            if (newPhoto != null && !newPhoto.isBlank() && !newPhoto.equals(s.getPhotoUrl())) {
+                s.setPhotoUrl(newPhoto);
+                s.setSyncStatus("PENDING");
+                s.setSyncError(null);
+            } else if (newPhoto == null || newPhoto.isBlank()) {
+                s.setPhotoUrl(null);
+                s.setSyncStatus("NO_PHOTO");
+                s.setSyncError(null);
+            }
+        }
         if (body.containsKey("birthDate") && body.get("birthDate") != null) {
             s.setBirthDate(LocalDate.parse(body.get("birthDate").toString()));
         }

@@ -8,10 +8,12 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -76,6 +78,14 @@ public class DeviceAlertService {
     /** Beqaror deb topilgan qurilma shu vaqtgacha jim turadi. */
     private final Map<String, Instant> quietUntil = new ConcurrentHashMap<>();
 
+    // 2026-10-08: 09:36 dagi "tiklandi" xabaridan keyin 09:52 da boshlangan uzilish COOLDOWN tufayli
+    // jim qoldi va soatlab davom etsa ham hech qachon xabar qilinmadi. Bo'g'uvchi faqat TEBRANISHNI
+    // bo'g'ishi kerak — SUSTAINED dan uzoq davom etgan uzilish har doim bir marta xabar qilinadi.
+    static final Duration SUSTAINED = Duration.ofMinutes(30);
+    /** Jim qolgan uzilish: qachon boshlangani va SUSTAINED o'tgach yuboriladigan xabar. */
+    private record PendingOutage(Instant since, String deviceName, Long schoolId, String telegramText) {}
+    private final Map<String, PendingOutage> pendingOutage = new ConcurrentHashMap<>();
+
     private enum Decision { SEND, SILENT, UNSTABLE }
 
     /** Testda vaqtni oldinga surish uchun — jonli kodda haqiqiy soat. */
@@ -106,9 +116,34 @@ public class DeviceAlertService {
     /** @return tiklanish haqida xabar berish kerakmi */
     private synchronized boolean decideOnline(String key) {
         openOutage.remove(key);
+        pendingOutage.remove(key);
         if (!notifiedOutage.remove(key)) return false; // uzilish e'lon qilinmagan — tiklanish ham ortiqcha
         lastSentAt.put(key, clock.get());
         return true;
+    }
+
+    /** Jim qolgan uzilishni eslab qoladi (allaqachon eslangan bo'lsa — boshlanish vaqti saqlanadi). */
+    private synchronized void rememberSilentOutage(String key, String deviceName, Long schoolId, String text) {
+        if (openOutage.contains(key) && !notifiedOutage.contains(key)) {
+            pendingOutage.putIfAbsent(key, new PendingOutage(clock.get(), deviceName, schoolId, text));
+        }
+    }
+
+    /** SUSTAINED dan uzoq davom etayotgan, lekin hali e'lon qilinmagan uzilishlarni xabar qiladi. */
+    @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
+    public void checkSustainedOutages() {
+        Instant now = clock.get();
+        for (Map.Entry<String, PendingOutage> e : pendingOutage.entrySet()) {
+            String key = e.getKey();
+            PendingOutage p = e.getValue();
+            if (p.since().plus(SUSTAINED).isAfter(now)) continue;
+            synchronized (this) {
+                if (!pendingOutage.remove(key, p)) continue;
+                if (!openOutage.contains(key) || !notifiedOutage.add(key)) continue;
+                lastSentAt.put(key, now);
+            }
+            dispatch(p.deviceName(), p.schoolId(), false, p.telegramText());
+        }
     }
 
     synchronized int outageCount(String key) {
@@ -132,11 +167,19 @@ public class DeviceAlertService {
     public void routerOffline(MikrotikRouter r) {
         String key = "router:" + r.getId();
         Decision d = decideOffline(key);
-        if (d == Decision.SILENT) return;
-        notifiedOutage.add(key);
-
         Long schoolId = schoolIdOf(r);
         String last = r.getLastHeartbeat() != null ? r.getLastHeartbeat().format(HM) : "-";
+        if (d == Decision.SILENT) {
+            rememberSilentOutage(key, "Router " + r.getName(), schoolId,
+                "🔴 Maktab bilan aloqa " + SUSTAINED.toMinutes() + " daqiqadan beri yo'q\n"
+                    + "Maktab: " + schoolName(schoolId) + "\n"
+                    + "Router: " + r.getName() + " (" + transportLabel(r) + ")\n"
+                    + "Oxirgi aloqa: " + last + "\n\n"
+                    + "Qisqa uzilishlardan keyin aloqa tiklanmadi — maktab internetini va routerning elektr manbasini tekshiring.");
+            return;
+        }
+        notifiedOutage.add(key);
+
         String text = d == Decision.UNSTABLE
             ? "⚠️ Maktab aloqasi BEQAROR\n"
                 + "Maktab: " + schoolName(schoolId) + "\n"
@@ -169,10 +212,17 @@ public class DeviceAlertService {
     // ─── Face ID terminal ────────────────────────────────────────────────────────
 
     public void terminalOffline(FaceTerminal t, String error) {
-        if (routerIsOffline(t.getRouterId())) return; // sabab — router, u haqida xabar allaqachon ketgan
+        if (routerLooksDown(t.getRouterId())) return; // sabab — router, u haqida alohida xabar ketadi
         String key = "terminal:" + t.getId();
         Decision d = decideOffline(key);
-        if (d == Decision.SILENT) return;
+        if (d == Decision.SILENT) {
+            rememberSilentOutage(key, "Face ID " + t.getName(), t.getSchoolId(),
+                "🔴 Face ID terminal " + SUSTAINED.toMinutes() + " daqiqadan beri javob bermayapti\n"
+                    + "Maktab: " + schoolName(t.getSchoolId()) + "\n"
+                    + "Terminal: " + t.getName() + (t.getIpAddress() != null ? " (" + t.getIpAddress() + ")" : "") + "\n\n"
+                    + "Router aloqasi joyida — terminalning elektr va tarmoq kabelini tekshiring.");
+            return;
+        }
         notifiedOutage.add(key);
 
         String text = d == Decision.UNSTABLE
@@ -216,10 +266,19 @@ public class DeviceAlertService {
         }
     }
 
-    private boolean routerIsOffline(Long routerId) {
+    /**
+     * Router OFFLINE deb belgilangan YOKI uning oxirgi aloqasi eskirgan. 2026-10-08: terminallar
+     * routerdan ~1 daqiqa oldin OFFLINE bo'lardi (heartbeat faqat har 60s yoziladi) va haqiqiy sabab
+     * tunnel bo'lsa ham "kabelni tekshiring" xabari ketardi. Onlayn routerda heartbeat ~75s dan eskirmaydi.
+     */
+    static final Duration ROUTER_STALE = Duration.ofSeconds(90);
+
+    private boolean routerLooksDown(Long routerId) {
         if (routerId == null) return false;
         return routerRepo.findById(routerId)
-            .map(r -> r.getStatus() == MikrotikRouter.RouterStatus.OFFLINE)
+            .map(r -> r.getStatus() == MikrotikRouter.RouterStatus.OFFLINE
+                || (r.getLastHeartbeat() != null
+                    && r.getLastHeartbeat().isBefore(LocalDateTime.now().minus(ROUTER_STALE))))
             .orElse(false);
     }
 
@@ -242,7 +301,11 @@ public class DeviceAlertService {
     }
 
     private static String transportLabel(MikrotikRouter r) {
-        return r.effectiveTransport() == MikrotikRouter.Transport.OPENVPN ? "OpenVPN" : "WireGuard";
+        return switch (r.effectiveTransport()) {
+            case OPENVPN -> "OpenVPN";
+            case SSTP -> "SSTP";
+            case WIREGUARD -> "WireGuard";
+        };
     }
 
     private static String truncate(String s, int max) {

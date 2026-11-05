@@ -113,7 +113,9 @@ function ConnectionPanel({ router, t, onChanged }) {
   const [switching, setSwitching] = useState(false)
 
   const transport = router.transport || 'WIREGUARD'
-  const isOvpn = transport === 'OPENVPN'
+  // OpenVPN va SSTP — ikkalasi ham routerN login/paroli bilan, WireGuard .conf'i yo'q
+  const isOvpn = transport !== 'WIREGUARD'
+  const transportLabel = { WIREGUARD: 'devices.network.transportWireguard', OPENVPN: 'devices.network.transportOpenvpn', SSTP: 'devices.network.transportSstp' }
 
   // Transport almashganda boshqa transport uchun olingan skript ko'rsatilib qolmasligi kerak
   useEffect(() => { setScript(null); setShowScript(false); setPendingTransport(null) }, [router.id, transport])
@@ -172,7 +174,7 @@ function ConnectionPanel({ router, t, onChanged }) {
       <div style={{ background: 'white', borderRadius: 9, padding: '10px 12px', marginBottom: 12 }}>
         <p style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>{t('devices.network.transportLabel')}</p>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {['WIREGUARD', 'OPENVPN'].map(tp => {
+          {['WIREGUARD', 'OPENVPN', 'SSTP'].map(tp => {
             const active = tp === transport
             return (
               <button key={tp} type="button" disabled={switching}
@@ -182,7 +184,7 @@ function ConnectionPanel({ router, t, onChanged }) {
                   border: active ? '1px solid #1D4ED8' : '1px solid #CBD5E1',
                   background: active ? '#1D4ED8' : 'white', color: active ? 'white' : '#334155',
                 }}>
-                {tp === 'WIREGUARD' ? t('devices.network.transportWireguard') : t('devices.network.transportOpenvpn')}
+                {t(transportLabel[tp])}
               </button>
             )
           })}

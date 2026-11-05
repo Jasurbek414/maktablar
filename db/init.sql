@@ -26,7 +26,13 @@ CREATE TABLE IF NOT EXISTS students (
     id BIGSERIAL PRIMARY KEY,
     full_name VARCHAR(255) NOT NULL,
     face_id VARCHAR(255) NOT NULL UNIQUE,
-    school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE CASCADE
+    school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+    birth_date DATE,
+    class_id BIGINT,
+    photo_url VARCHAR(255),
+    sync_status VARCHAR(32) DEFAULT 'PENDING',
+    sync_error TEXT,
+    synced_at TIMESTAMPTZ
 );
 
 -- Vasiylar (ota-ona)

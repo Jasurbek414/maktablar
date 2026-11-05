@@ -26,7 +26,7 @@ public class FileController {
     // DeviceController'da rasm boshqa hech qanday format ishlatmaydi (serve() ham faqat
     // shu uchtasini biladi). GIF/SVG kabi formatlar qabul qilinmaydi (SVG ayniqsa XSS xavfi).
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
-    private static final long MAX_UPLOAD_BYTES = 10L * 1024 * 1024; // 10 MB
+    private static final long MAX_UPLOAD_BYTES = 50L * 1024 * 1024; // 50 MB
 
     @Autowired private I18nService i18n;
 
@@ -54,19 +54,24 @@ public class FileController {
             return ResponseEntity.badRequest().body(Map.of("error", i18n.msg("error.file.invalid_type")));
         }
         try {
-            String ext = "";
-            String orig = file.getOriginalFilename();
-            if (orig != null && orig.contains(".")) {
-                ext = orig.substring(orig.lastIndexOf("."));
+            String ext = ".jpg";
+            byte[] bytes = file.getBytes();
+            try {
+                // Katta rasmlarni avtomatik ravishda terminal va veb uchun siqilgan JPEG'ga o'tkazish
+                byte[] optimized = com.maktab.faceterminal.FaceImageNormalizer.toDeviceJpeg(bytes);
+                if (optimized != null && optimized.length > 0) {
+                    bytes = optimized;
+                }
+            } catch (Exception ignored) {
+                String orig = file.getOriginalFilename();
+                if (orig != null && orig.contains(".")) {
+                    ext = orig.substring(orig.lastIndexOf("."));
+                }
             }
-            // XAVFSIZLIK (2026-09-25 audit): GET /api/files/** ATAYLAB ochiq (rasm <img src> orqali
-            // ko'rsatiladi va Telegram serverlari ham shu URL'dan yuklab oladi — token qo'yilsa
-            // ota-onaga rasm yetib bormaydi). Shuning uchun himoya nomning taxmin qilinmasligiga
-            // tayanadi. Avval 12 ta belgi (~44 bit) edi — endi to'liq UUID (128 bit).
-            // Mavjud fayllar o'z nomida qoladi, faqat yangilari uzun bo'ladi.
+            // XAVFSIZLIK (2026-09-25 audit): GET /api/files/** ATAYLAB ochiq
             String filename = UUID.randomUUID().toString().replace("-", "") + ext;
             Path target = uploadDir.resolve(filename);
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            Files.write(target, bytes);
             String url = "/api/files/" + filename;
             return ResponseEntity.ok(Map.of("url", url, "filename", filename));
         } catch (IOException e) {

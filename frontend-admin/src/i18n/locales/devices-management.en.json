@@ -114,12 +114,13 @@
       "transportLabel": "Connection type",
       "transportWireguard": "WireGuard (recommended)",
       "transportOpenvpn": "OpenVPN (fallback)",
-      "transportHint": "WireGuard is fast and light (UDP). If the school's internet blocks UDP or the router stays offline for more than 3 minutes, choose OpenVPN (TCP 443, passes through almost any network).",
+      "transportSstp": "SSTP (looks like HTTPS)",
+      "transportHint": "WireGuard is fast and light (UDP). If the school's internet blocks UDP or the router stays offline for more than 3 minutes, choose OpenVPN (TCP 443). If the provider blocks OpenVPN too, choose SSTP (inside TLS, looks like regular HTTPS).",
       "switchConfirmTitle": "Change the connection type?",
       "switchConfirmNote": "The school stays disconnected until you paste the new script into the router. The script removes the old connection by itself.",
       "switchConfirmBtn": "Yes, change",
       "switchError": "Could not change the connection type",
-      "ovpnLogin": "OpenVPN login:"
+      "ovpnLogin": "VPN login:"
     },
     "form": {
       "editTerminalTitle": "Edit terminal",

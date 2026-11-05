@@ -277,6 +277,28 @@ class StudentImportTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void supportsIndexColumnAndDatePunctuation() throws Exception {
+        MockMultipartFile file = xlsx(new Object[][]{
+            {"№", "F.I.Sh (majburiy)", "Tug'ilgan sana (DD.MM.YYYY, ixtiyoriy)", "Sinf nomi  (ixtiyoriy, masalan 1-A)"},
+            {"1", "Nigina Xayrullo Qizi", "24.09.2016", "1-A"},
+            {"2", "Muhammadyusuf Davron o'g'li", "27.04.2016.", "1-A"},
+            {"3", "Dildora Kozimjon Qizi", "12.01.2016,", "1-A"},
+        });
+
+        ResponseEntity<?> res = controller.importExcel("Bearer x", file, 1L, null);
+        assertEquals(200, res.getStatusCode().value());
+        Map<String, Object> b = body(res);
+        assertEquals(3, b.get("total"));
+        assertEquals(3, b.get("created"));
+        assertEquals(0, b.get("failed"));
+        List<Map<String, Object>> warnings = (List<Map<String, Object>>) b.get("warnings");
+        assertTrue(warnings.isEmpty(), "Trailing punctuation should not produce warnings: " + warnings);
+        assertEquals(LocalDate.of(2016, 4, 27), saved.get(1).getBirthDate());
+        assertEquals(LocalDate.of(2016, 1, 12), saved.get(2).getBirthDate());
+    }
+
+    @Test
     void templateHasOnlyHeaderInDataSheet() throws Exception {
         ResponseEntity<?> res = controller.importTemplate("Bearer x");
         assertEquals(200, res.getStatusCode().value());

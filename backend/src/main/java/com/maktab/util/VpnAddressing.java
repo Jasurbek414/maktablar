@@ -31,6 +31,8 @@ public class VpnAddressing {
     // OpenVPN zaxira transporti (2026-09-19): router N tunneli 10.21.0.N — WireGuard 10.20.0.0/24
     // bilan BIR XIL bo'lmasligi shart (09-19 dagi uzilish aynan bir xil IP ikki interfeysda edi).
     @Value("${app.openvpn.subnet-base:10.21.0}") private String ovpnTunnelBase;
+    // SSTP (2026-10-03): hub o'z pulidan 10.22.0.x beradi; maktab LAN'i bu oraliqda bo'lmasligi kerak
+    @Value("${app.sstp.subnet-base:10.22.0}") private String sstpTunnelBase;
 
     public static final String DEFAULT_LAN_SUBNET = "192.168.88.0/24";
 
@@ -114,7 +116,8 @@ public class VpnAddressing {
         if (!isPrivate) return null;
         String normalized = a + "." + b + "." + c + ".0/24";
         if (normalized.startsWith(tunnelBase + ".") || normalized.startsWith(mappedBase + ".")
-                || normalized.startsWith(ovpnTunnelBase + ".")) return null;
+                || normalized.startsWith(ovpnTunnelBase + ".")
+                || normalized.startsWith(sstpTunnelBase + ".")) return null;
         return normalized;
     }
 

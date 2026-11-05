@@ -36,6 +36,19 @@ OVPN_STATUS="/run/openvpn-status.log"
 OVPN_IFACE="tun0"
 OVPN_PID=""
 
+# SSTP (2026-10-03) — OpenVPN'ni ham to'sadigan provayderlar uchun: TLS ichida, oddiy HTTPS kabi
+# ko'rinadi. Login/parol OpenVPN bilan bir xil (routerN). Har router o'z ppp interfeysini oladi,
+# maktab LAN marshruti sstp-ip-up.sh'da qo'yiladi. Backend'dagi app.sstp.port bilan bir xil port.
+SSTP_ENABLED="${SSTP_ENABLED:-0}"
+SSTP_PORT="${SSTP_PORT:-4443}"
+SSTP_LOCAL_IP="${SSTP_LOCAL_IP:-10.22.0.1}"
+SSTP_POOL="${SSTP_POOL:-10.22.0.0/24}"
+SSTP_DIR="$CONF_DIR/sstp"                       # sertifikat volume'da — qayta yaratishda o'zgarmaydi
+SSTP_CACHE="$CONF_DIR/sstp-clients.json"         # sstp-ip-up.sh dagi yo'l bilan BIR XIL bo'lishi shart
+SSTP_SESSIONS="/run/sstp-sessions"               # sstp-ip-up.sh / sstp-ip-down.sh bilan bir xil
+SSTP_PPP_OPTIONS="/etc/ppp/options.sstpd"
+SSTP_PID=""
+
 mkdir -p "$CONF_DIR"
 
 # ── 1. Server kalit juftligini birinchi ishga tushirishda generatsiya qilish ──
@@ -111,6 +124,9 @@ echo "[wireguard] Route ${WG_MAPPED_SUPERNET} va izolyatsiya qoidalari o'rnatild
 # tun0 hali yo'q bo'lsa ham iptables interfeys nomini qabul qiladi.
 iptables -A FORWARD -i "$IFACE" -o "$OVPN_IFACE" -s "$WG_GATEWAY_IP" -j ACCEPT
 iptables -A FORWARD -i "$OVPN_IFACE" -o "$IFACE" -d "$WG_GATEWAY_IP" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+# SSTP routerlar (ppp0, ppp1, ...) — xuddi shu izolyatsiya
+iptables -A FORWARD -i "$IFACE" -o "ppp+" -s "$WG_GATEWAY_IP" -j ACCEPT
+iptables -A FORWARD -i "ppp+" -o "$IFACE" -d "$WG_GATEWAY_IP" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
 echo "════════════════════════════════════════════════════════════════"
 echo " WireGuard server tayyor. Backend'ga shu qiymatlarni bering:"
@@ -122,6 +138,7 @@ echo "════════════════════════�
 term_handler() {
     echo "[wireguard] To'xtatilmoqda..."
     if [ -n "$OVPN_PID" ]; then kill "$OVPN_PID" 2>/dev/null || true; fi
+    if [ -n "$SSTP_PID" ]; then kill "$SSTP_PID" 2>/dev/null || true; fi
     wg-quick down "$IFACE" || true
     exit 0
 }
@@ -289,11 +306,83 @@ sync_ovpn_clients() {
     done <<< "$current"
 }
 
-# Ulangan OpenVPN routerlar — routerning haqiqiy heartbeat'i (WireGuard handshake hisoboti kabi).
+# ── 6. SSTP transporti ──
+# Kesh + chap-secrets backenddan (MS-CHAPv2 ochiq parol talab qiladi — fayl faqat root uchun).
+# Backend javob bermasa eski fayllar qoladi: routerlar qayta ulana oladi.
+sync_sstp_clients() {
+    [ "$SSTP_ENABLED" = "1" ] || return 0
+    local response
+    if ! response="$(curl -fsS --max-time 8 \
+            -H "X-Wg-Sync-Key: ${WG_SYNC_SECRET}" \
+            "${BACKEND_URL%/}/api/internal/sstp-clients")"; then
+        echo "[sstp] Ogohlantirish: backend'dan klientlar ro'yxatini olib bo'lmadi — eski kesh ishlatiladi"
+        return 0
+    fi
+    if ! echo "$response" | jq -e 'type == "array"' >/dev/null 2>&1; then
+        echo "[sstp] Ogohlantirish: kutilmagan javob — kesh o'zgartirilmadi"
+        return 0
+    fi
+    umask 077
+    echo "$response" > "${SSTP_CACHE}.tmp" && mv -f "${SSTP_CACHE}.tmp" "$SSTP_CACHE"
+    # Faqat kutilgan shakldagi login/parol — fayl formatini buzadigan qiymatlar o'tkazib yuboriladi
+    echo "$response" | jq -r '.[] | select((.cn | test("^router[0-9]+$")) and (.password | test("^[A-Za-z0-9]{8,64}$")))
+        | "\(.cn) * \(.password) *"' > /etc/ppp/chap-secrets.tmp \
+        && mv -f /etc/ppp/chap-secrets.tmp /etc/ppp/chap-secrets
+    umask 022
+}
+
+start_sstp() {
+    [ "$SSTP_ENABLED" = "1" ] || return 0
+    mkdir -p "$SSTP_DIR" "$SSTP_SESSIONS"
+    if [ ! -f "$SSTP_DIR/cert.pem" ] || [ ! -f "$SSTP_DIR/key.pem" ]; then
+        # Routerlar verify-server-certificate=no bilan ulanadi (OpenVPN bilan bir xil) — self-signed yetarli
+        openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=maktab-sstp" \
+            -keyout "$SSTP_DIR/key.pem" -out "$SSTP_DIR/cert.pem" >/dev/null 2>&1
+        chmod 600 "$SSTP_DIR/key.pem"
+        echo "[sstp] Self-signed sertifikat yaratildi"
+    fi
+    cat > "$SSTP_PPP_OPTIONS" <<EOF
+name sstpd
+require-mschap-v2
+refuse-pap
+refuse-chap
+refuse-mschap
+nologfd
+nodefaultroute
+lcp-echo-interval 10
+lcp-echo-failure 6
+EOF
+    sstpd -l 0.0.0.0 -p "$SSTP_PORT" -c "$SSTP_DIR/cert.pem" -k "$SSTP_DIR/key.pem" \
+        --local "$SSTP_LOCAL_IP" --remote "$SSTP_POOL" --pppd-config "$SSTP_PPP_OPTIONS" -v 20 &
+    SSTP_PID=$!
+    echo "[sstp] Ishga tushdi: TCP ${SSTP_PORT}, ${SSTP_POOL} (pid ${SSTP_PID})"
+}
+
+ensure_sstp() {
+    [ "$SSTP_ENABLED" = "1" ] || return 0
+    if [ -z "$SSTP_PID" ] || ! kill -0 "$SSTP_PID" 2>/dev/null; then
+        echo "[sstp] Ogohlantirish: jarayon to'xtagan — qayta ishga tushirilmoqda"
+        start_sstp
+    fi
+}
+
+# Hozir ulangan SSTP loginlari: interfeysi hali mavjud sessiyalar (sstp-ip-up.sh yozadi)
+sstp_connected() {
+    [ "$SSTP_ENABLED" = "1" ] && [ -d "$SSTP_SESSIONS" ] || return 0
+    local f
+    for f in "$SSTP_SESSIONS"/*; do
+        [ -f "$f" ] || continue
+        if ip link show "$(basename "$f")" >/dev/null 2>&1; then cat "$f"; fi
+    done
+    return 0
+}
+
+# Ulangan OpenVPN/SSTP routerlar — routerning haqiqiy heartbeat'i (WireGuard handshake hisoboti kabi).
 report_ovpn_status() {
-    [ "$OVPN_ENABLED" = "1" ] && [ -f "$OVPN_STATUS" ] || return 0
+    [ "$OVPN_ENABLED" = "1" ] || [ "$SSTP_ENABLED" = "1" ] || return 0
     local payload
-    payload="$(awk -F, '$1 == "CLIENT_LIST" && $2 != "UNDEF" {print $2}' "$OVPN_STATUS" \
+    # pipefail: OpenVPN status fayli bo'lmasa ham SSTP ro'yxati yuborilishi kerak
+    payload="$( { if [ -f "$OVPN_STATUS" ]; then awk -F, '$1 == "CLIENT_LIST" && $2 != "UNDEF" {print $2}' "$OVPN_STATUS"; fi; sstp_connected; } \
         | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')" || return 0
     [ "$payload" = "[]" ] && return 0
     curl -fsS --max-time 8 -o /dev/null \
@@ -307,6 +396,8 @@ report_ovpn_status() {
 # Kesh avval yangilanadi — birinchi ulangan router darhol autentifikatsiyadan o'tishi uchun
 sync_ovpn_clients || true
 start_openvpn
+sync_sstp_clients || true
+start_sstp
 
 echo "[wireguard] Peer sinxronizatsiyasi boshlandi (har ${SYNC_INTERVAL}s, ${BACKEND_URL})"
 while true; do
@@ -318,6 +409,8 @@ while true; do
     sync_peers || echo "[wireguard] Ogohlantirish: sync_peers xato bilan tugadi, keyingi urinishda davom etadi"
     ensure_openvpn || true
     sync_ovpn_clients || echo "[openvpn] Ogohlantirish: sync_ovpn_clients xato bilan tugadi"
+    ensure_sstp || true
+    sync_sstp_clients || echo "[sstp] Ogohlantirish: sync_sstp_clients xato bilan tugadi"
     report_handshakes || true
     report_ovpn_status || true
     sleep "$SYNC_INTERVAL" &

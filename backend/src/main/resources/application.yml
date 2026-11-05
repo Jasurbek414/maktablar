@@ -23,8 +23,8 @@ spring:
     multipart:
       # Standart 1MB — o'quvchilar Excel fayli (StudentController#importExcel) rasmlar bilan
       # o'nlab MB bo'lishi mumkin. Docker'da docker-compose.yml'dagi ENV qiymati ustun turadi.
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: 150MB
+      max-request-size: 150MB
 
 app:
   jwt:
@@ -71,6 +71,12 @@ app:
     # Router N tunneli 10.21.0.N; maktab LAN'i transportdan qat'i nazar 10.30.N.0/24.
     subnet-base: ${OVPN_SUBNET_BASE:10.21.0}
     port: ${OVPN_PORT:443}
+
+  sstp:
+    # 2026-10-03: OpenVPN'ni ham to'sadigan provayderlar uchun (TLS ichida). Hub konteynerida,
+    # login/parol OpenVPN bilan bir xil. Port hub'dagi SSTP_PORT bilan bir xil bo'lishi shart.
+    subnet-base: ${SSTP_SUBNET_BASE:10.22.0}
+    port: ${SSTP_PORT:4443}
 
   retention:
     # Eski ma'lumotlarni tozalash (RetentionService, 2026-09-25). Har kuni 03:30 da —

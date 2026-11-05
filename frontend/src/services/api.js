@@ -194,24 +194,51 @@ export const api = {
   },
 
   // Excel orqali ko'plab o'quvchi import qilish (StudentController#importExcel) — bitta
-  // fayl, hisobga olinadigan maktab/sinf FormData orqali yuboriladi (JSON emas, chunki
-  // fayl binary).
-  async importStudents(file, schoolId, classId) {
+  // fayl, hisobga olinadigan maktab/sinf FormData orqali yuboriladi (progress animatsiyasi bilan).
+  importStudents(file, schoolId, classId, onProgress) {
     const token = localStorage.getItem('token');
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('schoolId', schoolId);
-    if (classId != null) fd.append('classId', classId);
-    const res = await fetch(`${API_BASE}/api/students/import`, {
-      method: 'POST',
-      headers: langHeaders({ Authorization: `Bearer ${token}` }),
-      body: fd,
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_BASE}/api/students/import`);
+      const headers = langHeaders({ Authorization: `Bearer ${token}` });
+      for (const [k, v] of Object.entries(headers)) {
+        xhr.setRequestHeader(k, v);
+      }
+
+      if (xhr.upload && onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable && e.total > 0) {
+            const pct = Math.min(50, Math.round((e.loaded / e.total) * 50));
+            onProgress(pct, 'uploading');
+          }
+        };
+      }
+
+      xhr.onload = async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (e) {
+            resolve({ ok: true });
+          }
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText);
+            reject(new Error(err.error || err.message || err.detail || 'Import xatosi'));
+          } catch {
+            reject(new Error(xhr.statusText || 'Import xatosi'));
+          }
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Tarmoq xatosi: serverga ulanib bo\'lmadi'));
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('schoolId', schoolId);
+      if (classId != null) fd.append('classId', classId);
+      xhr.send(fd);
     });
-    if (!res.ok) {
-      if (await checkAuthFailure(res)) throw new Error('Sessiya muddati tugagan, qayta kiring');
-      throw new Error(await extractErrorMessage(res, 'Import xatosi'));
-    }
-    return res.json();
   },
 
   logout() {

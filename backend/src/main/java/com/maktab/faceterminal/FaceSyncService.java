@@ -2,6 +2,7 @@ package com.maktab.faceterminal;
 
 import com.maktab.model.FaceTerminal;
 import com.maktab.model.Student;
+import com.maktab.repository.StudentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,7 @@ public class FaceSyncService {
     static final int MAX_ERRORS_PER_JOB = 500;
 
     @Autowired private HikvisionFaceTerminalDriver driver;
+    @Autowired private StudentRepository studentRepo;
 
     private final ExecutorService executor = Executors.newFixedThreadPool(2, r -> {
         Thread t = new Thread(r, "face-sync");
@@ -104,8 +106,10 @@ public class FaceSyncService {
                     pushOne(terminal, s);
                     job.success++;
                     consecutiveConnectionErrors = 0;
+                    markStudentSuccess(s.getId(), terminal);
                 } catch (TerminalException e) {
                     addError(job, s, e.getMessage());
+                    markStudentFailed(s.getId(), terminal.getName() + ": " + e.getMessage());
                     if (e.getMessage() != null && e.getMessage().startsWith("Terminal javob bermadi")) {
                         if (++consecutiveConnectionErrors >= ABORT_AFTER_CONSECUTIVE_CONNECTION_ERRORS) {
                             job.abortReason = e.getMessage();
@@ -117,6 +121,7 @@ public class FaceSyncService {
                     }
                 } catch (Exception e) {
                     addError(job, s, "Kutilmagan xato: " + e.getClass().getSimpleName());
+                    markStudentFailed(s.getId(), terminal.getName() + ": Kutilmagan xato");
                     log.error("Face sync: o'quvchi {} terminal {}: {}", s.getId(), terminal.getId(), e.toString());
                 }
                 job.done++;
@@ -127,6 +132,33 @@ public class FaceSyncService {
             runningByTerminal.remove(terminal.getId(), job.id);
             log.info("Face sync tugadi: terminal {} — {}/{} muvaffaqiyatli{}", terminal.getId(), job.success, job.total,
                 job.abortReason != null ? " (to'xtatildi: " + job.abortReason + ")" : "");
+        }
+    }
+
+    private void markStudentSuccess(Long studentId, FaceTerminal terminal) {
+        if (studentRepo == null || studentId == null) return;
+        try {
+            studentRepo.findById(studentId).ifPresent(s -> {
+                s.setSyncStatus("SYNCED");
+                s.setSyncError(null);
+                s.setSyncedAt(OffsetDateTime.now());
+                studentRepo.save(s);
+            });
+        } catch (Exception e) {
+            log.warn("markStudentSuccess xatosi: {}", e.getMessage());
+        }
+    }
+
+    private void markStudentFailed(Long studentId, String errorMsg) {
+        if (studentRepo == null || studentId == null) return;
+        try {
+            studentRepo.findById(studentId).ifPresent(s -> {
+                s.setSyncStatus("FAILED");
+                s.setSyncError(errorMsg);
+                studentRepo.save(s);
+            });
+        } catch (Exception e) {
+            log.warn("markStudentFailed xatosi: {}", e.getMessage());
         }
     }
 
