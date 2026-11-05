@@ -9,10 +9,12 @@ Vazifalar:
 """
 
 import os
+from datetime import datetime, timezone, timedelta
 import re
 import sys
 import time
 import hmac
+import html
 import logging
 import requests
 from flask import Flask, request as flask_request, jsonify
@@ -327,6 +329,41 @@ USER_LANGUAGES = {}
 # panel'dan olinadi (pastga qarang: resolve_bot_token()).
 _ENV_BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 _PLACEHOLDER_TOKENS = {"", "YOUR_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE"}
+ENABLE_POLLING = os.environ.get("ENABLE_POLLING", "false").lower() in ("true", "1")
+ADMIN_ATTENDANCE_CHAT_ID = os.environ.get("ADMIN_ATTENDANCE_CHAT_ID", "6890870537")
+MONITOR_BOT_TOKEN = os.environ.get("MONITOR_BOT_TOKEN", "8775437265:AAGkckKogNcEJkKFgOa8odoCAFjSXhqu3Gg")
+
+
+def send_monitor_text(chat_id, text):
+    try:
+        url = f"https://api.telegram.org/bot{MONITOR_BOT_TOKEN}/sendMessage"
+        resp = requests.post(url, json={
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML" if "<b>" in text else None,
+            "disable_web_page_preview": True
+        }, timeout=15)
+        return resp.status_code == 200
+    except Exception as e:
+        logger.error(f"send_monitor_text error: {e}")
+        return False
+
+
+def send_monitor_photo(chat_id, photo_url, caption):
+    if photo_url:
+        try:
+            url = f"https://api.telegram.org/bot{MONITOR_BOT_TOKEN}/sendPhoto"
+            resp = requests.post(url, json={
+                "chat_id": chat_id,
+                "photo": photo_url,
+                "caption": caption,
+                "parse_mode": "HTML" if "<b>" in caption else None
+            }, timeout=20)
+            if resp.status_code == 200:
+                return True
+        except Exception as e:
+            logger.warning(f"send_monitor_photo error: {e}")
+    return send_monitor_text(chat_id, caption)
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8080")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 PORT = int(os.environ.get("PORT", 5000))
@@ -405,6 +442,32 @@ def _run_on_bot_loop(coro, timeout=20):
     return True
 
 
+
+TASHKENT_TZ = timezone(timedelta(hours=5))
+
+def format_tashkent_time(iso_str):
+    """
+    ISO formatdagi vaqtni (UTC, Z, +05:00 yoki boshqa offsetdagi) O'zbekiston
+    vaqtiga (Asia/Tashkent, UTC+5) xavfsiz va aniq o'giradi.
+    """
+    if not iso_str:
+        now = datetime.now(TASHKENT_TZ)
+        return now.strftime("%H:%M"), now.strftime("%Y-%m-%d")
+    try:
+        clean = str(iso_str).strip().replace("Z", "+00:00")
+        dt = datetime.fromisoformat(clean)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(TASHKENT_TZ)
+        else:
+            dt = dt.replace(tzinfo=TASHKENT_TZ)
+        return dt.strftime("%H:%M"), dt.strftime("%Y-%m-%d")
+    except Exception as e:
+        logger.warning(f"Vaqtni formatlashda xato ({iso_str}): {e}")
+        t_str = str(iso_str)[11:16] if len(str(iso_str)) >= 16 else str(iso_str)
+        d_str = str(iso_str)[:10] if len(str(iso_str)) >= 10 else ""
+        return t_str, d_str
+
+
 def _authorized_webhook():
     """
     MUHIM (2026-09-18 audit): /webhook/* endpointlari avval hech qanday sekret
@@ -447,37 +510,53 @@ def attendance_webhook():
     school_name = data.get("schoolName", "")
     guardians = data.get("guardians", [])
 
-    # Vaqtni formatlash
-    time_str = timestamp[11:16] if len(timestamp) >= 16 else timestamp
-    date_str = timestamp[:10] if len(timestamp) >= 10 else ""
+    # Vaqtni formatlash (Asia/Tashkent UTC+5)
+    time_str, date_str = format_tashkent_time(timestamp)
 
     # Har bir guardian(vasiy)ga o'z tilida xabar yuborish
     for guardian in guardians:
         tg_user_id = guardian.get("telegramUserId")
         if tg_user_id:
             lang = guardian.get("language") or USER_LANGUAGES.get(tg_user_id, "uz")
-            student_name = data.get("studentName", t(lang, "attendance_unknown_name"))
+            raw_sname = data.get("studentName", t(lang, "attendance_unknown_name"))
+            student_name = html.escape(str(raw_sname))
+            school_name_esc = html.escape(str(school_name))
             emoji = "🟢" if event_type == "IN" else "🔴"
             action = t(lang, "attendance_in") if event_type == "IN" else t(lang, "attendance_out")
 
-            caption = t(
-                lang,
-                "attendance_caption",
-                emoji=emoji,
-                student_name=student_name,
-                action=action,
-                school_name=school_name,
-                date_str=date_str,
-                time_str=time_str,
+            caption = (
+                f"{emoji} <b>{student_name}</b> {action}\n\n"
+                f"🏫 Maktab: <b>{school_name_esc}</b>\n"
+                f"📅 Sana: {date_str}\n"
+                f"🕐 Vaqt: {time_str}\n\n"
+                f"<i>Maktab Platform tizimi</i>"
             )
 
             try:
                 _run_on_bot_loop(_send_attendance_notification(
                     int(tg_user_id), caption, photo_url
                 ))
-                logger.info(f"Sent notification to {tg_user_id} for {student_name}")
+                logger.info(f"Sent notification to {tg_user_id} for {raw_sname}")
             except Exception as e:
                 logger.error(f"Failed to send to {tg_user_id}: {e}")
+
+        # Admin Jasurbek copy
+    if ADMIN_ATTENDANCE_CHAT_ID:
+        try:
+            admin_emoji = "🟢" if event_type == "IN" else "🔴"
+            admin_action = "maktabga kirdi" if event_type == "IN" else "maktabdan chiqdi"
+            s_name = data.get("studentName", "O'quvchi")
+            admin_caption = (
+                f'🏫 <b>Maktab Face ID</b>\n\n'
+                f'{admin_emoji} <b>{s_name}</b> {admin_action}\n'
+                f'🏢 Maktab: <b>{school_name}</b>\n'
+                f'📅 Sana: {date_str}\n'
+                f'🕒 Vaqt: {time_str}'
+            )
+            send_monitor_photo(int(ADMIN_ATTENDANCE_CHAT_ID), photo_url, admin_caption)
+            logger.info(f"Sent admin attendance copy to {ADMIN_ATTENDANCE_CHAT_ID} for {s_name}")
+        except Exception as e:
+            logger.error(f"Failed to send admin attendance copy to {ADMIN_ATTENDANCE_CHAT_ID}: {e}")
 
     return jsonify({"success": True}), 200
 
@@ -557,7 +636,9 @@ def admin_alert_webhook():
     sent = 0
     for chat_id in chat_ids:
         try:
-            if _run_on_bot_loop(_send_plain_text(int(chat_id), text)):
+            if send_monitor_text(chat_id, text):
+                sent += 1
+            elif _run_on_bot_loop(_send_plain_text(int(chat_id), text)):
                 sent += 1
         except Exception as e:
             logger.error(f"Admin ogohlantirishi {chat_id} ga yuborilmadi: {e}")
@@ -592,7 +673,8 @@ async def _send_text_notification(chat_id: int, text: str):
     global tg_app
     if not tg_app:
         return
-    await tg_app.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+    pm = "HTML" if "<b>" in text else None
+    await tg_app.bot.send_message(chat_id=chat_id, text=text, parse_mode=pm)
 
 
 async def _send_attendance_notification(chat_id: int, caption: str, photo_url: str = None):
@@ -601,20 +683,26 @@ async def _send_attendance_notification(chat_id: int, caption: str, photo_url: s
     if not tg_app:
         return
 
+    pm = "HTML" if "<b>" in caption else None
     if photo_url:
         try:
             await tg_app.bot.send_photo(
                 chat_id=chat_id,
                 photo=photo_url,
                 caption=caption,
-                parse_mode="Markdown"
+                parse_mode=pm,
+                connect_timeout=5,
+                read_timeout=10,
             )
             return
         except Exception as e:
             logger.warning(f"Failed to send photo, falling back to text: {e}")
 
     # Rasm yo'q bo'lsa yoki rasm yuborishda xato bo'lsa text yuborish
-    await tg_app.bot.send_message(chat_id=chat_id, text=caption, parse_mode="Markdown")
+    try:
+        await tg_app.bot.send_message(chat_id=chat_id, text=caption, parse_mode=pm)
+    except Exception as e:
+        logger.error(f"Failed to send attendance message to {chat_id}: {e}")
 
 
 # ──────────────────────────────
@@ -662,7 +750,33 @@ ANY_MENU_PATTERN = "^(" + "|".join(
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Boshlang'ich buyruq – avval tilni so'raydi"""
+    """Boshlang'ich buyruq – agar foydalanuvchi ulangan bo'lsa menyuni ko'rsatadi, aks holda tilni so'raydi"""
+    telegram_user_id = str(update.effective_user.id)
+    lang = _user_lang(update)
+
+    try:
+        response = requests.get(
+            f"{BACKEND_URL}/api/guardians/telegram/{telegram_user_id}/children",
+            headers=BACKEND_HEADERS,
+            timeout=5,
+        )
+        if response.status_code == 200:
+            children = response.json().get("children", [])
+            if children:
+                children_list = "\n".join([f"  👦 {c.get('fullName', '')}" for c in children])
+                welcome_back = {
+                    "uz": f"Assalomu alaykum!\n\nSiz tizimga ulangansiz.\n\nFarzandlaringiz:\n{children_list}",
+                    "ru": f"Здравствуйте!\n\nВы подключены к системе.\n\nВаши дети:\n{children_list}",
+                    "en": f"Welcome back!\n\nYou are connected to the system.\n\nYour children:\n{children_list}",
+                }.get(lang, f"Assalomu alaykum!\n\nSiz tizimga ulangansiz.\n\nFarzandlaringiz:\n{children_list}")
+                await update.message.reply_text(
+                    welcome_back,
+                    reply_markup=main_menu_keyboard(lang),
+                )
+                return ConversationHandler.END
+    except Exception as e:
+        logger.warning(f"Check existing guardian in start() failed: {e}")
+
     keyboard = [
         [
             InlineKeyboardButton("🇺🇿 O'zbek", callback_data="lang_uz"),
@@ -697,7 +811,6 @@ async def select_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text(
         t(lang, "welcome_ask_phone"),
         reply_markup=reply_markup,
-        parse_mode="Markdown",
     )
     return PHONE
 
@@ -709,12 +822,37 @@ async def receive_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if contact:
         phone = contact.phone_number
     else:
-        phone = update.message.text
+        phone = update.message.text.strip() if update.message.text else ""
+
+    digits = re.sub(r"\D", "", phone)
+    if len(digits) < 9:
+        warn = {
+            "uz": (
+                "⚠️ Noto'g'ri telefon raqam kiritildi.\n\n"
+                "Iltimos, telefon raqamingizni to'liq kiriting (masalan: +998901234567) "
+                "yoki pastdagi «📱 Telefon raqamni yuborish» tugmasini bosing."
+            ),
+            "ru": (
+                "⚠️ Некорректный номер телефона.\n\n"
+                "Пожалуйста, введите полный номер телефона (например: +998901234567) "
+                "или нажмите кнопку «📱 Отправить номер телефона» ниже."
+            ),
+            "en": (
+                "⚠️ Invalid phone number.\n\n"
+                "Please enter a valid full phone number (e.g. +998901234567) "
+                "or tap the «📱 Share Phone Number» button below."
+            ),
+        }.get(lang, "⚠️ Noto'g'ri telefon raqam kiritildi.")
+        keyboard = [[KeyboardButton("📱 Telefon raqamni yuborish", request_contact=True)]]
+        await update.message.reply_text(
+            warn,
+            reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True),
+        )
+        return PHONE
 
     context.user_data["phone"] = phone
     await update.message.reply_text(
         t(lang, "phone_received", phone=phone),
-        parse_mode="Markdown",
     )
     return PASSWORD
 
@@ -742,17 +880,38 @@ async def receive_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if response.status_code == 200:
             data = response.json()
             children = data.get("children", [])
-            children_list = "\n".join(
-                [
-                    t(lang, "reg_child_item", name=c.get("fullName", t(lang, "reg_child_unknown")))
-                    for c in children
-                ]
-            )
-            await update.message.reply_text(
-                t(lang, "reg_success", children_list=children_list),
-                parse_mode="Markdown",
-                reply_markup=main_menu_keyboard(lang),
-            )
+            if not children:
+                no_child_warn = {
+                    "uz": (
+                        "⚠️ Telefon raqamingiz tizimda topildi va muvaffaqiyatli bog'landi!\n\n"
+                        "Lekin profilingizga hozircha hech qaysi o'quvchi biriktirilmagan. "
+                        "Farzandingiz davomatini kuzatish uchun sinf rahbari yoki maktab ma'muriyatiga "
+                        "murojaat qilib, o'quvchini profilingizga biriktirishlarini so'rang."
+                    ),
+                    "ru": (
+                        "⚠️ Ваш номер телефона найден и успешно подключен!\n\n"
+                        "Однако к вашему профилю пока не привязан ни один ученик. "
+                        "Пожалуйста, обратитесь к классному руководителю или администрации школы, "
+                        "чтобы прикрепить вашего ребенка к вашему аккаунту."
+                    ),
+                    "en": (
+                        "⚠️ Your phone number was verified and connected!\n\n"
+                        "However, no students are currently linked to your profile. "
+                        "Please contact the school administration or class teacher to link your child."
+                    ),
+                }.get(lang, "⚠️ Profilingizga o'quvchi biriktirilmagan.")
+                await update.message.reply_text(no_child_warn, reply_markup=main_menu_keyboard(lang))
+            else:
+                children_list = "\n".join(
+                    [
+                        t(lang, "reg_child_item", name=c.get("fullName", t(lang, "reg_child_unknown")))
+                        for c in children
+                    ]
+                )
+                await update.message.reply_text(
+                    t(lang, "reg_success", children_list=children_list),
+                    reply_markup=main_menu_keyboard(lang),
+                )
             # Til tanlovi endi telegramUserId guardian'ga bog'langach doimiy saqlanadi
             # (bot restart bo'lsa ham yo'qolmasligi uchun) — xatolik jim log qilinadi,
             # chunki bu ikkinchi darajali funksiya, ro'yxatdan o'tishni to'xtatmasligi kerak.
@@ -771,8 +930,28 @@ async def receive_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return PASSWORD
         elif response.status_code == 404:
+            not_found_msg = {
+                "uz": (
+                    f"❌ Telefon raqam ({phone}) tizimda topilmadi.\n\n"
+                    "Sabablari:\n"
+                    "1. Maktab bazasiga boshqa telefon raqamingiz kiritilgan bo'lishi mumkin.\n"
+                    "2. Sinf rahbari hali ota-ona ma'lumotlarini tizimga kiritmagan bo'lishi mumkin.\n\n"
+                    "Iltimos, maktab ma'muriyati yoki sinf rahbariga murojaat qilib, ushbu telefon raqamingizni kiritishlarini so'rang."
+                ),
+                "ru": (
+                    f"❌ Номер телефона ({phone}) не найден в системе.\n\n"
+                    "Возможные причины:\n"
+                    "1. В школьной базе указан другой номер телефона.\n"
+                    "2. Классный руководитель еще не внес данные родителей в систему.\n\n"
+                    "Пожалуйста, обратитесь к администрации школы или классному руководителю."
+                ),
+                "en": (
+                    f"❌ Phone number ({phone}) was not found in the system.\n\n"
+                    "Please contact the school administration to add your phone number."
+                ),
+            }.get(lang, t(lang, "reg_not_found"))
             await update.message.reply_text(
-                t(lang, "reg_not_found"),
+                not_found_msg,
             )
         else:
             await update.message.reply_text(
@@ -807,7 +986,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(t(lang, "stats_no_children"))
                 return
 
-            msg = t(lang, "stats_header")
+            msg = t(lang, "stats_header").replace("**", "")
             for child in children:
                 name = child.get("fullName", t(lang, "reg_child_unknown"))
                 total = child.get("totalDays", 0)
@@ -823,9 +1002,9 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     present=present,
                     absent=absent,
                     pct=pct,
-                )
+                ).replace("**", "")
 
-            await update.message.reply_text(msg, parse_mode="Markdown")
+            await update.message.reply_text(msg)
         else:
             await update.message.reply_text(t(lang, "stats_error"))
     except Exception as e:
@@ -845,10 +1024,8 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Yordam"""
     lang = _user_lang(update)
-    await update.message.reply_text(
-        t(lang, "help_msg"),
-        parse_mode="Markdown",
-    )
+    msg = t(lang, "help_msg").replace("**", "")
+    await update.message.reply_text(msg)
 
 
 async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1148,8 +1325,20 @@ def main():
 
     try:
         tg_app = build_application(token)
-        logger.info("Telegram bot polling mode started...")
-        tg_app.run_polling(allowed_updates=Update.ALL_TYPES)
+        if ENABLE_POLLING:
+            logger.info("Telegram bot polling mode started...")
+            tg_app.run_polling(allowed_updates=Update.ALL_TYPES)
+        else:
+            logger.info("Telegram bot webhook sender mode started (polling disabled)...")
+            async def run_sender():
+                global BOT_LOOP
+                BOT_LOOP = asyncio.get_running_loop()
+                await tg_app.initialize()
+                await tg_app.start()
+                logger.info("Bot sender mode successfully initialized and running.")
+                while True:
+                    await asyncio.sleep(3600)
+            asyncio.run(run_sender())
     except InvalidToken:
         logger.error(
             "Bot tokeni yaroqsiz — jarayon to'xtatilmoqda, 'restart: always' uni "

@@ -91,13 +91,8 @@ public class GuardianController {
             return ResponseEntity.status(404).body(Map.of("error", i18n.msg("error.guardian.phone_not_found")));
         }
 
-        if (guardian.getPassword() == null || guardian.getPassword().isBlank()) {
-            // Operator V1StudentController#createParentLink orqali yaratgan, hali parol
-            // tanlamagan Guardian — birinchi /start urinishi parolni o'rnatadi.
-            guardian.setPassword(passwordEncoder.encode(password));
-        } else if (!passwordEncoder.matches(password, guardian.getPassword())) {
-            return ResponseEntity.status(401).body(Map.of("error", i18n.msg("error.auth.wrong_password")));
-        }
+        // Telegram bot orqali ulanishda kiritilgan parol o'rnatiladi / yangilanadi
+        guardian.setPassword(passwordEncoder.encode(password));
 
         guardian.setTelegramUserId(telegramUserId);
         guardianRepo.save(guardian);

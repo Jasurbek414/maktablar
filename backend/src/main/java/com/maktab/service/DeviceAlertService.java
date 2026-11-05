@@ -165,54 +165,22 @@ public class DeviceAlertService {
     // ─── Router ──────────────────────────────────────────────────────────────────
 
     public void routerOffline(MikrotikRouter r) {
-        String key = "router:" + r.getId();
-        Decision d = decideOffline(key);
-        Long schoolId = schoolIdOf(r);
-        String last = r.getLastHeartbeat() != null ? r.getLastHeartbeat().format(HM) : "-";
-        if (d == Decision.SILENT) {
-            rememberSilentOutage(key, "Router " + r.getName(), schoolId,
-                "🔴 Maktab bilan aloqa " + SUSTAINED.toMinutes() + " daqiqadan beri yo'q\n"
-                    + "Maktab: " + schoolName(schoolId) + "\n"
-                    + "Router: " + r.getName() + " (" + transportLabel(r) + ")\n"
-                    + "Oxirgi aloqa: " + last + "\n\n"
-                    + "Qisqa uzilishlardan keyin aloqa tiklanmadi — maktab internetini va routerning elektr manbasini tekshiring.");
-            return;
-        }
-        notifiedOutage.add(key);
-
-        String text = d == Decision.UNSTABLE
-            ? "⚠️ Maktab aloqasi BEQAROR\n"
-                + "Maktab: " + schoolName(schoolId) + "\n"
-                + "Router: " + r.getName() + " (" + transportLabel(r) + ")\n"
-                + "6 soatda " + outageCount(key) + " marta uzildi.\n\n"
-                + "Keyingi 6 soat davomida bu router haqida alohida xabar yuborilmaydi.\n"
-                + "Maktab internetini yoki routerni tekshirish kerak."
-            : "🔴 Maktab bilan aloqa uzildi\n"
-                + "Maktab: " + schoolName(schoolId) + "\n"
-                + "Router: " + r.getName() + " (" + transportLabel(r) + ")\n"
-                + "Oxirgi aloqa: " + last + "\n\n"
-                + "Face ID hodisalari terminalning o'zida saqlanadi va aloqa tiklangach avtomatik o'qiladi.";
-        dispatch("Router " + r.getName(), schoolId, false, text);
+        // Face ID terminallari to'g'ridan-to'g'ri tizimga ulangan bo'lgani sababli,
+        // Mikrotik routerlar bo'yicha Telegram botga xabarnoma yuborilmaydi.
+        return;
     }
 
     /** @param firstConnection router birinchi marta ulanmoqda (avval hech qachon aloqa bo'lmagan) */
     public void routerOnline(MikrotikRouter r, boolean firstConnection) {
-        String key = "router:" + r.getId();
-        // Yangi router ulanishi — bir martalik voqea, bo'g'uvchidan qat'i nazar xabar beriladi
-        if (!firstConnection && !decideOnline(key)) return;
-        if (firstConnection) { openOutage.remove(key); notifiedOutage.remove(key); }
-
-        Long schoolId = schoolIdOf(r);
-        String text = (firstConnection ? "🟢 Yangi router serverga ulandi\n" : "🟢 Maktab bilan aloqa tiklandi\n")
-            + "Maktab: " + schoolName(schoolId) + "\n"
-            + "Router: " + r.getName() + " (" + transportLabel(r) + ")";
-        dispatch("Router " + r.getName(), schoolId, true, text);
+        // Face ID terminallari to'g'ridan-to'g'ri tizimga ulangan bo'lgani sababli,
+        // Mikrotik routerlar bo'yicha Telegram botga xabarnoma yuborilmaydi.
+        return;
     }
 
     // ─── Face ID terminal ────────────────────────────────────────────────────────
 
     public void terminalOffline(FaceTerminal t, String error) {
-        if (routerLooksDown(t.getRouterId())) return; // sabab — router, u haqida alohida xabar ketadi
+        // Terminallar to'g'ridan-to'g'ri ulanganligi sababli, router holatidan qat'i nazar terminal haqida xabar beriladi
         String key = "terminal:" + t.getId();
         Decision d = decideOffline(key);
         if (d == Decision.SILENT) {

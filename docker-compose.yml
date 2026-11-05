@@ -118,10 +118,14 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
+      TZ: Asia/Tashkent
       BOT_TOKEN: ${BOT_TOKEN}
       BOT_SHARED_SECRET: ${BOT_SHARED_SECRET}
       BACKEND_URL: http://backend:8080
       PORT: 5000
+      ENABLE_POLLING: ${ENABLE_POLLING:-false}
+      ADMIN_ATTENDANCE_CHAT_ID: ${ADMIN_ATTENDANCE_CHAT_ID:-6890870537}
+      MONITOR_BOT_TOKEN: ${MONITOR_BOT_TOKEN:-8775437265:AAGkckKogNcEJkKFgOa8odoCAFjSXhqu3Gg}
     depends_on:
       - backend
     networks:
