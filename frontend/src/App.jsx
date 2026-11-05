@@ -11,6 +11,9 @@ import Attendance from './pages/Attendance';
 import Users from './pages/Users';
 import Classes from './pages/Classes';
 import Devices from './pages/Devices';
+import Cameras from './pages/Cameras';
+import CameraAnalysis from './pages/CameraAnalysis';
+import AiAnalysis from './pages/AiAnalysis';
 
 const api = { baseURL: '/api' };
 const apiFetch = async (url) => {
@@ -304,7 +307,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard user={user} />} />
               <Route path="/provinces" element={
-                <Gate user={user} allowed={['SUPERADMIN']}><Provinces /></Gate>
+                <Gate user={user} allowed={['SUPERADMIN', 'ADMIN']}><Provinces /></Gate>
               } />
               <Route path="/districts" element={
                 <Gate user={user} allowed={['SUPERADMIN', 'ADMIN']}><Districts user={user} /></Gate>
@@ -319,13 +322,22 @@ export default function App() {
                 <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR', 'MUDIR', 'TEACHER']}><Attendance user={user} /></Gate>
               } />
               <Route path="/users" element={
-                <Gate user={user} allowed={['SUPERADMIN']}><Users user={user} /></Gate>
+                <Gate user={user} allowed={['SUPERADMIN', 'ADMIN']}><Users user={user} /></Gate>
               } />
               <Route path="/classes" element={
                 <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR']}><Classes /></Gate>
               } />
               <Route path="/devices" element={
                 <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR']}><Devices user={user} /></Gate>
+              } />
+              <Route path="/cameras" element={
+                <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR', 'MUDIR', 'TEACHER']}><Cameras user={user} /></Gate>
+              } />
+              <Route path="/camera-analysis" element={
+                <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR', 'MUDIR', 'TEACHER']}><CameraAnalysis user={user} /></Gate>
+              } />
+              <Route path="/ai-analysis" element={
+                <Gate user={user} allowed={['SUPERADMIN', 'ADMIN', 'DIRECTOR', 'MUDIR', 'TEACHER']}><AiAnalysis user={user} /></Gate>
               } />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

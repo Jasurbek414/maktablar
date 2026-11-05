@@ -2,15 +2,19 @@ package com.maktab.controller;
 
 import com.maktab.model.Device;
 import com.maktab.model.FaceTerminal;
+import com.maktab.model.User;
 import com.maktab.repository.DeviceRepository;
 import com.maktab.repository.FaceTerminalRepository;
 import com.maktab.repository.SchoolRepository;
 import com.maktab.repository.DistrictRepository;
 import com.maktab.repository.ProvinceRepository;
+import com.maktab.security.CurrentUserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -36,6 +40,7 @@ public class DeviceController {
     @Autowired private DistrictRepository districtRepo;
     @Autowired private ProvinceRepository provinceRepo;
     @Autowired private DeviceCommandRepository commandRepo;
+    @Autowired private CurrentUserService currentUserService;
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     //  PLATFORMADAN KALIT YARATISH (ADMIN)
@@ -200,30 +205,71 @@ public class DeviceController {
     //  QURILMALAR RO'YXATI (HIERARCHICAL)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    /** Barcha qurilmalar — GET /api/devices?schoolId=2&provinceId=1&districtId=3 */
+    /** Barcha qurilmalar — GET /api/devices?schoolId=2&provinceId=1&districtId=3
+     * MUHIM: schoolId/provinceId/districtId endi faqat SUPERADMIN uchun ixtiyoriy tor
+     * filtr — ADMIN/DIRECTOR/MUDIR/TEACHER uchun haqiqiy ko'lam Authorization headerdagi
+     * foydalanuvchidan olinadi, client filtri faqat shu ko'lam ichida tekshiriladi. */
     @GetMapping
     public List<Map<String, Object>> getAll(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) Long schoolId,
             @RequestParam(required = false) Long provinceId,
             @RequestParam(required = false) Long districtId) {
 
+        User user = currentUserService.requireUser(authHeader);
         List<Device> devices;
 
-        if (schoolId != null) {
-            devices = deviceRepo.findBySchoolId(schoolId);
-        } else if (districtId != null) {
-            List<Long> schoolIds = schoolRepo.findByDistrictId(districtId)
-                .stream().map(s -> s.getId()).collect(Collectors.toList());
-            devices = schoolIds.isEmpty() ? Collections.emptyList() : deviceRepo.findBySchoolIdIn(schoolIds);
-        } else if (provinceId != null) {
-            List<Long> districtIds = districtRepo.findByProvinceId(provinceId)
-                .stream().map(d -> d.getId()).collect(Collectors.toList());
-            List<Long> schoolIds = districtIds.isEmpty() ? Collections.emptyList() :
-                schoolRepo.findByDistrictIdIn(districtIds)
+        if (user.getRole() == User.Role.DIRECTOR || user.getRole() == User.Role.MUDIR
+                || user.getRole() == User.Role.TEACHER) {
+            devices = user.getSchoolId() != null ? deviceRepo.findBySchoolId(user.getSchoolId()) : Collections.emptyList();
+        } else if (user.getRole() == User.Role.REGION_DIRECTOR) {
+            if (schoolId != null) {
+                if (!currentUserService.canAccessSchool(user, schoolId)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bu maktabga ruxsat yo'q");
+                }
+                devices = deviceRepo.findBySchoolId(schoolId);
+            } else if (districtId != null) {
+                if (!currentUserService.canAccessDistrict(user, districtId)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bu tumanga ruxsat yo'q");
+                }
+                List<Long> schoolIds = schoolRepo.findByDistrictId(districtId)
                     .stream().map(s -> s.getId()).collect(Collectors.toList());
-            devices = schoolIds.isEmpty() ? Collections.emptyList() : deviceRepo.findBySchoolIdIn(schoolIds);
-        } else {
-            devices = deviceRepo.findAll();
+                devices = schoolIds.isEmpty() ? Collections.emptyList() : deviceRepo.findBySchoolIdIn(schoolIds);
+            } else {
+                // provinceId client'dan berilgan bo'lsa ham e'tiborga olinmaydi — REGION_DIRECTOR
+                // har doim faqat O'Z provinceId'siga cheklanadi.
+                List<Long> schoolIds = currentUserService.schoolIdsForProvince(user.getProvinceId());
+                devices = schoolIds.isEmpty() ? Collections.emptyList() : deviceRepo.findBySchoolIdIn(schoolIds);
+            }
+        } else if (user.getRole() == User.Role.DISTRICT_DIRECTOR) {
+            if (schoolId != null) {
+                if (!currentUserService.canAccessSchool(user, schoolId)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bu maktabga ruxsat yo'q");
+                }
+                devices = deviceRepo.findBySchoolId(schoolId);
+            } else {
+                // districtId/provinceId client'dan berilgan bo'lsa ham e'tiborga olinmaydi —
+                // DISTRICT_DIRECTOR har doim faqat O'Z districtId'siga cheklanadi.
+                List<Long> schoolIds = currentUserService.schoolIdsForDistrict(user.getDistrictId());
+                devices = schoolIds.isEmpty() ? Collections.emptyList() : deviceRepo.findBySchoolIdIn(schoolIds);
+            }
+        } else { // SUPERADMIN / ADMIN — ikkalasi ham ko'rish uchun cheklovsiz, ixtiyoriy tor filtr
+            if (schoolId != null) {
+                devices = deviceRepo.findBySchoolId(schoolId);
+            } else if (districtId != null) {
+                List<Long> schoolIds = schoolRepo.findByDistrictId(districtId)
+                    .stream().map(s -> s.getId()).collect(Collectors.toList());
+                devices = schoolIds.isEmpty() ? Collections.emptyList() : deviceRepo.findBySchoolIdIn(schoolIds);
+            } else if (provinceId != null) {
+                List<Long> districtIds = districtRepo.findByProvinceId(provinceId)
+                    .stream().map(d -> d.getId()).collect(Collectors.toList());
+                List<Long> schoolIds = districtIds.isEmpty() ? Collections.emptyList() :
+                    schoolRepo.findByDistrictIdIn(districtIds)
+                        .stream().map(s -> s.getId()).collect(Collectors.toList());
+                devices = schoolIds.isEmpty() ? Collections.emptyList() : deviceRepo.findBySchoolIdIn(schoolIds);
+            } else {
+                devices = deviceRepo.findAll();
+            }
         }
 
         // Terminallarni device id bo'yicha guruhlash
@@ -362,9 +408,15 @@ public class DeviceController {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     @GetMapping("/overview")
-    public Map<String, Object> overview() {
-        List<Device> allDevices = deviceRepo.findAll();
-        List<FaceTerminal> allTerminals = terminalRepo.findAll();
+    public Map<String, Object> overview(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        User user = currentUserService.requireUser(authHeader);
+        List<Long> scope = currentUserService.allowedSchoolIds(user); // null => SUPERADMIN, cheklovsiz
+
+        List<Device> allDevices = scope == null ? deviceRepo.findAll()
+            : (scope.isEmpty() ? Collections.emptyList() : deviceRepo.findBySchoolIdIn(scope));
+        List<Long> deviceIds = allDevices.stream().map(Device::getId).collect(Collectors.toList());
+        List<FaceTerminal> allTerminals = deviceIds.isEmpty() ? Collections.emptyList()
+            : terminalRepo.findByDeviceIdIn(deviceIds);
 
         long online = allDevices.stream().filter(d -> d.getStatus() == Device.DeviceStatus.ONLINE).count();
         long offline = allDevices.stream().filter(d -> d.getStatus() == Device.DeviceStatus.OFFLINE).count();

@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Date;
 
 @Component
@@ -47,6 +49,18 @@ public class JwtUtil {
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /**
+     * Opaque refresh token — JWT emas, DB'da saqlanadi va rotatsiya/bekor qilish uchun ishlatiladi
+     * (frontend A'ning access+refresh JWT juftligi kontraktiga mos, /api/v1/auth/* uchun).
+     */
+    public String generateOpaqueToken() {
+        byte[] bytes = new byte[48];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private Claims getClaims(String token) {

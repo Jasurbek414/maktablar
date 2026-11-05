@@ -6,6 +6,7 @@ import com.maktab.model.DeviceHeartbeat;
 import com.maktab.model.Student;
 import com.maktab.model.User;
 import com.maktab.repository.*;
+import com.maktab.security.CurrentUserService;
 import com.maktab.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,7 @@ public class AttendanceController {
     @Autowired private SchoolClassRepository classRepo;
     @Autowired private UserRepository userRepo;
     @Autowired private NotificationService notificationService;
+    @Autowired private CurrentUserService currentUserService;
 
     // ─── Mini-PC: single event ───
     @PostMapping
@@ -142,7 +144,12 @@ public class AttendanceController {
 
     // ─── Frontend: device status for school ───
     @GetMapping("/devices/{schoolId}")
-    public ResponseEntity<?> getDevices(@PathVariable Long schoolId) {
+    public ResponseEntity<?> getDevices(@PathVariable Long schoolId,
+                                         @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        User user = currentUserService.requireUser(authHeader);
+        if (!currentUserService.canAccessSchool(user, schoolId)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Bu maktabga ruxsat yo'q"));
+        }
         List<DeviceHeartbeat> devices = heartbeatRepo.findBySchoolId(schoolId);
         // Mark offline if not seen in 2 minutes
         OffsetDateTime threshold = OffsetDateTime.now().minusMinutes(2);
@@ -162,7 +169,12 @@ public class AttendanceController {
     // ─── Frontend: attendance by school + date ───
     @GetMapping("/school/{schoolId}")
     public ResponseEntity<?> getBySchool(@PathVariable Long schoolId,
-                                          @RequestParam(required = false) String date) {
+                                          @RequestParam(required = false) String date,
+                                          @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        User user = currentUserService.requireUser(authHeader);
+        if (!currentUserService.canAccessSchool(user, schoolId)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Bu maktabga ruxsat yo'q"));
+        }
         LocalDate day = date != null ? LocalDate.parse(date) : LocalDate.now();
         OffsetDateTime from = day.atStartOfDay().atOffset(ZoneOffset.ofHours(5));
         OffsetDateTime to = day.plusDays(1).atStartOfDay().atOffset(ZoneOffset.ofHours(5));
@@ -187,7 +199,15 @@ public class AttendanceController {
     @GetMapping("/student/{studentId}")
     public ResponseEntity<?> getByStudent(@PathVariable Long studentId,
                                            @RequestParam(required = false) String from,
-                                           @RequestParam(required = false) String to) {
+                                           @RequestParam(required = false) String to,
+                                           @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        User user = currentUserService.requireUser(authHeader);
+        Student owner = studentRepo.findById(studentId).orElse(null);
+        if (owner == null) return ResponseEntity.notFound().build();
+        Long ownerSchoolId = owner.getSchool() != null ? owner.getSchool().getId() : null;
+        if (!currentUserService.canAccessSchool(user, ownerSchoolId)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Bu o'quvchiga ruxsat yo'q"));
+        }
         List<Attendance> list;
         if (from != null && to != null) {
             list = attendanceRepo.findByStudentIdAndTimestampBetween(studentId,
@@ -272,55 +292,52 @@ public class AttendanceController {
     }
 
     // ─── Frontend: Dashboard Overview ───
+    // MUHIM: `role`/`provinceId`/`schoolId` endi client'dan ISHONCH bilan qabul qilinmaydi —
+    // haqiqiy ko'lam Authorization headerdagi JWT orqali aniqlangan foydalanuvchidan olinadi.
+    // SUPERADMIN uchun provinceId/schoolId ixtiyoriy tor filtr sifatida qoladi.
     @GetMapping("/overview")
     public ResponseEntity<?> getOverview(
-            @RequestParam(required = false) String role,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) Long provinceId,
             @RequestParam(required = false) Long schoolId) {
 
-        Map<String, Object> data = new HashMap<>();
+        User user = currentUserService.requireUser(authHeader);
+
         LocalDate today = LocalDate.now();
         OffsetDateTime from = today.atStartOfDay().atOffset(ZoneOffset.ofHours(5));
         OffsetDateTime to = today.plusDays(1).atStartOfDay().atOffset(ZoneOffset.ofHours(5));
+        OffsetDateTime deviceThreshold = OffsetDateTime.now().minusMinutes(5);
 
-        long totalStudents = 0;
-        long totalSchools = 0;
-        long presentToday = 0;
+        List<Long> scope; // null => cheklovsiz (faqat SUPERADMIN, filtrsiz)
+        long totalSchools;
 
-        if ("DIRECTOR".equals(role) || "TEACHER".equals(role)) {
+        if (user.getRole() == User.Role.DIRECTOR || user.getRole() == User.Role.MUDIR
+                || user.getRole() == User.Role.TEACHER) {
+            scope = user.getSchoolId() != null ? List.of(user.getSchoolId()) : Collections.emptyList();
+            totalSchools = scope.size();
+        } else if (user.getRole() == User.Role.REGION_DIRECTOR) {
+            scope = currentUserService.schoolIdsForProvince(user.getProvinceId());
+            totalSchools = scope.size();
+        } else if (user.getRole() == User.Role.DISTRICT_DIRECTOR) {
+            scope = currentUserService.schoolIdsForDistrict(user.getDistrictId());
+            totalSchools = scope.size();
+        } else { // SUPERADMIN / ADMIN — ikkalasi ham ko'rish uchun cheklovsiz, ixtiyoriy tor filtr
             if (schoolId != null) {
-                totalStudents = studentRepo.countBySchoolId(schoolId);
+                scope = List.of(schoolId);
                 totalSchools = 1;
-                presentToday = attendanceRepo.findBySchoolAndDateRange(schoolId, from, to)
-                        .stream().filter(a -> a.getType() == Attendance.AttendanceType.IN)
-                        .map(a -> a.getStudent().getId()).distinct().count();
+            } else if (provinceId != null) {
+                scope = currentUserService.schoolIdsForProvince(provinceId);
+                totalSchools = scope.size();
+            } else {
+                scope = null;
+                totalSchools = 14; // hamma viloyat — mavjud placeholder saqlanadi
             }
-        } else if ("ADMIN".equals(role) && provinceId != null) {
-            // Placeholder: Admin logic
-            // To do this perfectly we need province stats. Just fallback to something reasonable.
-            totalStudents = studentRepo.count();
-            totalSchools = 10;
-        } else {
-            totalStudents = studentRepo.count();
-            totalSchools = 14; // All provinces
-            presentToday = attendanceRepo.findAll().stream()
-                    .filter(a -> a.getTimestamp().isAfter(from) && a.getType() == Attendance.AttendanceType.IN)
-                    .map(a -> a.getStudent().getId()).distinct().count();
         }
 
-        long totalDevices = 0;
-        long onlineDevices = 0;
-        OffsetDateTime threshold = OffsetDateTime.now().minusMinutes(5);
-        if (schoolId != null) {
-            List<DeviceHeartbeat> hbs = heartbeatRepo.findBySchoolId(schoolId);
-            totalDevices = hbs.size();
-            onlineDevices = hbs.stream().filter(h -> h.getLastSeen() != null && h.getLastSeen().isAfter(threshold)).count();
-        } else {
-            List<DeviceHeartbeat> hbs = heartbeatRepo.findAll();
-            totalDevices = hbs.size();
-            onlineDevices = hbs.stream().filter(h -> h.getLastSeen() != null && h.getLastSeen().isAfter(threshold)).count();
-        }
+        long[] counts = scopedOverviewCounts(scope, from, to, deviceThreshold);
+        long totalStudents = counts[0], presentToday = counts[1], totalDevices = counts[2], onlineDevices = counts[3];
 
+        Map<String, Object> data = new HashMap<>();
         data.put("totalStudents", totalStudents);
         data.put("totalSchools", totalSchools);
         data.put("presentToday", presentToday);
@@ -338,5 +355,44 @@ public class AttendanceController {
         data.put("weeklyPresent", weeklyPresent);
 
         return ResponseEntity.ok(data);
+    }
+
+    /**
+     * schoolIds == null   -> cheklovsiz (butun tizim)
+     * schoolIds.isEmpty() -> ko'lamda hech qanday maktab yo'q (0 natija)
+     * aks holda           -> shu maktablar bo'yicha jamlangan
+     * Natija: [totalStudents, presentToday, totalDevices, onlineDevices]
+     */
+    private long[] scopedOverviewCounts(List<Long> schoolIds, OffsetDateTime from, OffsetDateTime to,
+                                         OffsetDateTime deviceThreshold) {
+        long totalStudents;
+        List<Attendance> inEvents;
+        List<DeviceHeartbeat> hbs;
+
+        if (schoolIds == null) {
+            totalStudents = studentRepo.count();
+            inEvents = attendanceRepo.findAll().stream()
+                    .filter(a -> a.getTimestamp() != null && a.getTimestamp().isAfter(from)
+                            && a.getType() == Attendance.AttendanceType.IN)
+                    .collect(Collectors.toList());
+            hbs = heartbeatRepo.findAll();
+        } else if (schoolIds.isEmpty()) {
+            totalStudents = 0;
+            inEvents = Collections.emptyList();
+            hbs = Collections.emptyList();
+        } else {
+            totalStudents = studentRepo.findBySchoolIdIn(schoolIds).size();
+            inEvents = attendanceRepo.findBySchoolsAndDateRange(schoolIds, from, to).stream()
+                    .filter(a -> a.getType() == Attendance.AttendanceType.IN)
+                    .collect(Collectors.toList());
+            hbs = heartbeatRepo.findBySchoolIdIn(schoolIds);
+        }
+
+        long presentToday = inEvents.stream().map(a -> a.getStudent().getId()).distinct().count();
+        long totalDevices = hbs.size();
+        long onlineDevices = hbs.stream()
+                .filter(h -> h.getLastSeen() != null && h.getLastSeen().isAfter(deviceThreshold)).count();
+
+        return new long[]{totalStudents, presentToday, totalDevices, onlineDevices};
     }
 }

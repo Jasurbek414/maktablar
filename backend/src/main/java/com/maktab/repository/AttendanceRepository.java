@@ -24,4 +24,13 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     boolean existsByStudentIdAndTimestampAndType(Long studentId, OffsetDateTime timestamp, Attendance.AttendanceType type);
     boolean existsBySyncKey(String syncKey);
+
+    // /api/v1/attendance/** (Frontend A) uchun qo'shildi: maktabsiz, butun tizim bo'yicha
+    // sana oralig'ida davomat olish kerak bo'lgan hollar uchun (masalan superadmin umumiy hisobot).
+    List<Attendance> findByTimestampBetween(OffsetDateTime from, OffsetDateTime to);
+
+    // ADMIN scoping: bitta viloyatdagi bir nechta maktab bo'yicha sana oralig'ida davomat
+    // (server-side scoping — CurrentUserService orqali aniqlangan ruxsat etilgan schoolId ro'yxati).
+    @Query("SELECT a FROM Attendance a WHERE a.student.school.id IN :schoolIds AND a.timestamp BETWEEN :from AND :to ORDER BY a.timestamp DESC")
+    List<Attendance> findBySchoolsAndDateRange(@Param("schoolIds") List<Long> schoolIds, @Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to);
 }

@@ -2,6 +2,7 @@ package com.maktab.controller;
 
 import com.maktab.model.User;
 import com.maktab.repository.UserRepository;
+import com.maktab.security.CurrentUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,20 +21,63 @@ public class UserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private CurrentUserService currentUserService;
+
+    /**
+     * MUHIM: role/schoolId/provinceId endi client'dan ishonch bilan qabul qilinmaydi —
+     * xodimlar ro'yxati (ism, rol, viloyat/maktab) haqiqiy Authorization headerdagi
+     * foydalanuvchi ko'lamiga cheklanadi. SUPERADMIN uchun bu filtrlar ixtiyoriy qoladi.
+     */
     @GetMapping
     public List<Map<String, Object>> getAll(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) Long schoolId,
             @RequestParam(required = false) Long provinceId) {
+        User caller = currentUserService.requireUser(authHeader);
+        User.Role roleFilter = (role != null && !role.isBlank()) ? User.Role.valueOf(role) : null;
+
         List<User> users;
-        if (role != null && schoolId != null) {
-            users = userRepository.findByRoleAndSchoolId(User.Role.valueOf(role), schoolId);
-        } else if (role != null && provinceId != null) {
-            users = userRepository.findByRoleAndProvinceId(User.Role.valueOf(role), provinceId);
-        } else if (role != null) {
-            users = userRepository.findByRole(User.Role.valueOf(role));
-        } else {
-            users = userRepository.findAll();
+        if (currentUserService.isSuperAdmin(caller) || caller.getRole() == User.Role.ADMIN) {
+            if (roleFilter != null && schoolId != null) {
+                users = userRepository.findByRoleAndSchoolId(roleFilter, schoolId);
+            } else if (roleFilter != null && provinceId != null) {
+                users = userRepository.findByRoleAndProvinceId(roleFilter, provinceId);
+            } else if (roleFilter != null) {
+                users = userRepository.findByRole(roleFilter);
+            } else if (schoolId != null) {
+                users = userRepository.findBySchoolId(schoolId);
+            } else {
+                users = userRepository.findAll();
+            }
+        } else if (caller.getRole() == User.Role.REGION_DIRECTOR) {
+            List<Long> scope = currentUserService.schoolIdsForProvince(caller.getProvinceId());
+            if (scope.isEmpty()) {
+                users = Collections.emptyList();
+            } else if (roleFilter != null) {
+                users = userRepository.findByRoleAndSchoolIdIn(roleFilter, scope);
+            } else {
+                users = userRepository.findBySchoolIdIn(scope);
+            }
+        } else if (caller.getRole() == User.Role.DISTRICT_DIRECTOR) {
+            List<Long> scope = currentUserService.schoolIdsForDistrict(caller.getDistrictId());
+            if (scope.isEmpty()) {
+                users = Collections.emptyList();
+            } else if (roleFilter != null) {
+                users = userRepository.findByRoleAndSchoolIdIn(roleFilter, scope);
+            } else {
+                users = userRepository.findBySchoolIdIn(scope);
+            }
+        } else { // DIRECTOR/MUDIR/TEACHER — faqat o'z maktabi
+            Long sid = caller.getSchoolId();
+            if (sid == null) {
+                users = Collections.emptyList();
+            } else if (roleFilter != null) {
+                users = userRepository.findByRoleAndSchoolId(roleFilter, sid);
+            } else {
+                users = userRepository.findBySchoolId(sid);
+            }
         }
         return users.stream().map(this::toMap).collect(Collectors.toList());
     }

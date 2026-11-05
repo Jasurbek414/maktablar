@@ -38,21 +38,27 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Ochiq endpointlar
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/v1/auth/**").permitAll() // /spd (frontend A) auth kontrakti
                 .requestMatchers("/api/attendance").permitAll() // mini-pc event
                 .requestMatchers("/api/attendance/sync").permitAll() // mini-pc batch sync
                 .requestMatchers("/api/attendance/students").permitAll() // mini-pc student list
                 .requestMatchers("/api/attendance/offline-data").permitAll() // mini-pc offline data
-                .requestMatchers("/api/devices/**").permitAll() // qurilmalar
-                .requestMatchers("/api/provinces/**").permitAll() // viloyatlar
-                .requestMatchers("/api/districts/**").permitAll() // tumanlar
-                .requestMatchers("/api/schools/**").permitAll() // maktablar
                 .requestMatchers("/api/students/face/**").permitAll() // mini-pc dan
                 .requestMatchers("/api/files/**").permitAll() // rasm serve
-                .requestMatchers("/api/guardians/register").permitAll() // bot dan
-                .requestMatchers("/api/notifications/**").permitAll() // bildirishnomalar
+                .requestMatchers("/api/guardians/**").permitAll() // Telegram bot — JWT'siz, o'z ichida telefon+parol bilan autentifikatsiya qiladi
+                // Mini-PC bridge — X-Api-Key (yoki body'dagi apiKey) bilan o'z ichida autentifikatsiya
+                // qiladi, foydalanuvchi JWT'i yo'q. Qolgan /api/devices/** (CRUD, create-credentials,
+                // terminal boshqaruvi va h.k.) endi tizimga kirgan xodim uchun autentifikatsiya talab qiladi.
+                .requestMatchers(HttpMethod.POST, "/api/devices/authenticate").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/devices/register").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/devices/heartbeat").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/devices/commands/pending").permitAll()
+                .requestMatchers(HttpMethod.PUT, "/api/devices/commands/*/result").permitAll()
                 // SUPERADMIN – hamma narsa
                 .requestMatchers("/api/admin/**").hasRole("SUPERADMIN")
-                // Qolgan barcha endpointlar autentifikatsiya talab qiladi
+                // Qolgan barcha endpointlar (shu jumladan /api/devices/**, /api/provinces/**,
+                // /api/districts/**, /api/schools/**, /api/notifications/** ustidagi qolgan CRUD)
+                // avval blanket permitAll() edi — endi tizimga kirgan xodim uchun autentifikatsiya talab qiladi.
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

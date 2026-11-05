@@ -37,6 +37,9 @@ public class AuthController {
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ResponseEntity.status(401).body(Map.of("error", "Login yoki parol noto'g'ri"));
         }
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Foydalanuvchi deaktivlashtirilgan"));
+        }
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name(), user.getId());
 

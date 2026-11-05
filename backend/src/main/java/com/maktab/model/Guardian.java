@@ -23,4 +23,11 @@ public class Guardian {
 
     @Column(nullable = true, unique = true)
     private String telegramUserId; // Telegram user identifier
+
+    // BCrypt bilan shifrlangan parol — Telegram bot orqali ro'yxatdan o'tish uchun.
+    // NULLABLE: V1StudentController#createParentLink orqali operator tomonidan yaratilgan
+    // eski Guardian yozuvlarida hali parol yo'q — birinchi /start urinishida shu parol
+    // "birinchi marta o'rnatiladigan parol" sifatida qabul qilinadi (GuardianController'ga qarang).
+    @Column(nullable = true)
+    private String password;
 }

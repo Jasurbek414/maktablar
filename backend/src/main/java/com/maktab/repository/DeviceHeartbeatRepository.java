@@ -10,4 +10,5 @@ import java.util.List;
 public interface DeviceHeartbeatRepository extends JpaRepository<DeviceHeartbeat, Long> {
     Optional<DeviceHeartbeat> findBySchoolIdAndDeviceSerial(Long schoolId, String serial);
     List<DeviceHeartbeat> findBySchoolId(Long schoolId);
+    List<DeviceHeartbeat> findBySchoolIdIn(List<Long> schoolIds);
 }

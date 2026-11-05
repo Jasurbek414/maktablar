@@ -3,13 +3,13 @@ import { api } from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 
 const ROLES = [
-  { value: 'ADMIN', label: 'Admin (Viloyat)', icon: '🛡️', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+  { value: 'ADMIN', label: 'Admin', icon: '🛡️', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
   { value: 'DIRECTOR', label: 'Direktor', icon: '🏫', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
   { value: 'MUDIR', label: "O'quv mudir", icon: '📋', color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
   { value: 'TEACHER', label: "O'qituvchi", icon: '👨‍🏫', color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
 ];
 const ROLE_COLORS = { SUPERADMIN:'bg-red-500/10 text-red-400', ADMIN:'bg-amber-500/10 text-amber-400', DIRECTOR:'bg-emerald-500/10 text-emerald-400', MUDIR:'bg-cyan-500/10 text-cyan-400', TEACHER:'bg-violet-500/10 text-violet-400' };
-const ROLE_LABELS = { SUPERADMIN:'Super Admin', ADMIN:'Viloyat Admin', DIRECTOR:'Direktor', MUDIR:"O'quv mudir", TEACHER:"O'qituvchi" };
+const ROLE_LABELS = { SUPERADMIN:'Super Admin', ADMIN:'Admin', DIRECTOR:'Direktor', MUDIR:"O'quv mudir", TEACHER:"O'qituvchi" };
 
 function Modal({open, onClose, title, children}) {
   if (!open) return null;
