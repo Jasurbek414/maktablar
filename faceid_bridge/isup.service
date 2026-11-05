@@ -1,0 +1,16 @@
+[Unit]
+Description=Hikvision ISUP 5.0 CMS Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/faceid_server
+ExecStart=/opt/faceid_server/isup_bridge
+Restart=always
+RestartSec=3
+StandardOutput=append:/opt/faceid_server/isup.log
+StandardError=append:/opt/faceid_server/isup.log
+
+[Install]
+WantedBy=multi-user.target
